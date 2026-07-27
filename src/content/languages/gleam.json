@@ -1,0 +1,6 @@
+{
+  "name": "Gleam",
+  "year": 2016,
+  "paradigm": "functional-impure",
+  "note": "typed BEAM language"
+}

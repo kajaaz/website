@@ -1,0 +1,6 @@
+{
+  "name": "Forth",
+  "year": 1970,
+  "paradigm": "imperative-procedural",
+  "note": "stack-based concatenative"
+}

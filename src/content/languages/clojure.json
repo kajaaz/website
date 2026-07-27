@@ -1,0 +1,6 @@
+{
+  "name": "Clojure",
+  "year": 2007,
+  "paradigm": "functional-impure",
+  "note": "Lisp with persistent data structures"
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Datalog",
+  "year": 1977,
+  "paradigm": "logic-relational",
+  "note": "decidable Prolog fragment"
+}

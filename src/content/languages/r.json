@@ -1,0 +1,13 @@
+{
+  "name": "R",
+  "year": 1993,
+  "paradigm": "multi-paradigm",
+  "note": "Statistics-focused language from the S lineage with a strong FP substrate",
+  "typeSystem": "Dynamic; vectors as the core type",
+  "runtime": "Interpreted; copy-on-modify semantics",
+  "concurrencyModel": "Mostly single-threaded; parallel/future packages",
+  "codeExample": {
+    "lang": "r",
+    "source": "greet <- function(name) paste0(\"hello, \", name)\nprint(greet(\"world\"))"
+  }
+}

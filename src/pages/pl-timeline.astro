@@ -1,0 +1,151 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import PLTimeline from "../components/PLTimeline.svelte";
+import { getCollection } from "astro:content";
+import {
+  computeTimeline,
+  computeBands,
+  DEFAULT_CONFIG,
+  PARADIGM_ORDER,
+  BAND_META,
+  type LanguageEntry,
+} from "../lib/timeline";
+import { highlightCode } from "../lib/highlight";
+
+const rawEntries = await getCollection("languages");
+
+const entries: LanguageEntry[] = rawEntries.map((e) => ({
+  id: e.id,
+  name: e.data.name,
+  year: e.data.year,
+  paradigm: e.data.paradigm,
+  note: e.data.note,
+  typeSystem: e.data.typeSystem,
+  runtime: e.data.runtime,
+  concurrencyModel: e.data.concurrencyModel,
+  codeExample: e.data.codeExample,
+}));
+
+const computed = computeTimeline(entries, DEFAULT_CONFIG);
+const bands = computeBands(DEFAULT_CONFIG, computed);
+
+// Languages that still see meaningful real-world use, per the 2025 Stack
+// Overflow Developer Survey (share of all respondents who worked with them in
+// the past year). We bold anything at roughly 5%+ to flag "still widely used".
+// https://survey.stackoverflow.co/2025/technology
+const POPULAR = new Set([
+  "JavaScript", // 66%
+  "SQL", // 58.6%
+  "Python", // 57.9%
+  "sh", // Bash/Shell 48.7%
+  "TypeScript", // 43.6%
+  "Java", // 29.4%
+  "C#", // 27.8%
+  "C++", // 23.5%
+  "C", // 22%
+  "PHP", // 18.9%
+  "Go", // 16.4%
+  "Rust", // 14.8%
+  "Kotlin", // 10.8%
+  "Lua", // 9.2%
+  "Ruby", // 6.4%
+  "Swift", // 5.4%
+]);
+
+for (const lang of computed) {
+  lang.popular = POPULAR.has(lang.name);
+  const entry = entries.find((e) => e.id === lang.id);
+  if (entry?.codeExample) {
+    lang.codeHtml = await highlightCode(
+      entry.codeExample.lang,
+      entry.codeExample.source,
+    );
+  }
+}
+
+const config = {
+  plotWidth: DEFAULT_CONFIG.plotWidth,
+  laneHeight: DEFAULT_CONFIG.laneHeight,
+  paddingLeft: DEFAULT_CONFIG.paddingLeft,
+  paddingRight: DEFAULT_CONFIG.paddingRight,
+};
+
+// Legend chips: split into "how you structure code" (procedural / OO /
+// functional / multi-paradigm) vs "declarative" families (logic, dependent
+// types), each with the plain-language gloss and one example.
+const legend: Record<string, string> = {
+  "imperative-procedural": "Step-by-step, no objects (C, Fortran)",
+  "object-oriented": "State bundled into objects (Java, Smalltalk)",
+  "multi-paradigm": "Mixes styles freely (Python, Rust, Go)",
+  "functional-impure": "Functions first, effects allowed (Lisp, OCaml)",
+  "functional-pure": "Functions first, effects tracked (Haskell)",
+  "logic-relational": "Describe facts & rules (Prolog)",
+  "dependently-typed": "Proofs as types (Coq, Lean)",
+};
+const legendOrder = [
+  "imperative-procedural",
+  "object-oriented",
+  "multi-paradigm",
+  "functional-impure",
+  "functional-pure",
+  "logic-relational",
+  "dependently-typed",
+];
+---
+
+<BaseLayout title="PL Timeline">
+  <h1 class="mb-4 text-3xl font-bold tracking-tight text-brand-text">
+    Programming Languages Timeline
+  </h1>
+  <p class="mb-2 max-w-2xl text-brand-body">
+    Languages by paradigm and year of first appearance. Click any marker to see
+    a code example, runtime, and concurrency model.
+  </p>
+  <p class="mb-6 max-w-2xl text-sm text-brand-muted">
+    Bands run from <strong class="font-semibold text-brand-body">imperative</strong>
+    at the bottom to <strong class="font-semibold text-brand-body">declarative</strong>
+    at the top. Note these are two different axes: "imperative vs. declarative"
+    is about <em>how</em> you instruct the machine, while
+    <strong class="font-semibold text-brand-body">procedural</strong>,
+    <strong class="font-semibold text-brand-body">object-oriented</strong> and
+    <strong class="font-semibold text-brand-body">functional</strong> are about
+    how you <em>structure</em> code. So imperative splits into procedural and
+    object-oriented, while functional sits on the declarative side. Each language
+    sits in the family it was born into (a few are multi-paradigm today).
+  </p>
+
+  <!-- Paradigm / colour legend -->
+  <ul class="mb-4 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
+    {legendOrder.map((id) => (
+      <li class="flex items-baseline gap-2">
+        <span
+          class="mt-1 inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+          style={`background-color: ${BAND_META[id as keyof typeof BAND_META].color}`}
+        ></span>
+        <span>
+          <span class="font-medium text-brand-text">{BAND_META[id as keyof typeof BAND_META].label}</span>
+          <span class="text-brand-muted">: {legend[id]}</span>
+        </span>
+      </li>
+    ))}
+  </ul>
+
+  <p class="mb-8 text-sm text-brand-muted">
+    <strong class="font-semibold text-brand-body">Bold</strong> names are still
+    significantly used today (roughly 5%+ of developers in the
+    <a
+      href="https://survey.stackoverflow.co/2025/technology"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="text-accent-blue underline underline-offset-2 transition-colors hover:text-accent-emerald"
+      >2025 Stack Overflow Developer Survey</a
+    >).
+  </p>
+
+  <PLTimeline
+    client:visible
+    languages={computed}
+    bands={bands}
+    config={config}
+  />
+</BaseLayout>

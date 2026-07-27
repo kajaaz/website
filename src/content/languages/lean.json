@@ -1,0 +1,6 @@
+{
+  "name": "Lean",
+  "year": 2013,
+  "paradigm": "dependently-typed",
+  "note": "dependent types; Lean 4 is also a general PL"
+}

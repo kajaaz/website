@@ -1,0 +1,12 @@
+{
+  "name": "OCaml",
+  "year": 1996,
+  "paradigm": "functional-impure",
+  "typeSystem": "Static, strong, inferred (Hindley-Milner), algebraic data types",
+  "runtime": "Compiled to native (ocamlopt) or bytecode (ocamlc), with GC",
+  "concurrencyModel": "OCaml 5: multicore via domains + effect handlers; pre-5: single-domain with Lwt/Async",
+  "codeExample": {
+    "lang": "ocaml",
+    "source": "let rec fib = function\n  | 0 -> 0\n  | 1 -> 1\n  | n -> fib (n - 1) + fib (n - 2)\n\nlet () =\n  List.init 10 Fun.id\n  |> List.map fib\n  |> List.iter (Printf.printf \"%d \")\n  |> print_newline"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "Java",
+  "year": 1995,
+  "paradigm": "object-oriented",
+  "typeSystem": "Static, strong, manifest with generics",
+  "runtime": "JVM bytecode (HotSpot, GraalVM, OpenJ9)",
+  "concurrencyModel": "OS threads + synchronized blocks, java.util.concurrent, virtual threads (Project Loom)",
+  "codeExample": {
+    "lang": "java",
+    "source": "import java.util.stream.IntStream;\n\npublic class Main {\n    public static void main(String[] args) {\n        IntStream.range(0, 10)\n            .forEach(i -> System.out.println(\"Hello \" + i));\n    }\n}"
+  }
+}

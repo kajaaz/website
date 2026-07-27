@@ -1,0 +1,33 @@
+---
+import Nav from "../components/Nav.astro";
+import Footer from "../components/Footer.astro";
+import "../styles/global.css";
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = "Karolina Gorna – Cybersecurity researcher, PhD candidate at Télécom Paris & Ledger Donjon" } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <title>{title} | Karolina GORNA</title>
+  </head>
+  <body class="flex min-h-screen flex-col bg-brand-bg font-sans text-brand-body antialiased">
+    <div class="h-1 w-full bg-gradient-to-r from-accent-blue via-accent-cyan to-accent-green"></div>
+    <Nav />
+    <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>

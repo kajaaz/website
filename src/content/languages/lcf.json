@@ -1,0 +1,6 @@
+{
+  "name": "LCF",
+  "year": 1972,
+  "paradigm": "dependently-typed",
+  "note": "tactic-based proof; ML was its metalanguage"
+}

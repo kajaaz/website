@@ -1,0 +1,13 @@
+{
+  "name": "Scala",
+  "year": 2004,
+  "paradigm": "multi-paradigm",
+  "note": "Explicit OO/FP fusion on the JVM",
+  "typeSystem": "Static, strong, inferred; higher-kinded types",
+  "runtime": "JVM bytecode (also Scala.js and Scala Native); garbage-collected",
+  "concurrencyModel": "Futures, Akka actors, effect systems (cats-effect, ZIO)",
+  "codeExample": {
+    "lang": "scala",
+    "source": "import scala.concurrent.Future\nimport scala.concurrent.ExecutionContext.Implicits.global\n\n@main def run() =\n  Future { println(\"hello from future\") }"
+  }
+}

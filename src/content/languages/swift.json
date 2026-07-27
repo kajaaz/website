@@ -1,0 +1,13 @@
+{
+  "name": "Swift",
+  "year": 2014,
+  "paradigm": "multi-paradigm",
+  "note": "Apple's systems/app language blending OO and functional styles",
+  "typeSystem": "Static, strong, inferred; optionals for null-safety",
+  "runtime": "Compiled to native (LLVM); automatic reference counting (ARC)",
+  "concurrencyModel": "async/await, actors, structured concurrency",
+  "codeExample": {
+    "lang": "swift",
+    "source": "func greet() async -> String {\n    return \"hello from async\"\n}\n\nTask {\n    print(await greet())\n}"
+  }
+}

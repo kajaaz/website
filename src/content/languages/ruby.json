@@ -1,0 +1,13 @@
+{
+  "name": "Ruby",
+  "year": 1995,
+  "paradigm": "object-oriented",
+  "note": "Pure-OO scripting language with heavy metaprogramming",
+  "typeSystem": "Dynamic, strong, duck-typed",
+  "runtime": "Interpreted on the YARV bytecode VM; garbage-collected",
+  "concurrencyModel": "Threads (GVL), Fibers, and Ractors (parallel actors)",
+  "codeExample": {
+    "lang": "ruby",
+    "source": "t = Thread.new { puts \"hello from thread\" }\nt.join"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "JavaScript",
+  "year": 1995,
+  "paradigm": "multi-paradigm",
+  "typeSystem": "Dynamic, weak, duck-typed",
+  "runtime": "JIT engines (V8, SpiderMonkey, JavaScriptCore)",
+  "concurrencyModel": "Single-threaded event loop, Promises/async-await, Web Workers",
+  "codeExample": {
+    "lang": "javascript",
+    "source": "async function fetchData(url) {\n  const response = await fetch(url);\n  const data = await response.json();\n  return data;\n}\n\nfetchData('https://api.example.com/data')\n  .then(data => console.log(data))\n  .catch(err => console.error(err));"
+  }
+}

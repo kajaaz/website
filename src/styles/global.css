@@ -1,0 +1,165 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Helvetica Neue", "Arial", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", "Menlo", "Consolas", monospace;
+
+  --color-brand-bg: #FCFCFA;
+  --color-brand-text: #18181B;
+  --color-brand-body: #27272A;
+  --color-brand-muted: #71717A;
+  --color-brand-border: #E4E4E7;
+
+  /* accent palette — blue → green */
+  --color-accent-blue: #2563EB;
+  --color-accent-cyan: #0EA5E9;
+  --color-accent-green: #10B981;
+  --color-accent-emerald: #059669;
+
+  --color-band-dep-typed: #8B5CF6;
+  --color-band-logic-rel: #0EA5E9;
+  --color-band-fn-pure: #059669;
+  --color-band-fn-impure: #65A30D;
+  --color-band-multi-par: #D97706;
+  --color-band-oo: #DC2626;
+  --color-band-imp-proc: #9F1239;
+}
+
+/* Faint "blueprint" grid — keeps the page reading as white but adds
+   a subtle technical texture reminiscent of graph paper / CAD. */
+body {
+  background-color: var(--color-brand-bg);
+  background-image:
+    linear-gradient(to right, rgba(37, 99, 235, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(16, 185, 129, 0.035) 1px, transparent 1px);
+  background-size: 34px 34px;
+  background-attachment: fixed;
+}
+
+/* Hacker-green text selection. */
+::selection {
+  background-color: rgba(16, 185, 129, 0.25);
+  color: var(--color-brand-text);
+}
+
+/* Terminal-style blinking cursor block. */
+@keyframes blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.cursor-blink {
+  display: inline-block;
+  width: 0.6ch;
+  height: 1.05em;
+  margin-left: 0.15ch;
+  transform: translateY(0.12em);
+  background: linear-gradient(180deg, var(--color-accent-cyan), var(--color-accent-green));
+  animation: blink 1.1s steps(1) infinite;
+}
+
+/* Monospace "code comment" eyebrow used above section headings. */
+.mono-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  color: var(--color-accent-emerald);
+}
+
+/* Thin blue→green gradient rule. */
+.accent-rule {
+  height: 2px;
+  background-image: linear-gradient(90deg, var(--color-accent-blue), var(--color-accent-green), transparent);
+}
+
+/* Custom scrollbar — small detail, subtle accent. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-accent-green) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background-image: linear-gradient(180deg, var(--color-accent-cyan), var(--color-accent-green));
+  border-radius: 9999px;
+  border: 2px solid var(--color-brand-bg);
+}
+
+/* ── Glitch (RGB-split in blue/green) ───────────────────────────────
+   Duplicates the text into cyan + green copies that jitter in short
+   bursts. Add `is-live` for a periodic idle glitch; hovering always
+   triggers a faster burst. Requires a data-text attribute. */
+.glitch {
+  position: relative;
+  display: inline-block;
+}
+.glitch::before,
+.glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+.glitch::before { color: var(--color-accent-cyan); }
+.glitch::after  { color: var(--color-accent-green); }
+
+@keyframes glitch-b {
+  0%, 8%, 100% { opacity: 0; transform: translate(0, 0); }
+  1% { opacity: 0.85; transform: translate(-2px, -1px); clip-path: inset(0 0 58% 0); }
+  3% { opacity: 0.85; transform: translate(2px, 1px);  clip-path: inset(44% 0 22% 0); }
+  5% { opacity: 0.85; transform: translate(-1px, 1px); clip-path: inset(76% 0 0 0); }
+}
+@keyframes glitch-a {
+  0%, 8%, 100% { opacity: 0; transform: translate(0, 0); }
+  1% { opacity: 0.85; transform: translate(2px, 1px);  clip-path: inset(0 0 62% 0); }
+  3% { opacity: 0.85; transform: translate(-2px, -1px); clip-path: inset(50% 0 16% 0); }
+  5% { opacity: 0.85; transform: translate(1px, -1px); clip-path: inset(82% 0 0 0); }
+}
+
+/* One-shot glitch that fires on page load, then settles. */
+@keyframes glitch-intro-b {
+  0%   { opacity: 0.9; transform: translate(-2px, -1px); clip-path: inset(0 0 62% 0); }
+  15%  { opacity: 0.9; transform: translate(2px, 1px);   clip-path: inset(38% 0 30% 0); }
+  30%  { opacity: 0.9; transform: translate(-2px, 1px);  clip-path: inset(70% 0 0 0); }
+  45%  { opacity: 0.9; transform: translate(2px, -1px);  clip-path: inset(20% 0 52% 0); }
+  60%  { opacity: 0.9; transform: translate(-1px, 1px);  clip-path: inset(52% 0 12% 0); }
+  75%, 100% { opacity: 0; transform: translate(0, 0); }
+}
+@keyframes glitch-intro-a {
+  0%   { opacity: 0.9; transform: translate(2px, 1px);   clip-path: inset(0 0 66% 0); }
+  15%  { opacity: 0.9; transform: translate(-2px, -1px); clip-path: inset(42% 0 26% 0); }
+  30%  { opacity: 0.9; transform: translate(1px, -1px);  clip-path: inset(74% 0 0 0); }
+  45%  { opacity: 0.9; transform: translate(-2px, 1px);  clip-path: inset(24% 0 48% 0); }
+  60%  { opacity: 0.9; transform: translate(2px, -1px);  clip-path: inset(56% 0 8% 0); }
+  75%, 100% { opacity: 0; transform: translate(0, 0); }
+}
+
+.glitch.is-live::before { animation: glitch-b 7s steps(1) infinite; }
+.glitch.is-live::after  { animation: glitch-a 7s steps(1) infinite; }
+.glitch.is-intro::before { animation: glitch-intro-b 0.9s steps(1) 1 both; }
+.glitch.is-intro::after  { animation: glitch-intro-a 0.9s steps(1) 1 both; }
+.glitch:hover::before   { animation: glitch-b 1.1s steps(1) infinite; }
+.glitch:hover::after    { animation: glitch-a 1.1s steps(1) infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .glitch::before, .glitch::after,
+  .cursor-blink { animation: none !important; }
+}
+
+/* CRT scanline overlay for terminal panels. */
+.scanlines { position: relative; }
+.scanlines::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(16, 185, 129, 0.05) 0,
+    rgba(16, 185, 129, 0.05) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}

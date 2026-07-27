@@ -1,0 +1,13 @@
+{
+  "name": "C++",
+  "year": 1983,
+  "paradigm": "object-oriented",
+  "note": "Multi-paradigm systems language layered on top of C",
+  "typeSystem": "Static, strong, nominal; templates for generics",
+  "runtime": "Compiled to native; no managed runtime (RAII, manual/ smart-pointer memory)",
+  "concurrencyModel": "OS threads (std::thread), atomics, coroutines (C++20)",
+  "codeExample": {
+    "lang": "cpp",
+    "source": "#include <iostream>\n#include <thread>\n\nvoid greet() { std::cout << \"hello from thread\\n\"; }\n\nint main() {\n    std::thread t(greet);\n    t.join();\n}"
+  }
+}

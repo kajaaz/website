@@ -1,0 +1,238 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="Home">
+  <!-- ====== HERO / INTRO ====== -->
+  <section class="mb-12">
+    <p class="mono-eyebrow mb-2"><span class="text-accent-blue">$</span> whoami</p>
+    <h1 class="mb-4 text-3xl font-bold tracking-tight text-brand-text sm:text-4xl">
+      <span class="glitch is-live" data-text="Hi, welcome!">Hi, welcome!</span><span class="cursor-blink align-middle"></span>
+    </h1>
+    <p class="max-w-2xl text-lg leading-relaxed text-brand-body">
+      I am Karolina, a Ph.D. candidate in cybersecurity at Télécom Paris and Ledger Donjon. My research combines formal verification methods with practical security engineering to address vulnerabilities in production systems.
+    </p>
+  </section>
+
+  <!-- ====== RESEARCH INTERESTS ====== -->
+  <section class="mb-12">
+    <p class="mono-eyebrow mb-1">// warning: rabbit holes ahead</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Research Interests">Research Interests</h2>
+    <ul class="space-y-1.5 text-brand-body">
+      <li class="flex gap-2"><span class="select-none font-mono text-accent-green">▹</span>Symbolic execution and formal verification of protocols,</li>
+      <li class="flex gap-2"><span class="select-none font-mono text-accent-green">▹</span>Software and networks security,</li>
+      <li class="flex gap-2"><span class="select-none font-mono text-accent-green">▹</span>Binaries analysis,</li>
+      <li class="flex gap-2"><span class="select-none font-mono text-accent-green">▹</span>Secure compilation and hardware-software interactions,</li>
+      <li class="flex gap-2"><span class="select-none font-mono text-accent-green">▹</span>Zero-knowledge proof systems,</li>
+      <li class="flex gap-2"><span class="select-none font-mono text-accent-green">▹</span>Languages: <span class="font-mono text-sm text-accent-blue">Rust</span>, <span class="font-mono text-sm text-accent-blue">Go</span>, <span class="font-mono text-sm text-accent-blue">Assembly</span>.</li>
+    </ul>
+  </section>
+
+  <!-- ====== PULL-QUOTE ====== -->
+  <section class="mb-12">
+    <figure class="rounded-xl bg-accent-green/5 p-6 sm:p-8">
+      <p class="text-lg font-medium leading-relaxed text-brand-text sm:text-xl">
+        When things are beautifully done, there is usually a well thought out sort of abstraction layers.
+      </p>
+      <figcaption class="mt-3 font-mono text-sm text-accent-emerald">
+        Jim Keller
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- ====== CURRENT MAIN PROJECT (ZORYA) ====== -->
+  <section class="mb-12">
+    <p class="mono-eyebrow mb-1">// it works on my machine</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="My Current Main Project">My Current Main Project</h2>
+    <div class="overflow-hidden rounded-xl border border-brand-border bg-white/50 shadow-sm transition-colors hover:border-accent-green/60">
+      <div class="grid md:grid-cols-2">
+        <!-- Info panel -->
+        <div class="p-6 sm:p-8">
+          <div class="mb-4 flex flex-wrap items-center gap-3">
+            <img src="/images/zorya_logo.png" alt="ZORYA logo" class="h-16 w-auto object-contain" loading="lazy" />
+            <span class="inline-flex items-center gap-1.5 rounded-full border border-brand-border bg-brand-bg px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-brand-muted">
+              <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-accent-green"></span> active
+            </span>
+            <h3 class="sr-only">ZORYA</h3>
+          </div>
+          <p class="mb-6 text-sm leading-relaxed text-brand-body">
+            I'm the main developer of <strong>ZORYA</strong>, a concolic execution framework for binary-level vulnerability analysis, with a strong focus on Go binaries. Written in Rust, it initializes execution from real runtime state (CPU + memory dumps), translates code to Ghidra's low-level P-Code, and explores paths with concrete and symbolic values using the Z3 SMT solver.
+          </p>
+          <a
+            href="https://github.com/Ledger-Donjon/zorya"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center gap-2 rounded-lg bg-brand-text px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-emerald"
+          >
+            <svg viewBox="0 0 16 16" class="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+            View on GitHub
+          </a>
+        </div>
+
+        <!-- Terminal mock -->
+        <div class="border-t border-brand-border md:border-l md:border-t-0">
+          <div class="flex items-center gap-2 border-b border-brand-border bg-brand-bg px-4 py-2.5">
+            <span class="h-3 w-3 rounded-full bg-band-oo/70"></span>
+            <span class="h-3 w-3 rounded-full bg-band-multi-par/70"></span>
+            <span class="h-3 w-3 rounded-full bg-accent-green/70"></span>
+            <span class="ml-2 font-mono text-xs text-brand-muted">karolina@donjon:~/zorya</span>
+          </div>
+          <div class="scanlines bg-zinc-50 p-4 font-mono text-xs leading-relaxed sm:text-[13px]">
+            <p><span class="text-accent-green">$</span> <span class="text-brand-body">zorya tests/programs/crashme-go/crashme-go \</span></p>
+            <p class="text-brand-body">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--lang go --compiler tinygo --mode main</p>
+            <p class="text-accent-cyan">[zorya] init state from CPU + memory dump</p>
+            <p class="text-accent-cyan">[zorya] lifting to Ghidra P-Code</p>
+            <p class="text-accent-cyan">[zorya] solving paths (concrete + symbolic) via Z3</p>
+            <p class="text-band-multi-par">[found] nil pointer dereference &nbsp;@ crashme.crash</p>
+            <p class="text-accent-emerald">[done] &nbsp;results written to results/</p>
+            <p><span class="text-accent-green">$</span> <span class="cursor-blink align-middle"></span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== INNOVATION & PROTOTYPING / HACKATHONS ====== -->
+  <section class="mb-12">
+    <p class="mono-eyebrow mb-1">// ship first, sleep later</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Innovation &amp; Prototyping">Innovation &amp; Prototyping</h2>
+    <p class="mb-6 text-brand-body">
+      Applied research requires iteration between theoretical frameworks and empirical validation. Through competitive hackathons and collaborative prototyping events, I develop proof-of-concept implementations that test security hypotheses in constrained timeframes. This rapid experimentation informs my doctoral research by exposing practical limitations of formal methods, revealing emergent attack vectors in Layer 2 systems, and fostering interdisciplinary collaboration. The projects below demonstrate how theoretical security analysis translates into functional tools and protocols.
+    </p>
+    <div class="grid gap-6 sm:grid-cols-2">
+      <!-- ETH Global Brussels 2024 -->
+      <div class="text-center">
+        <img src="/images/onchainguard-logo-1.png" alt="OnchainGuard logo" class="mx-auto mb-3 h-20 w-auto" loading="lazy" />
+        <h3 class="mb-1 text-center font-semibold text-brand-text">ETH Global Brussels 2024, Belgium</h3>
+        <p class="text-center text-sm text-brand-body">An onchain static analyzer for blockchain smart contracts</p>
+        <div class="mt-3 flex justify-center gap-3">
+          <a href="https://github.com/OnchainGuard/OnchainGuard" target="_blank" rel="noopener noreferrer" class="text-xs text-band-fn-pure underline underline-offset-2">GitHub</a>
+          <a href="https://ethglobal.com/showcase/onchainguard-ki7x6" target="_blank" rel="noopener noreferrer" class="text-xs text-band-fn-pure underline underline-offset-2">Showcase</a>
+        </div>
+        <ul class="mt-3 space-y-1 text-xs font-medium text-blue-600">
+          <li>Nethermind Price – Best Security Driven Development</li>
+        </ul>
+      </div>
+
+      <!-- ZK Hack 2023 -->
+      <div class="text-center">
+        <img src="/images/logo_prooftranslate.png" alt="ProofTranslate logo" class="mx-auto mb-3 h-20 w-auto" loading="lazy" />
+        <h3 class="mb-1 text-center font-semibold text-brand-text">ZK Hack 2023, Istanbul, Turkey</h3>
+        <p class="text-center text-sm text-brand-body">The conversion algorithm of ZK proofs between the Polygon zkEVM system and the Scroll system.</p>
+        <div class="mt-3 flex justify-center gap-3">
+          <a href="https://github.com/ProofTranslate/0xProofTranslate" target="_blank" rel="noopener noreferrer" class="text-xs text-band-fn-pure underline underline-offset-2">GitHub</a>
+          <a href="https://devfolio.co/projects/prooftranslate-d03b" target="_blank" rel="noopener noreferrer" class="text-xs text-band-fn-pure underline underline-offset-2">Devfolio</a>
+        </div>
+        <ul class="mt-3 space-y-1 text-xs font-medium text-blue-600">
+          <li>Price for Best Idea on Polygon</li>
+        </ul>
+      </div>
+
+      <!-- ETH Denver 2023 -->
+      <div class="text-center">
+        <img src="/images/GENI_logo.png" alt="GENI logo" class="mx-auto mb-3 h-20 w-auto" loading="lazy" />
+        <h3 class="mb-1 text-center font-semibold text-brand-text">ETH Denver Hackathon 2023, USA</h3>
+        <p class="text-center text-sm text-brand-body">The specifications' generator for security tests</p>
+        <div class="mt-3 flex justify-center gap-3">
+          <a href="https://github.com/0xGeni/Geni" target="_blank" rel="noopener noreferrer" class="text-xs text-band-fn-pure underline underline-offset-2">GitHub</a>
+          <a href="https://app.buidlbox.io/projects/geni" target="_blank" rel="noopener noreferrer" class="text-xs text-band-fn-pure underline underline-offset-2">BuidlBox</a>
+        </div>
+        <ul class="mt-3 space-y-1 text-xs font-medium text-blue-600">
+          <li>Price for Best Developer Infrastructure/tooling on Mantle</li>
+          <li>Price for Best Developer tooling solution for Filecoin Virtual Machine</li>
+          <li>Price for Open Aurora Bounty</li>
+        </ul>
+      </div>
+
+      <!-- Open Climate Collabathon 2019 -->
+      <div class="text-center">
+        <img src="/images/collabathon.png" alt="Open Climate Collabathon" class="mx-auto mb-3 h-20 w-auto" loading="lazy" />
+        <h3 class="mb-1 text-center font-semibold text-brand-text">Open Climate Collabathon 2019, HEC Paris</h3>
+        <p class="text-center text-sm text-brand-body">"Consumer Disclosure Contracts for Sustainable Supply Chain", based on Hyperledger</p>
+        <div class="mt-3 flex justify-center">
+          <a href="https://www.hec.edu/en/society-organizations-institute/events/collabathon-open-climate-hec-paris-and-yale" target="_blank" rel="noopener noreferrer" class="text-xs text-band-fn-pure underline underline-offset-2">HEC Event</a>
+        </div>
+        <ul class="mt-3 space-y-1 text-xs font-medium text-blue-600">
+          <li>Award for the Most Innovative Contribution</li>
+          <li>Award of the Most Collaborative Team</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== PHOTO GALLERY ====== -->
+  <section class="mb-12">
+    <p class="mono-eyebrow mb-1">// pics or it didn't happen</p>
+    <h2 class="glitch mb-6 text-xl font-semibold text-brand-text" data-text="Events">Events</h2>
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      <figure>
+        <img src="/images/black-hat-asia-2026.png" alt="Black Hat Asia Arsenal 2026" class="aspect-[4/3] w-full rounded-md object-cover ring-1 ring-transparent transition-all hover:-translate-y-0.5 hover:ring-2 hover:ring-accent-green hover:brightness-105" loading="lazy" />
+        <figcaption class="mt-1 text-xs text-brand-muted">Black Hat Asia Arsenal 2026</figcaption>
+      </figure>
+      <figure>
+        <img src="/images/ethcc8-photo-photos_ethcc8_2-TALKS_3-WEDNESDAY-02-07-25_6-Burton-87-scaled.jpg" alt="EthCC[8] 2025" class="aspect-[4/3] w-full rounded-md object-cover ring-1 ring-transparent transition-all hover:-translate-y-0.5 hover:ring-2 hover:ring-accent-green hover:brightness-105" loading="lazy" />
+        <figcaption class="mt-1 text-xs text-brand-muted">EthCC[8] 2025</figcaption>
+      </figure>
+      <figure>
+        <img src="/images/infres-summer-camp-scaled.jpg" alt="Telecom Paris INFRES – My Thesis in 3 Minutes 2025" class="aspect-[4/3] w-full rounded-md object-cover ring-1 ring-transparent transition-all hover:-translate-y-0.5 hover:ring-2 hover:ring-accent-green hover:brightness-105" loading="lazy" />
+        <figcaption class="mt-1 text-xs text-brand-muted">Telecom Paris INFRES 3rd price for "My Thesis in 3 minutes" 2025</figcaption>
+      </figure>
+      <figure>
+        <img src="/images/IMG_0839.jpg" alt="KRYPTOSPHERE Blockchain Summit 2024" class="aspect-[4/3] w-full rounded-md object-cover ring-1 ring-transparent transition-all hover:-translate-y-0.5 hover:ring-2 hover:ring-accent-green hover:brightness-105" loading="lazy" />
+        <figcaption class="mt-1 text-xs text-brand-muted">KRYPTOSPHERE Blockchain Summit 2024</figcaption>
+      </figure>
+      <figure>
+        <img src="/images/Ledger_mars_24_copy_27-scaled.jpg" alt="Jury for Ledger Hackathon 2024" class="aspect-[4/3] w-full rounded-md object-cover ring-1 ring-transparent transition-all hover:-translate-y-0.5 hover:ring-2 hover:ring-accent-green hover:brightness-105" loading="lazy" />
+        <figcaption class="mt-1 text-xs text-brand-muted">Jury for Ledger Hackathon 2024</figcaption>
+      </figure>
+      <figure>
+        <img src="/images/Image.jpeg" alt="VivaTech 2023" class="aspect-[4/3] w-full rounded-md object-cover ring-1 ring-transparent transition-all hover:-translate-y-0.5 hover:ring-2 hover:ring-accent-green hover:brightness-105" loading="lazy" />
+        <figcaption class="mt-1 text-xs text-brand-muted">VivaTech 2023</figcaption>
+      </figure>
+      <figure>
+        <img src="/images/gendarmerie2.jpeg" alt="Security Workshop with Gendarmerie Nationale, 2023" class="aspect-[4/3] w-full rounded-md object-cover ring-1 ring-transparent transition-all hover:-translate-y-0.5 hover:ring-2 hover:ring-accent-green hover:brightness-105" loading="lazy" />
+        <figcaption class="mt-1 text-xs text-brand-muted">Security Workshop with Gendarmerie Nationale, 2023</figcaption>
+      </figure>
+      <figure>
+        <img src="/images/@SilkyShots2023-Wallet.con_.aferlunch.sidestage.4-2023.03.01-3657.jpg" alt="WalletCon 2023" class="aspect-[4/3] w-full rounded-md object-cover ring-1 ring-transparent transition-all hover:-translate-y-0.5 hover:ring-2 hover:ring-accent-green hover:brightness-105" loading="lazy" />
+        <figcaption class="mt-1 text-xs text-brand-muted">WalletCon 2023</figcaption>
+      </figure>
+      <figure>
+        <img src="/images/web3secuconf-scaled.jpeg" alt="Web3 Security Conference 2022" class="aspect-[4/3] w-full rounded-md object-cover ring-1 ring-transparent transition-all hover:-translate-y-0.5 hover:ring-2 hover:ring-accent-green hover:brightness-105" loading="lazy" />
+        <figcaption class="mt-1 text-xs text-brand-muted">Web3 Security Conference 2022</figcaption>
+      </figure>
+      <figure>
+        <img src="/images/IMG_0533-1.jpg" alt="Viva Technology 2022" class="aspect-[4/3] w-full rounded-md object-cover ring-1 ring-transparent transition-all hover:-translate-y-0.5 hover:ring-2 hover:ring-accent-green hover:brightness-105" loading="lazy" />
+        <figcaption class="mt-1 text-xs text-brand-muted">Viva Technology 2022 – J. Herscovici, K. Gorna, A. Stachtchenko and E. Larchevêque</figcaption>
+      </figure>
+      <figure>
+        <img src="/images/IMG_0279.jpg" alt="Inauguration of The Big Whale, June 10 2022" class="aspect-[4/3] w-full rounded-md object-cover ring-1 ring-transparent transition-all hover:-translate-y-0.5 hover:ring-2 hover:ring-accent-green hover:brightness-105" loading="lazy" />
+        <figcaption class="mt-1 text-xs text-brand-muted">Inauguration of <em>The Big Whale</em> – June 10, 2022</figcaption>
+      </figure>
+      <figure>
+        <img src="/images/IMG_9679-scaled.jpg" alt="KRYPTOSPHERE Blockchain Summit 2022" class="aspect-[4/3] w-full rounded-md object-cover ring-1 ring-transparent transition-all hover:-translate-y-0.5 hover:ring-2 hover:ring-accent-green hover:brightness-105" loading="lazy" />
+        <figcaption class="mt-1 text-xs text-brand-muted">KRYPTOSPHERE Blockchain Summit 2022</figcaption>
+      </figure>
+      <figure>
+        <img src="/images/IMG_7204-scaled.jpg" alt="KRYPTOSPHERE Internal Seminar 2021" class="aspect-[4/3] w-full rounded-md object-cover ring-1 ring-transparent transition-all hover:-translate-y-0.5 hover:ring-2 hover:ring-accent-green hover:brightness-105" loading="lazy" />
+        <figcaption class="mt-1 text-xs text-brand-muted">KRYPTOSPHERE Internal Seminar 2021</figcaption>
+      </figure>
+      <figure>
+        <img src="/images/IMG_4992.jpg" alt="First Stablecoins Meetup in Paris, 2020" class="aspect-[4/3] w-full rounded-md object-cover ring-1 ring-transparent transition-all hover:-translate-y-0.5 hover:ring-2 hover:ring-accent-green hover:brightness-105" loading="lazy" />
+        <figcaption class="mt-1 text-xs text-brand-muted">First Stablecoins' Meetup in Paris, 2020</figcaption>
+      </figure>
+      <figure>
+        <img src="/images/IMG_4045-scaled.jpg" alt="Meetup Invest in Crypto" class="aspect-[4/3] w-full rounded-md object-cover ring-1 ring-transparent transition-all hover:-translate-y-0.5 hover:ring-2 hover:ring-accent-green hover:brightness-105" loading="lazy" />
+        <figcaption class="mt-1 text-xs text-brand-muted">Meetup "Invest in Crypto"</figcaption>
+      </figure>
+      <figure>
+        <img src="/images/IMG_3257-scaled.jpg" alt="Open Climate Collabathon 2019" class="aspect-[4/3] w-full rounded-md object-cover ring-1 ring-transparent transition-all hover:-translate-y-0.5 hover:ring-2 hover:ring-accent-green hover:brightness-105" loading="lazy" />
+        <figcaption class="mt-1 text-xs text-brand-muted">Open Climate Collabathon 2019</figcaption>
+      </figure>
+      <figure>
+        <img src="/images/IMG_2911-scaled.jpg" alt="Paris Blockchain Summit 2019" class="aspect-[4/3] w-full rounded-md object-cover ring-1 ring-transparent transition-all hover:-translate-y-0.5 hover:ring-2 hover:ring-accent-green hover:brightness-105" loading="lazy" />
+        <figcaption class="mt-1 text-xs text-brand-muted">Paris Blockchain Summit 2019</figcaption>
+      </figure>
+    </div>
+  </section>
+</BaseLayout>

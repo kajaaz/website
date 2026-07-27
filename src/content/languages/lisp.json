@@ -1,0 +1,12 @@
+{
+  "name": "Lisp",
+  "year": 1958,
+  "paradigm": "functional-impure",
+  "typeSystem": "Dynamic, strong",
+  "runtime": "Interpreted or compiled (SBCL, CLISP, various implementations)",
+  "concurrencyModel": "Implementation-dependent; SBCL supports native threads; historically single-threaded",
+  "codeExample": {
+    "lang": "lisp",
+    "source": "(defun factorial (n)\n  (if (<= n 1)\n      1\n      (* n (factorial (- n 1)))))\n\n(format t \"10! = ~a~%\" (factorial 10))"
+  }
+}

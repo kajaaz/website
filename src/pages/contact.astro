@@ -1,0 +1,36 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const socials = [
+  { href: "https://github.com/kajaaz", label: "GitHub" },
+  { href: "https://twitter.com/KarolinaGorna_", label: "X / Twitter" },
+  { href: "https://www.linkedin.com/in/karolina-gorna-29210a194/", label: "LinkedIn" },
+  { href: "http://orcid.org/0009-0004-0483-8596", label: "ORCID" },
+  { href: "https://dblp.uni-trier.de/pid/383/6792.html", label: "dblp" },
+];
+---
+
+<BaseLayout title="Contact">
+  <p class="mono-eyebrow mb-1"><span class="text-accent-blue">$</span> ping karolina &nbsp;# 0% packet loss</p>
+  <h1 class="glitch is-intro mb-8 text-3xl font-bold tracking-tight text-brand-text" data-text="Contact Me">Contact Me</h1>
+
+  <div class="mx-auto max-w-lg text-center">
+    <nav class="mb-8 flex flex-wrap justify-center gap-4">
+      {socials.map(({ href, label }) => (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="rounded-full border border-brand-border px-4 py-2 font-mono text-sm font-medium text-brand-body transition-colors hover:border-accent-green hover:text-accent-emerald"
+        >
+          {label}
+        </a>
+      ))}
+    </nav>
+
+    <p class="text-brand-body">
+      <strong>Write to me on LinkedIn or Twitter</strong> or at<br />
+      <span class="font-mono text-sm">karolina [dot] gorna [at] telecom-paris [dot] fr</span>
+    </p>
+  </div>
+</BaseLayout>

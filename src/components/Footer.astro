@@ -1,0 +1,30 @@
+---
+const socials = [
+  { href: "https://github.com/kajaaz", label: "GitHub", icon: "github" },
+  { href: "https://twitter.com/KarolinaGorna_", label: "X / Twitter", icon: "twitter" },
+  { href: "https://www.linkedin.com/in/karolina-gorna-29210a194/", label: "LinkedIn", icon: "linkedin" },
+  { href: "http://orcid.org/0009-0004-0483-8596", label: "ORCID", icon: "orcid" },
+  { href: "https://dblp.uni-trier.de/pid/383/6792.html", label: "dblp", icon: "dblp" },
+];
+---
+
+<footer class="mt-auto border-t border-brand-border bg-brand-bg">
+  <div class="accent-rule opacity-60"></div>
+  <div class="mx-auto flex max-w-6xl flex-col items-center gap-4 px-4 py-8 sm:flex-row sm:justify-between sm:px-6">
+    <p class="font-mono text-sm text-brand-muted">
+      <span class="text-accent-green">$</span> mail&nbsp;<span class="text-brand-body">karolina [dot] gorna [at] telecom-paris [dot] fr</span>
+    </p>
+    <nav aria-label="Social links" class="flex flex-wrap items-center justify-center gap-3">
+      {socials.map(({ href, label }) => (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="font-mono text-sm text-brand-muted transition-colors hover:text-accent-emerald"
+        >
+          {label}
+        </a>
+      ))}
+    </nav>
+  </div>
+</footer>
