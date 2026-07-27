@@ -1,0 +1,6 @@
+{
+  "name": "ALGOL 60",
+  "year": 1960,
+  "paradigm": "imperative-procedural",
+  "note": "recursion + BNF"
+}

@@ -1,0 +1,13 @@
+{
+  "name": "PHP",
+  "year": 1995,
+  "paradigm": "object-oriented",
+  "note": "Server-side scripting language for the web",
+  "typeSystem": "Dynamic, gradually typed; optional scalar type declarations",
+  "runtime": "Interpreted (Zend Engine), typically per-request",
+  "concurrencyModel": "Synchronous per request; Fibers (8.1+) and async extensions",
+  "codeExample": {
+    "lang": "php",
+    "source": "<?php\nfunction greet(string $name): string {\n    return \"hello, {$name}\";\n}\n\necho greet(\"world\");"
+  }
+}

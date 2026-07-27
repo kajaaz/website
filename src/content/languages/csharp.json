@@ -1,0 +1,13 @@
+{
+  "name": "C#",
+  "year": 2000,
+  "paradigm": "object-oriented",
+  "note": "OO core that became increasingly functional over time",
+  "typeSystem": "Static, strong, nominal; local type inference with var",
+  "runtime": ".NET CLR (JIT and AOT), garbage-collected",
+  "concurrencyModel": "Threads + Task-based async/await (TPL)",
+  "codeExample": {
+    "lang": "csharp",
+    "source": "using System;\nusing System.Threading.Tasks;\n\nclass Program {\n    static async Task Main() {\n        await Task.Run(() => Console.WriteLine(\"hello from task\"));\n    }\n}"
+  }
+}

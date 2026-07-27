@@ -1,0 +1,13 @@
+{
+  "name": "SQL",
+  "year": 1974,
+  "paradigm": "logic-relational",
+  "note": "Declarative query language based on relational algebra",
+  "typeSystem": "Static, declared column types",
+  "runtime": "Executed by a database engine's query planner",
+  "concurrencyModel": "Transactions (ACID); MVCC or locking",
+  "codeExample": {
+    "lang": "sql",
+    "source": "SELECT name, year\nFROM languages\nWHERE paradigm = 'functional-pure'\nORDER BY year;"
+  }
+}

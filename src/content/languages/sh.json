@@ -1,0 +1,13 @@
+{
+  "name": "sh",
+  "year": 1977,
+  "paradigm": "imperative-procedural",
+  "note": "The Unix shell as a scripting language for gluing processes",
+  "typeSystem": "Untyped; every value is a string",
+  "runtime": "Interpreted by the shell; spawns external processes",
+  "concurrencyModel": "Process-level: pipes, background jobs (&), wait",
+  "codeExample": {
+    "lang": "bash",
+    "source": "greet() {\n  echo \"hello, $1\"\n}\n\ngreet world"
+  }
+}

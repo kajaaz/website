@@ -1,0 +1,6 @@
+{
+  "name": "Agda",
+  "year": 1999,
+  "paradigm": "dependently-typed",
+  "note": "dependent types as a programming language"
+}

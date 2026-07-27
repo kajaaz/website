@@ -1,0 +1,6 @@
+{
+  "name": "Standard ML",
+  "year": 1983,
+  "paradigm": "functional-impure",
+  "note": "formally specified semantics"
+}

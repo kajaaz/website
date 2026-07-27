@@ -1,0 +1,12 @@
+{
+  "name": "C",
+  "year": 1972,
+  "paradigm": "imperative-procedural",
+  "typeSystem": "Static, weak, manifest",
+  "runtime": "Compiled to native (GCC, Clang, MSVC)",
+  "concurrencyModel": "POSIX threads (pthreads), manual memory shared-state",
+  "codeExample": {
+    "lang": "c",
+    "source": "#include <stdio.h>\n\nint main(void) {\n    for (int i = 0; i < 10; i++) {\n        printf(\"Hello %d\\n\", i);\n    }\n    return 0;\n}"
+  }
+}

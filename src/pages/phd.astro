@@ -1,0 +1,92 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="PhD">
+  <p class="mono-eyebrow mb-1"><span class="text-accent-blue">$</span> ./thesis.sh &nbsp;# still running...</p>
+  <h1 class="glitch is-intro mb-8 text-3xl font-bold tracking-tight text-brand-text" data-text="PhD">PhD</h1>
+
+  <p class="mb-8 max-w-2xl text-lg leading-relaxed text-brand-body">
+    My PhD started in June 2023 and focuses on the security of the Go programming language, with applications to cloud infrastructures and blockchain components. Here are the resources if you'd like to dig deeper.
+  </p>
+
+  <!-- ====== THESIS INFO ====== -->
+  <section class="mb-12">
+    <p class="mono-eyebrow mb-2">// thesis --info</p>
+    <dl class="grid gap-x-8 gap-y-3 rounded-xl bg-accent-blue/5 p-6 sm:grid-cols-[7rem_1fr] sm:p-8">
+      <dt class="font-mono text-xs uppercase tracking-wider text-accent-emerald">started</dt>
+      <dd class="text-brand-body">June 2023</dd>
+
+      <dt class="font-mono text-xs uppercase tracking-wider text-accent-emerald">focus</dt>
+      <dd class="text-brand-body">Security of the Go programming language, with applications to cloud infrastructures &amp; blockchain components</dd>
+
+      <dt class="font-mono text-xs uppercase tracking-wider text-accent-emerald">hosts</dt>
+      <dd class="text-brand-body">Télécom Paris &middot; Ledger Donjon</dd>
+
+      <dt class="font-mono text-xs uppercase tracking-wider text-accent-emerald">advisors</dt>
+      <dd class="text-brand-body">Prof. Rida Khatoun, Dr. Yannick Seurin, Nicolas Iooss</dd>
+
+      <dt class="font-mono text-xs uppercase tracking-wider text-accent-emerald">tool</dt>
+      <dd class="text-brand-body">
+        <a href="https://github.com/Ledger-Donjon/zorya" target="_blank" rel="noopener noreferrer" class="text-accent-blue underline underline-offset-2 transition-colors hover:text-accent-emerald">ZORYA</a>, concolic execution for Go binaries
+      </dd>
+
+      <dt class="font-mono text-xs uppercase tracking-wider text-accent-emerald">registry</dt>
+      <dd class="text-brand-body">
+        <a href="https://theses.fr/s366715" target="_blank" rel="noopener noreferrer" class="text-accent-blue underline underline-offset-2 transition-colors hover:text-accent-emerald">theses.fr/s366715</a>
+      </dd>
+    </dl>
+  </section>
+
+  <!-- ====== PAPERS ====== -->
+  <section class="mb-12">
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Papers">Papers</h2>
+    <ul class="space-y-4">
+      <li class="border-l-2 border-accent-green/40 pl-4">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="font-mono text-xs font-semibold text-accent-emerald">2026</span>
+          <span class="font-mono text-xs text-brand-muted">&middot; ACM EASE 2026</span>
+        </div>
+        <h3 class="mt-1 font-semibold text-brand-text">From TinyGo to gc Compiler: Extending Zorya's Concolic Framework to Real-World Go Binaries</h3>
+        <a href="https://arxiv.org/pdf/2605.03492" target="_blank" rel="noopener noreferrer" class="mt-1 inline-block font-mono text-sm text-accent-blue underline underline-offset-2 transition-colors hover:text-accent-emerald">arXiv:2605.03492 &rarr;</a>
+      </li>
+
+      <li class="border-l-2 border-accent-green/40 pl-4">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="font-mono text-xs font-semibold text-accent-emerald">2026</span>
+          <span class="font-mono text-xs text-brand-muted">&middot; ACM SAC 2026</span>
+        </div>
+        <h3 class="mt-1 font-semibold text-brand-text">Zorya: Automated Concolic Execution of Single-Threaded Go Binaries</h3>
+        <a href="https://dl.acm.org/doi/pdf/10.1145/3748522.3779940" target="_blank" rel="noopener noreferrer" class="mt-1 inline-block font-mono text-sm text-accent-blue underline underline-offset-2 transition-colors hover:text-accent-emerald">ACM Digital Library &rarr;</a>
+      </li>
+
+      <li class="border-l-2 border-accent-green/40 pl-4">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="font-mono text-xs font-semibold text-accent-emerald">2025</span>
+          <span class="font-mono text-xs text-brand-muted">&middot; IEEE SERA 2025</span>
+        </div>
+        <h3 class="mt-1 font-semibold text-brand-text">Exposing Go's Hidden Bugs: A Novel Concolic Framework</h3>
+        <a href="https://arxiv.org/pdf/2505.20183" target="_blank" rel="noopener noreferrer" class="mt-1 inline-block font-mono text-sm text-accent-blue underline underline-offset-2 transition-colors hover:text-accent-emerald">arXiv:2505.20183 &rarr;</a>
+      </li>
+    </ul>
+  </section>
+
+  <!-- ====== TALKS ====== -->
+  <section class="mb-10">
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Talks">Talks</h2>
+    <div class="space-y-8">
+      <article>
+        <span class="inline-block rounded bg-accent-blue/10 px-2 py-0.5 font-mono text-xs font-semibold text-accent-blue">Pass the SALT 2026</span>
+        <h3 class="mt-2 font-semibold text-brand-text">Automated Vulnerability Detection in Go: Concolic Execution for Multi-Threaded Binaries</h3>
+        <img src="/images/pass-the-salt.png" alt="Pass the SALT 2026 presentation" class="mt-3 max-w-2xl rounded-md border border-brand-border" loading="lazy" />
+        <a href="https://passthesalt.ubicast.tv/videos/2026-automated-vulnerability-detection-in-go-concolic-execution-for-multi-threaded-binaries/" target="_blank" rel="noopener noreferrer" class="mt-2 inline-block text-sm text-accent-blue underline underline-offset-2 transition-colors hover:text-accent-emerald">Watch the presentation &rarr;</a>
+      </article>
+
+      <article>
+        <span class="inline-block rounded bg-accent-blue/10 px-2 py-0.5 font-mono text-xs font-semibold text-accent-blue">EthCC [8]</span>
+        <h3 class="mt-2 font-semibold text-brand-text">Hunting Blockchain Clients' Bugs with Concolic Execution</h3>
+        <iframe class="mt-3 aspect-video w-full max-w-2xl rounded-md" src="https://www.youtube.com/embed/QpcAtfN3B9M" title="EthCC[8] – Hunting Blockchain Clients' Bugs with Concolic Execution" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen loading="lazy"></iframe>
+      </article>
+    </div>
+  </section>
+</BaseLayout>

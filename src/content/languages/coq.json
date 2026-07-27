@@ -1,0 +1,12 @@
+{
+  "name": "Coq",
+  "year": 1989,
+  "paradigm": "dependently-typed",
+  "typeSystem": "Dependent types, Calculus of Inductive Constructions",
+  "runtime": "Proof assistant (terms extracted to OCaml, Haskell, or Scheme)",
+  "concurrencyModel": "N/A (proof assistant; extracted code inherits target language's model)",
+  "codeExample": {
+    "lang": "coq",
+    "source": "Fixpoint factorial (n : nat) : nat :=\n  match n with\n  | O => 1\n  | S p => n * factorial p\n  end.\n\nCompute factorial 10."
+  }
+}

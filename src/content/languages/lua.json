@@ -1,0 +1,13 @@
+{
+  "name": "Lua",
+  "year": 1993,
+  "paradigm": "multi-paradigm",
+  "note": "Small embeddable language with closures and coroutines",
+  "typeSystem": "Dynamic, strong; tables as the core data structure",
+  "runtime": "Register-based bytecode VM; incremental garbage collector",
+  "concurrencyModel": "Cooperative coroutines",
+  "codeExample": {
+    "lang": "lua",
+    "source": "local co = coroutine.create(function()\n  print(\"hello from coroutine\")\nend)\n\ncoroutine.resume(co)"
+  }
+}

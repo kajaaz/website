@@ -1,0 +1,12 @@
+{
+  "name": "Haskell",
+  "year": 1990,
+  "paradigm": "functional-pure",
+  "typeSystem": "Static, strong, inferred (Hindley-Milner), type classes, lazy evaluation",
+  "runtime": "Compiled to native (GHC), with RTS providing GC and green threads",
+  "concurrencyModel": "Lightweight green threads (forkIO), STM (Software Transactional Memory), sparks for parallelism",
+  "codeExample": {
+    "lang": "haskell",
+    "source": "module Main where\n\nfib :: Int -> Int\nfib 0 = 0\nfib 1 = 1\nfib n = fib (n - 1) + fib (n - 2)\n\nmain :: IO ()\nmain = mapM_ (print . fib) [0..9]"
+  }
+}

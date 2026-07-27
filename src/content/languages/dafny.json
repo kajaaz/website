@@ -1,0 +1,6 @@
+{
+  "name": "Dafny",
+  "year": 2009,
+  "paradigm": "dependently-typed",
+  "note": "imperative surface; verification-oriented"
+}

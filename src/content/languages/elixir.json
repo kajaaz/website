@@ -1,0 +1,6 @@
+{
+  "name": "Elixir",
+  "year": 2011,
+  "paradigm": "functional-impure",
+  "note": "BEAM; Erlang semantics"
+}

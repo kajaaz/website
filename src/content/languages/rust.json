@@ -1,0 +1,12 @@
+{
+  "name": "Rust",
+  "year": 2015,
+  "paradigm": "multi-paradigm",
+  "typeSystem": "Static, strong, inferred, affine types (ownership + borrowing)",
+  "runtime": "Compiled to native (LLVM), no GC, zero-cost abstractions",
+  "concurrencyModel": "Ownership prevents data races at compile time; async/await with Tokio/async-std; OS threads via std::thread",
+  "codeExample": {
+    "lang": "rust",
+    "source": "use std::thread;\n\nfn main() {\n    let handles: Vec<_> = (0..4)\n        .map(|i| thread::spawn(move || {\n            println!(\"thread {i} running\");\n            i * i\n        }))\n        .collect();\n\n    for h in handles {\n        println!(\"result: {}\", h.join().unwrap());\n    }\n}"
+  }
+}

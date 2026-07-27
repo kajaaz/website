@@ -1,0 +1,6 @@
+{
+  "name": "Automath",
+  "year": 1967,
+  "paradigm": "dependently-typed",
+  "note": "de Bruijn; first proof checker"
+}

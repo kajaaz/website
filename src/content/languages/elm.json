@@ -1,0 +1,6 @@
+{
+  "name": "Elm",
+  "year": 2012,
+  "paradigm": "functional-pure",
+  "note": "pure; managed effects"
+}

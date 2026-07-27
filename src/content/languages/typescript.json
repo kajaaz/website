@@ -1,0 +1,12 @@
+{
+  "name": "TypeScript",
+  "year": 2012,
+  "paradigm": "multi-paradigm",
+  "typeSystem": "Static, structural, inferred, gradual (compiles to JavaScript)",
+  "runtime": "Transpiled to JS, runs on V8/SpiderMonkey/JSC (or Deno/Bun natively)",
+  "concurrencyModel": "Inherits JS event loop: Promises, async/await, Web Workers",
+  "codeExample": {
+    "lang": "typescript",
+    "source": "interface User {\n  id: number;\n  name: string;\n}\n\nasync function getUser(id: number): Promise<User> {\n  const res = await fetch(`/api/users/${id}`);\n  return res.json();\n}\n\nconst user = await getUser(1);\nconsole.log(user.name);"
+  }
+}

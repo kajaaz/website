@@ -1,0 +1,100 @@
+year,name,band,note
+1957,Fortran,imperative-procedural,first high-level compiled language
+1958,ALGOL 58,imperative-procedural,block structure ancestor
+1958,Lisp,functional-impure,McCarthy; impure but first FP language
+1959,COBOL,imperative-procedural,
+1960,ALGOL 60,imperative-procedural,recursion + BNF
+1962,APL,functional-impure,array/combinator style
+1964,BASIC,imperative-procedural,
+1964,PL/I,imperative-procedural,
+1966,ISWIM,functional-impure,Landin; paper language ancestor of ML
+1967,Simula 67,imperative-oo,first OO language
+1967,Logo,functional-impure,Lisp dialect
+1967,Automath,dependent-proof,de Bruijn; first proof checker
+1968,ALGOL 68,imperative-procedural,
+1970,Pascal,imperative-procedural,
+1970,Forth,imperative-procedural,stack-based concatenative
+1972,C,imperative-procedural,
+1972,Smalltalk,imperative-oo,pure OO message passing
+1972,Prolog,logic-declarative,SLD resolution
+1972,SASL,functional-pure,Turner; first lazy pure FP
+1972,LCF,dependent-proof,tactic-based proof; ML was its metalanguage
+1973,ML,functional-impure,type inference; refs and exceptions
+1974,SQL,logic-declarative,relational calculus/algebra
+1975,Scheme,functional-impure,lexical scoping; first-class continuations
+1977,Datalog,logic-declarative,decidable Prolog fragment
+1977,sh,imperative-procedural,
+1977,AWK,imperative-procedural,
+1980,Ada,imperative-procedural,
+1983,C++,imperative-oo,
+1983,Standard ML,functional-impure,formally specified semantics
+1984,Common Lisp,functional-impure,multi-paradigm in practice
+1984,Objective-C,imperative-oo,
+1984,NuPRL,dependent-proof,constructive type theory
+1985,Caml,functional-impure,INRIA ML lineage
+1985,Miranda,functional-pure,lazy; direct Haskell ancestor
+1986,Erlang,functional-impure,concurrency-oriented; immutable data
+1986,Isabelle,dependent-proof,generic proof assistant (HOL)
+1987,Clean,functional-pure,uniqueness types for effects
+1987,Perl,multi-paradigm,
+1987,Self,imperative-oo,prototype-based
+1988,Eiffel,imperative-oo,design by contract
+1988,HOL,dependent-proof,higher-order logic
+1988,Wolfram,multi-paradigm,term rewriting core
+1989,Coq,dependent-proof,CIC; renamed Rocq in 2025
+1990,Haskell,functional-pure,lazy; monadic effects
+1990,ACL2,dependent-proof,first-order; heavily automated
+1991,Python,multi-paradigm,imperative core with first-class functions
+1991,Visual Basic,imperative-procedural,
+1991,Oz,logic-declarative,multi-paradigm constraint language
+1992,PVS,dependent-proof,
+1993,Lua,multi-paradigm,imperative with closures and coroutines
+1993,R,multi-paradigm,S lineage; strong FP substrate
+1995,Java,imperative-oo,
+1995,Ruby,imperative-oo,
+1995,PHP,imperative-oo,
+1995,Delphi,imperative-oo,
+1995,JavaScript,multi-paradigm,first-class functions + prototypes
+1995,Racket,functional-impure,Scheme lineage; language-oriented
+1995,Mercury,logic-declarative,pure logic + strong types
+1996,OCaml,functional-impure,ML with objects and mutation
+1999,Agda,dependent-proof,dependent types as a programming language
+1999,Twelf,dependent-proof,LF framework
+1999,TLA+,logic-declarative,specification language
+2000,C#,imperative-oo,became increasingly functional
+2000,Alloy,logic-declarative,relational model finding
+2001,D,multi-paradigm,
+2003,Groovy,imperative-oo,
+2004,Scala,multi-paradigm,explicit OO/FP fusion
+2005,F#,functional-impure,ML on .NET
+2007,Clojure,functional-impure,Lisp with persistent data structures
+2007,Idris,dependent-proof,dependent types + general programming
+2008,Nim,multi-paradigm,
+2009,Go,imperative-procedural,procedural with CSP concurrency
+2009,Dafny,dependent-proof,imperative surface; verification-oriented
+2011,Elixir,functional-impure,BEAM; Erlang semantics
+2011,Kotlin,imperative-oo,OO with functional idioms
+2011,Why3,dependent-proof,deductive verification platform
+2011,F*,dependent-proof,effectful dependently typed
+2012,Julia,multi-paradigm,multiple dispatch
+2012,TypeScript,multi-paradigm,
+2012,Elm,functional-pure,pure; managed effects
+2013,PureScript,functional-pure,strict Haskell-like
+2013,Lean,dependent-proof,dependent types; Lean 4 is also a general PL
+2014,Swift,multi-paradigm,
+2014,Solidity,imperative-oo,contract-oriented; inheritance
+2014,Crystal,imperative-oo,
+2015,Rust,multi-paradigm,imperative core; ML type system; affine types
+2016,Zig,imperative-procedural,
+2016,Gleam,functional-impure,typed BEAM language
+2017,Vyper,imperative-procedural,deliberately restricted; Python-like
+2018,Michelson,functional-impure,stack-based with pure semantics
+2019,Move,imperative-procedural,linear resource types
+2020,Cairo 0,imperative-procedural,write-once memory; assembly-like
+2021,Leo,multi-paradigm,ZK circuits; Rust-inspired
+2021,Lean 4,dependent-proof,self-hosted; metaprogramming
+2022,Noir,multi-paradigm,ZK circuits; Rust-inspired
+2022,Carbon,imperative-oo,
+2023,Cairo 1,multi-paradigm,Rust-inspired; linear types
+2023,Mojo,multi-paradigm,
+2025,Rocq,dependent-proof,Coq renamed

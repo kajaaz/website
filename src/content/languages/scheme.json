@@ -1,0 +1,6 @@
+{
+  "name": "Scheme",
+  "year": 1975,
+  "paradigm": "functional-impure",
+  "note": "lexical scoping; first-class continuations"
+}

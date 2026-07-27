@@ -1,0 +1,12 @@
+{
+  "name": "Smalltalk",
+  "year": 1972,
+  "paradigm": "object-oriented",
+  "typeSystem": "Dynamic, strong",
+  "runtime": "Bytecode VM (Squeak, Pharo, VisualWorks)",
+  "concurrencyModel": "Green threads / processes with message passing",
+  "codeExample": {
+    "lang": "smalltalk",
+    "source": "| greeting |\ngreeting := 'Hello, World!'.\nTranscript show: greeting; cr.\n1 to: 10 do: [:i | Transcript show: i printString; cr]."
+  }
+}

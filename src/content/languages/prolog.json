@@ -1,0 +1,12 @@
+{
+  "name": "Prolog",
+  "year": 1972,
+  "paradigm": "logic-relational",
+  "typeSystem": "Untyped (terms are dynamically unified)",
+  "runtime": "Interpreted / WAM-compiled (SWI-Prolog, SICStus, GNU Prolog)",
+  "concurrencyModel": "Implementation-dependent; SWI-Prolog supports native threads with message queues",
+  "codeExample": {
+    "lang": "prolog",
+    "source": "parent(tom, bob).\nparent(tom, liz).\nparent(bob, ann).\n\nancestor(X, Y) :- parent(X, Y).\nancestor(X, Y) :- parent(X, Z), ancestor(Z, Y).\n\n?- ancestor(tom, ann)."
+  }
+}

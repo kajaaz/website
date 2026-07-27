@@ -1,0 +1,6 @@
+{
+  "name": "Miranda",
+  "year": 1985,
+  "paradigm": "functional-pure",
+  "note": "lazy; direct Haskell ancestor"
+}

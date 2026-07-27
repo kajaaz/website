@@ -1,0 +1,6 @@
+{
+  "name": "PureScript",
+  "year": 2013,
+  "paradigm": "functional-pure",
+  "note": "strict Haskell-like"
+}

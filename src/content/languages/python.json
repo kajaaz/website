@@ -1,0 +1,12 @@
+{
+  "name": "Python",
+  "year": 1991,
+  "paradigm": "multi-paradigm",
+  "typeSystem": "Dynamic, strong, duck-typed (optional type hints)",
+  "runtime": "Interpreted bytecode (CPython), JIT (PyPy), compiled (Cython)",
+  "concurrencyModel": "GIL-constrained threads, multiprocessing, asyncio coroutines",
+  "codeExample": {
+    "lang": "python",
+    "source": "import asyncio\n\nasync def greet(name: str) -> str:\n    await asyncio.sleep(0.1)\n    return f\"Hello, {name}!\"\n\nasync def main():\n    result = await greet(\"world\")\n    print(result)\n\nasyncio.run(main())"
+  }
+}

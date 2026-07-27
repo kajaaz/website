@@ -1,0 +1,12 @@
+{
+  "name": "Kotlin",
+  "year": 2011,
+  "paradigm": "object-oriented",
+  "typeSystem": "Static, strong, inferred, null-safe",
+  "runtime": "JVM bytecode, Kotlin/Native (LLVM), Kotlin/JS",
+  "concurrencyModel": "Coroutines (structured concurrency via kotlinx.coroutines)",
+  "codeExample": {
+    "lang": "kotlin",
+    "source": "import kotlinx.coroutines.*\n\nfun main() = runBlocking {\n    val result = async { computeAnswer() }\n    println(\"The answer is ${result.await()}\")\n}\n\nsuspend fun computeAnswer(): Int {\n    delay(100)\n    return 42\n}"
+  }
+}

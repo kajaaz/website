@@ -1,0 +1,12 @@
+{
+  "name": "Go",
+  "year": 2009,
+  "paradigm": "imperative-procedural",
+  "typeSystem": "Static, strong, inferred + manifest",
+  "runtime": "Compiled to native with built-in runtime (goroutine scheduler, GC)",
+  "concurrencyModel": "Goroutines + channels (CSP model)",
+  "codeExample": {
+    "lang": "go",
+    "source": "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tch := make(chan string)\n\tgo func() { ch <- \"hello from goroutine\" }()\n\tfmt.Println(<-ch)\n}"
+  }
+}

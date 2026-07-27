@@ -1,0 +1,70 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="Projects">
+  <p class="mono-eyebrow mb-1"><span class="text-accent-blue">$</span> git log --oneline</p>
+  <h1 class="glitch is-intro mb-8 text-3xl font-bold tracking-tight text-brand-text" data-text="Projects">Projects</h1>
+
+  <!-- ====== FROM ROCQ TO METAL ====== -->
+  <section class="mb-10">
+    <h2 class="mb-3 text-lg font-semibold text-brand-text">From Rocq to Metal: A Pipeline for Formally Verified Microcontroller Firmware</h2>
+    <div class="space-y-4 text-brand-body">
+      <p>As part of my research bridging formal verification and embedded systems security, I worked with Valentin Bergeron and co-authored "From Rocq to Metal," demonstrating how formally verified firmware is achievable today. Enforcing invariants in safety-critical systems is increasingly urgent as AI-generated code becomes widespread, but the runtimes required to support high-level specification languages are typically too large for constrained embedded targets. To address this, we built Encore!, a bare-metal Continuation Passing Style (CPS) virtual machine (VM) written in no_std Rust that runs Rocq-extracted Scheme directly on microcontrollers.</p>
+
+      <p>Our work introduced a novel architecture that structures firmware as a pure state-transition function. This approach makes the business-logic core fully provable in Rocq, while keeping the unverified host layer (the Trusted Computing Base) constant, regardless of the firmware's complexity. This workflow also perfectly accommodates Large Language Model (LLM)-assisted development: formal theorem statements replace manual code review, allowing AI-generated firmware to mathematically prove its own correctness before deployment. This project showcases a practical, end-to-end pipeline for deploying mathematically proven software onto highly restricted hardware devices like ST33-class smartcards.</p>
+
+      <p>
+        Paper: <a href="https://arxiv.org/pdf/2606.02651" target="_blank" rel="noopener noreferrer" class="text-band-fn-pure underline underline-offset-2">https://arxiv.org/pdf/2606.02651</a><br/>
+        GitHub: <a href="https://github.com/vbergeron/encore" target="_blank" rel="noopener noreferrer" class="text-band-fn-pure underline underline-offset-2">https://github.com/vbergeron/encore</a><br/>
+        Rust crate: <a href="https://crates.io/crates/encore-toolchain" target="_blank" rel="noopener noreferrer" class="text-band-fn-pure underline underline-offset-2">https://crates.io/crates/encore-toolchain</a>
+      </p>
+    </div>
+  </section>
+
+  <!-- ====== CAMPUS CYBER ====== -->
+  <section class="mb-10">
+    <h2 class="mb-3 text-lg font-semibold text-brand-text">Campus Cyber: Working Group on Crypto Assets Security</h2>
+    <div class="space-y-4 text-brand-body">
+      <p>Since 2023, I have been an active member of Campus Cyber's Working Group on Crypto Assets Security, contributing to the development of standardized security evaluation methodologies for blockchain infrastructure. As part of this collaborative effort with industry experts and institutional partners, I co-authored the "<a href="https://wiki.campuscyber.fr/M%C3%A9thodologie_d%27%C3%A9valuation_sur_noeuds_Ethereum_inspir%C3%A9_de_la_CSPN/en" target="_blank" rel="noopener noreferrer" class="text-band-fn-pure underline underline-offset-2">Methodology for Evaluation of Ethereum Nodes inspired by CSPN</a>" (Certification de Sécurité de Premier Niveau), a comprehensive framework adapting France's established security certification approach to distributed systems. To validate this methodology, our group conducted penetration testing campaigns based on the enumerated attack scenarios, with results forthcoming in an upcoming release. I presented these findings at the <a href="https://wiki.campuscyber.fr/CONNECT2_-_24_juin_-_PROGRAMME" target="_blank" rel="noopener noreferrer" class="text-band-fn-pure underline underline-offset-2">CONNECT2 event</a> in June 2024, demonstrating how formal security evaluation frameworks can be applied to decentralized infrastructure. Additionally, I contributed to organizing and served as a jury member for the <a href="https://innovation.banque-france.fr/fr/challenges/mission-smart-mature-solutions" target="_blank" rel="noopener noreferrer" class="text-band-fn-pure underline underline-offset-2">Banque de France Innovation Lab's "Mission Smart" challenge</a>, evaluating blockchain-based solutions for financial sector applications. This working group exemplifies how academic research, regulatory requirements, and industry practice can converge to strengthen the security posture of emerging technologies.</p>
+    </div>
+    <img src="/images/Screenshot-from-2025-10-22-14-26-48.png" alt="Campus Cyber methodology document" class="mt-4 rounded-md border border-brand-border" loading="lazy" />
+  </section>
+
+  <!-- ====== NASA SPACE APPS ====== -->
+  <section class="mb-10">
+    <h2 class="mb-3 text-lg font-semibold text-brand-text">NASA Space Apps Challenge</h2>
+    <div class="space-y-4 text-brand-body">
+      <p>The <a href="https://2020.spaceappschallenge.org/locations/paris/event" target="_blank" rel="noopener noreferrer" class="text-band-fn-pure underline underline-offset-2">NASA International Space Apps Challenge</a> is the largest international hackathon, part of a NASA incubation program. It invites participants from around the world for a weekend to create computer applications. In 2020, it has gathered 26,000 participants from 150 countries and territories. This challenge aims to use data collected by satellites to solve real-world problems encountered on earth or in space.</p>
+
+      <p>The specificity is that the data from the five partner space agencies – NASA, CSA, CNES, ESA and JAXA – are open source, and therefore accessible to all. Considering their number, it is difficult to process them all: the Space Apps Challenge is an opportunity to stimulate contributions to science from all citizens, through diverse and varied challenges.</p>
+
+      <p>With others KRYPTOSPHERE members, we organized and hosted the 2020 and 2021 sessions of the NASA Space Apps Challenge in Paris.</p>
+    </div>
+    <figure class="mt-6">
+      <iframe class="aspect-video w-full max-w-2xl rounded-md" src="https://www.youtube.com/embed/Dq7srFmW2KE?start=4" title="Cérémonie de Lancement – NASA Space Apps Challenge Paris 2020" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen loading="lazy"></iframe>
+      <figcaption class="mt-2 text-sm italic text-brand-muted">Cérémonie de Lancement – NASA Space Apps Challenge Paris 2020, October 4th, 2020</figcaption>
+    </figure>
+  </section>
+
+  <!-- ====== OPEN CLIMATE COLLABATHON ====== -->
+  <section class="mb-10">
+    <h2 class="mb-3 text-lg font-semibold text-brand-text">Open Climate Collabathon</h2>
+    <div class="space-y-4 text-brand-body">
+      <p>In November 2019, along with my teammates from <a href="https://kryptosphere.org/" target="_blank" rel="noopener noreferrer" class="text-band-fn-pure underline underline-offset-2">KRYPTOSPHERE</a>, we have been invited to participate to the physical edition of the Collabathon at <a href="https://www.hec.edu/en" target="_blank" rel="noopener noreferrer" class="text-band-fn-pure underline underline-offset-2">HEC</a>. Then, during the hack weekend, I met a team of wonderful people based not only in Paris, but in different cities around the world through a collective work on the Consumer Disclosure prompt. When I saw the possible impact this project could have, I decided to come back during the <a href="https://www.collabathon.openclimate.earth/earth-day-event" target="_blank" rel="noopener noreferrer" class="text-band-fn-pure underline underline-offset-2">Earth Day Dialogues 2020</a>, and then met a wider panel of enthusiastic people ready to deepen the work proposed in November.</p>
+    </div>
+
+    <figure class="mt-6">
+      <iframe class="aspect-video w-full max-w-2xl rounded-md" src="https://www.youtube.com/embed/Rk_dG2GLZf4" title="Consumer Disclosure and Sustainable Supply Chains Work Group" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen loading="lazy"></iframe>
+      <figcaption class="mt-2 text-sm italic text-brand-muted">Consumer Disclosure and Sustainable Supply Chains Work Group, August 28th, 2020</figcaption>
+    </figure>
+
+    <figure class="mt-6">
+      <iframe class="aspect-video w-full max-w-2xl rounded-md" src="https://www.youtube.com/embed/wYEkI7XfeBE" title="Panel: How Blockchain is Helping to Achieve Sustainable Development Goals" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen loading="lazy"></iframe>
+      <figcaption class="mt-2 text-sm italic text-brand-muted">
+        Panel: How Blockchain is Helping to Achieve Sustainable Development Goals – Climate, Environment and Circular Economy, June 12th, 2021.
+        <a href="https://hgf2021.sched.com/event/j3dc/panel-how-blockchain-is-helping-to-achieve-sustainable-development-goals-climate-environment-and-circular-economy-robin-klemens-westphalian-university-si-chen-open-source-strategies-inc-karolina-gorna-kryptospherer-kamlesh-nagware-snapper-f" target="_blank" rel="noopener noreferrer" class="text-band-fn-pure underline underline-offset-2">More info</a>
+      </figcaption>
+    </figure>
+  </section>
+</BaseLayout>

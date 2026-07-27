@@ -1,0 +1,6 @@
+{
+  "name": "Vyper",
+  "year": 2017,
+  "paradigm": "imperative-procedural",
+  "note": "deliberately restricted; Python-like"
+}

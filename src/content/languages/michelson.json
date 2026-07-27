@@ -1,0 +1,6 @@
+{
+  "name": "Michelson",
+  "year": 2018,
+  "paradigm": "functional-impure",
+  "note": "stack-based with pure semantics"
+}

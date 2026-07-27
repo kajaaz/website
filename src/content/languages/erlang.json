@@ -1,0 +1,12 @@
+{
+  "name": "Erlang",
+  "year": 1986,
+  "paradigm": "functional-impure",
+  "typeSystem": "Dynamic, strong",
+  "runtime": "BEAM VM (bytecode interpreted + JIT in OTP 25+)",
+  "concurrencyModel": "Actor model: lightweight processes with message passing, preemptive scheduling, no shared memory",
+  "codeExample": {
+    "lang": "erlang",
+    "source": "-module(hello).\n-export([start/0]).\n\nstart() ->\n    Pid = spawn(fun() -> loop() end),\n    Pid ! {self(), \"Hello!\"},\n    receive\n        {Pid, Reply} -> io:format(\"Got: ~s~n\", [Reply])\n    end.\n\nloop() ->\n    receive\n        {From, Msg} -> From ! {self(), Msg ++ \" World\"}\n    end."
+  }
+}

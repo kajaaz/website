@@ -1,0 +1,6 @@
+{
+  "name": "ISWIM",
+  "year": 1966,
+  "paradigm": "functional-impure",
+  "note": "Landin; paper language ancestor of ML"
+}

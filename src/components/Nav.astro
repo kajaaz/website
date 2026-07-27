@@ -1,0 +1,93 @@
+---
+const currentPath = Astro.url.pathname;
+
+const links = [
+  { href: "/", label: "Home" },
+  { href: "/about", label: "About" },
+  { href: "/projects", label: "Projects" },
+  { href: "/phd", label: "PhD" },
+  { href: "/interviews", label: "Interviews" },
+  { href: "/publications", label: "Publications" },
+  { href: "/pl-timeline", label: "PL Timeline" },
+  { href: "/contact", label: "Contact" },
+];
+
+function isActive(href: string) {
+  if (href === "/") return currentPath === "/";
+  return currentPath.startsWith(href);
+}
+---
+
+<header class="sticky top-0 z-50 border-b border-brand-border bg-brand-bg/95 backdrop-blur supports-[backdrop-filter]:bg-brand-bg/80">
+  <nav class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+    <a href="/" class="group flex flex-col leading-tight">
+      <span class="text-lg font-semibold tracking-tight text-brand-text">
+        <span class="font-mono text-accent-green">~/</span><span class="glitch" data-text="Karolina GORNA">Karolina GORNA</span>
+      </span>
+      <span class="font-mono text-xs text-brand-muted"><span class="text-accent-blue">//</span> Brave New World</span>
+    </a>
+
+    <button
+      id="mobile-menu-btn"
+      class="inline-flex items-center justify-center rounded-md p-2 text-brand-muted hover:text-brand-text md:hidden"
+      aria-label="Toggle navigation menu"
+      aria-expanded="false"
+    >
+      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+        <path id="hamburger-icon" stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+        <path id="close-icon" class="hidden" stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+
+    <ul id="nav-links" class="hidden items-center gap-1 md:flex">
+      {links.map(({ href, label }) => (
+        <li>
+          <a
+            href={href}
+            class:list={[
+              "relative rounded-md px-3 py-1.5 text-sm transition-colors after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:origin-left after:scale-x-0 after:bg-gradient-to-r after:from-accent-blue after:to-accent-green after:transition-transform hover:after:scale-x-100",
+              isActive(href)
+                ? "font-medium text-brand-text after:scale-x-100"
+                : "text-brand-muted hover:text-brand-text",
+            ]}
+          >
+            {label}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+
+  <ul id="mobile-nav" class="hidden border-t border-brand-border px-4 pb-4 pt-2 md:hidden">
+    {links.map(({ href, label }) => (
+      <li>
+        <a
+          href={href}
+          class:list={[
+            "block rounded-md border-l-2 px-3 py-2 text-sm transition-colors",
+            isActive(href)
+              ? "border-accent-green bg-brand-text/5 font-medium text-brand-text"
+              : "border-transparent text-brand-muted hover:border-accent-blue hover:text-brand-text",
+          ]}
+        >
+          {label}
+        </a>
+      </li>
+    ))}
+  </ul>
+</header>
+
+<script>
+  const btn = document.getElementById("mobile-menu-btn");
+  const menu = document.getElementById("mobile-nav");
+  const hamburger = document.getElementById("hamburger-icon");
+  const closeIcon = document.getElementById("close-icon");
+  if (btn && menu && hamburger && closeIcon) {
+    btn.addEventListener("click", () => {
+      const open = menu.classList.toggle("hidden");
+      btn.setAttribute("aria-expanded", String(!open));
+      hamburger.classList.toggle("hidden");
+      closeIcon.classList.toggle("hidden");
+    });
+  }
+</script>
