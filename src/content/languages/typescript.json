@@ -3,10 +3,37 @@
   "year": 2012,
   "paradigm": "multi-paradigm",
   "typeSystem": "Static, structural, inferred, gradual (compiles to JavaScript)",
-  "runtime": "Transpiled to JS, runs on V8/SpiderMonkey/JSC (or Deno/Bun natively)",
+  "typeSystemExample": {
+    "lang": "typescript",
+    "caption": "Generic max with a constraint on types that support comparison",
+    "source": "function max<T extends number | string>(a: T, b: T): T {\n  return a >= b ? a : b;\n}\n\nconsole.log(max(3, 7));\nconsole.log(max(1.5, 2.8));"
+  },
+  "runtime": "Types are erased; the resulting JavaScript runs on engines such as V8, SpiderMonkey, and JavaScriptCore",
+  "runtimes": [
+    { "name": "Transpile to JavaScript (tsc)", "kind": "transpile", "role": "Types are erased and TS becomes plain JS before it ever runs." },
+    { "name": "Via JS engines (V8/SpiderMonkey/JSC)", "kind": "jit", "role": "After transpilation, TS runs wherever JavaScript runs." },
+    { "name": "Deno / Bun (direct source support)", "kind": "jit", "role": "Accept .ts files and strip or transpile their types before executing JavaScript." }
+  ],
+  "compilers": [
+    { "name": "tsc", "role": "Reference compiler; type-checks and emits JavaScript." },
+    { "name": "esbuild / SWC", "role": "Fast type-stripping transpilers (no type checking)." },
+    { "name": "Babel (preset-typescript)", "role": "Strips types as part of a Babel pipeline." }
+  ],
+  "asyncRuntimes": [
+    { "name": "Node.js", "role": "libuv-based event loop; the most popular server-side platform." },
+    { "name": "Deno", "role": "Tokio-based event loop with native TypeScript support and permissions." },
+    { "name": "Bun", "role": "Custom event loop written in Zig, with native .ts execution." },
+    { "name": "Browser", "role": "Platform event loop with Web APIs (same as JavaScript)." }
+  ],
   "concurrencyModel": "Inherits JS event loop: Promises, async/await, Web Workers",
+  "concurrencyExample": {
+    "lang": "typescript",
+    "caption": "4 workers computing i*i in parallel via Promise.all",
+    "source": "async function square(n: number): Promise<number> {\n  return n * n;\n}\n\nconst results = await Promise.all(\n  [0, 1, 2, 3].map(square)\n);\nconsole.log(...results);"
+  },
   "codeExample": {
     "lang": "typescript",
-    "source": "interface User {\n  id: number;\n  name: string;\n}\n\nasync function getUser(id: number): Promise<User> {\n  const res = await fetch(`/api/users/${id}`);\n  return res.json();\n}\n\nconst user = await getUser(1);\nconsole.log(user.name);"
+    "caption": "Hello, World!",
+    "source": "console.log(\"Hello, World!\");"
   }
 }

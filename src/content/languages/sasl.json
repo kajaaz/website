@@ -2,5 +2,5 @@
   "name": "SASL",
   "year": 1972,
   "paradigm": "functional-pure",
-  "note": "Turner; first lazy pure FP"
+  "note": "Turner's pure ISWIM-derived language; redesigned for lazy evaluation in 1976"
 }

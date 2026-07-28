@@ -4,7 +4,13 @@
   "paradigm": "object-oriented",
   "typeSystem": "Dynamic, strong",
   "runtime": "Bytecode VM (Squeak, Pharo, VisualWorks)",
-  "concurrencyModel": "Green threads / processes with message passing",
+  "runtimes": [
+    { "name": "Cog VM (Pharo / Squeak)", "kind": "jit", "role": "Bytecode VM with a JIT for hot methods, running a live object image." }
+  ],
+  "compilers": [
+    { "name": "Image compiler", "role": "Compiles methods to bytecode live inside the running image." }
+  ],
+  "concurrencyModel": "Implementation-level lightweight processes scheduled within an image and sharing objects. Smalltalk message sends are method dispatch; inter-process coordination uses facilities such as semaphores and shared queues.",
   "codeExample": {
     "lang": "smalltalk",
     "source": "| greeting |\ngreeting := 'Hello, World!'.\nTranscript show: greeting; cr.\n1 to: 10 do: [:i | Transcript show: i printString; cr]."

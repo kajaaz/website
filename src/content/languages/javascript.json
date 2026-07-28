@@ -3,10 +3,36 @@
   "year": 1995,
   "paradigm": "multi-paradigm",
   "typeSystem": "Dynamic, weak, duck-typed",
+  "typeSystemExample": {
+    "lang": "javascript",
+    "caption": "Generic max: no types, just duck typing",
+    "source": "function max(a, b) {\n  return a >= b ? a : b;\n}\n\nconsole.log(max(3, 7));\nconsole.log(max(1.5, 2.8));"
+  },
   "runtime": "JIT engines (V8, SpiderMonkey, JavaScriptCore)",
-  "concurrencyModel": "Single-threaded event loop, Promises/async-await, Web Workers",
+  "runtimes": [
+    { "name": "V8 (Chrome, Node.js, Deno)", "kind": "jit", "role": "Multi-tier JIT; the most widely deployed JavaScript engine." },
+    { "name": "SpiderMonkey (Firefox)", "kind": "jit", "role": "Mozilla's engine, the very first JavaScript implementation." },
+    { "name": "JavaScriptCore (Safari, Bun)", "kind": "jit", "role": "Apple's engine, also used by the Bun runtime." }
+  ],
+  "compilers": [
+    { "name": "Babel", "role": "Transpiles modern JS to older syntax for browser compatibility." },
+    { "name": "esbuild / SWC", "role": "Fast JavaScript/TypeScript transpilation toolchains written in Go and Rust." }
+  ],
+  "asyncRuntimes": [
+    { "name": "Node.js", "role": "libuv-based event loop; the most popular server-side JS platform." },
+    { "name": "Deno", "role": "Tokio-based (Rust) event loop with built-in permissions and TypeScript support." },
+    { "name": "Bun", "role": "Custom event loop written in Zig, optimised for startup and throughput." },
+    { "name": "Browser", "role": "Platform event loop with Web APIs (fetch, setTimeout, requestAnimationFrame)." }
+  ],
+  "concurrencyModel": "Per-agent event loop with run-to-completion jobs, Promises/async-await, and parallel Web Workers",
+  "concurrencyExample": {
+    "lang": "javascript",
+    "caption": "4 workers computing i*i in parallel via Promise.all",
+    "source": "async function square(n) {\n  return n * n;\n}\n\nconst results = await Promise.all(\n  [0, 1, 2, 3].map(square)\n);\nconsole.log(...results);"
+  },
   "codeExample": {
     "lang": "javascript",
-    "source": "async function fetchData(url) {\n  const response = await fetch(url);\n  const data = await response.json();\n  return data;\n}\n\nfetchData('https://api.example.com/data')\n  .then(data => console.log(data))\n  .catch(err => console.error(err));"
+    "caption": "Hello, World!",
+    "source": "console.log(\"Hello, World!\");"
   }
 }

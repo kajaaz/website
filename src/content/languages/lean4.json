@@ -4,9 +4,16 @@
   "paradigm": "dependently-typed",
   "typeSystem": "Dependent types, Calculus of Constructions with inductive types",
   "runtime": "Compiled to C via reference counting (no GC), or interpreted",
+  "runtimes": [
+    { "name": "Native (via C)", "kind": "native", "role": "Compiles to C then to native code, using reference counting instead of a GC." },
+    { "name": "Interpreter", "kind": "interpreter", "role": "Executes Lean metaprograms during elaboration and supports interactive evaluation workflows." }
+  ],
+  "compilers": [
+    { "name": "lean", "role": "The Lean 4 compiler and elaborator." }
+  ],
   "concurrencyModel": "Task-based concurrency (IO.asTask), built-in async primitives",
   "codeExample": {
     "lang": "lean4",
-    "source": "def factorial : Nat → Nat\n  | 0     => 1\n  | n + 1 => (n + 1) * factorial n\n\ntheorem factorial_pos : ∀ n, factorial n > 0 := by\n  intro n; induction n with\n  | zero => simp [factorial]\n  | succ n ih => simp [factorial]; omega"
+    "source": "def factorial : Nat → Nat\n  | 0     => 1\n  | n + 1 => (n + 1) * factorial n\n\ntheorem factorial_pos : ∀ n, factorial n > 0 := by\n  intro n\n  induction n with\n  | zero => simp [factorial]\n  | succ n ih => exact Nat.mul_pos (Nat.zero_lt_succ n) ih"
   }
 }

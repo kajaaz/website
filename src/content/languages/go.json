@@ -2,11 +2,49 @@
   "name": "Go",
   "year": 2009,
   "paradigm": "imperative-procedural",
-  "typeSystem": "Static, strong, inferred + manifest",
-  "runtime": "Compiled to native with built-in runtime (goroutine scheduler, GC)",
-  "concurrencyModel": "Goroutines + channels (CSP model)",
+  "typeSystem": "Static, strong, mostly inferred. Deliberately small: structural interfaces instead of inheritance, and (since Go 1.18) parametric generics with type constraints.",
+  "typeSystemExample": {
+    "lang": "go",
+    "caption": "Generic max with a type constraint (Go 1.18+)",
+    "source": "package main\n\nimport \"fmt\"\n\ntype Ordered interface{ ~int | ~float64 | ~string }\n\nfunc Max[T Ordered](a, b T) T {\n\tif a >= b {\n\t\treturn a\n\t}\n\treturn b\n}\n\nfunc main() {\n\tfmt.Println(Max(3, 7))\n\tfmt.Println(Max(1.5, 2.8))\n}"
+  },
+  "runtime": "Compiled ahead-of-time to native code and linked with the Go runtime (goroutine scheduler and garbage collector). Binaries are often self-contained, but builds using facilities such as cgo may have dynamic-library dependencies.",
+  "runtimes": [
+    {
+      "name": "Native (gc toolchain)",
+      "kind": "native",
+      "role": "Official toolchain; produces native binaries linked with the Go scheduler and garbage collector."
+    },
+    {
+      "name": "Native (gccgo)",
+      "kind": "native",
+      "role": "GCC-based frontend that reuses GCC's optimiser and back-end targets."
+    },
+    {
+      "name": "WebAssembly (js/wasm, wasip1)",
+      "kind": "wasm",
+      "role": "Compiles Go to WASM for browsers and WASI runtimes."
+    },
+    {
+      "name": "yaegi",
+      "kind": "interpreter",
+      "role": "Interpreter used for scripting and plugins where a build step is undesirable."
+    }
+  ],
+  "compilers": [
+    { "name": "gc", "role": "The compiler used by the official Go toolchain; the toolchain also supplies the linker and runtime." },
+    { "name": "gccgo", "role": "Alternative frontend built on GCC, sharing its optimisation passes." },
+    { "name": "TinyGo", "role": "LLVM-based compiler for microcontrollers and small WASM binaries." }
+  ],
+  "concurrencyModel": "Concurrency is a core feature: goroutines are lightweight tasks multiplexed by the runtime onto OS threads, and channels support CSP-inspired communication between them.",
+  "concurrencyExample": {
+    "lang": "go",
+    "caption": "4 concurrent goroutines computing i*i and sending results on a channel",
+    "source": "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tch := make(chan int, 4)\n\tfor i := 0; i < 4; i++ {\n\t\tgo func(n int) { ch <- n * n }(i)\n\t}\n\tfor i := 0; i < 4; i++ {\n\t\tfmt.Printf(\"%d \", <-ch)\n\t}\n}"
+  },
   "codeExample": {
     "lang": "go",
-    "source": "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tch := make(chan string)\n\tgo func() { ch <- \"hello from goroutine\" }()\n\tfmt.Println(<-ch)\n}"
+    "caption": "Hello, World!",
+    "source": "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Println(\"Hello, World!\")\n}"
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "LCF",
   "year": 1972,
-  "paradigm": "dependently-typed",
-  "note": "tactic-based proof; ML was its metalanguage"
+  "paradigm": "multi-paradigm",
+  "note": "Stanford theorem prover for Scott's Logic for Computable Functions; Edinburgh LCF later introduced ML"
 }

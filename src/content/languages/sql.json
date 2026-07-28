@@ -3,11 +3,23 @@
   "year": 1974,
   "paradigm": "logic-relational",
   "note": "Declarative query language based on relational algebra",
-  "typeSystem": "Static, declared column types",
-  "runtime": "Executed by a database engine's query planner",
+  "typeSystem": "Dialect-dependent. Most engines assign declared types to columns and type-check expressions, with implicit conversions and SQL NULL's three-valued logic; SQLite uses dynamic value typing with column affinity.",
+  "typeSystemExample": {
+    "lang": "sql",
+    "caption": "Typed columns and GREATEST as the closest to generic max",
+    "source": "CREATE TABLE nums (a INTEGER, b INTEGER);\nINSERT INTO nums VALUES (3, 7), (10, 2);\n\nSELECT a, b, GREATEST(a, b) AS max_val\nFROM nums;"
+  },
+  "runtime": "Parsed, planned, optimised, and executed by a database engine",
+  "runtimes": [
+    { "name": "Database query engine", "kind": "interpreter", "role": "Each engine (PostgreSQL, SQLite, MySQL...) parses, plans, and executes queries." }
+  ],
+  "compilers": [
+    { "name": "Query compiler / planner", "role": "Transforms SQL into an execution plan; engines may execute an operator plan, virtual-machine bytecode, generated native code, or a combination." }
+  ],
   "concurrencyModel": "Transactions (ACID); MVCC or locking",
   "codeExample": {
     "lang": "sql",
-    "source": "SELECT name, year\nFROM languages\nWHERE paradigm = 'functional-pure'\nORDER BY year;"
+    "caption": "Hello, World!",
+    "source": "SELECT 'Hello, World!' AS greeting;"
   }
 }

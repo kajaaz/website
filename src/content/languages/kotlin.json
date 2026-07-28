@@ -1,12 +1,38 @@
 {
   "name": "Kotlin",
   "year": 2011,
-  "paradigm": "object-oriented",
+  "paradigm": "multi-paradigm",
   "typeSystem": "Static, strong, inferred, null-safe",
+  "typeSystemExample": {
+    "lang": "kotlin",
+    "caption": "Generic max with a Comparable bound",
+    "source": "fun <T : Comparable<T>> maxOf(a: T, b: T): T =\n    if (a >= b) a else b\n\nfun main() {\n    println(maxOf(3, 7))\n    println(maxOf(1.5, 2.8))\n}"
+  },
   "runtime": "JVM bytecode, Kotlin/Native (LLVM), Kotlin/JS",
+  "runtimes": [
+    { "name": "JVM (HotSpot)", "kind": "jit", "role": "Primary target; full interop with the Java ecosystem." },
+    { "name": "Kotlin/Native (LLVM)", "kind": "native", "role": "AOT to native binaries for iOS, desktop, and embedded." },
+    { "name": "Kotlin/JS", "kind": "transpile", "role": "Compiles to JavaScript for the web." },
+    { "name": "Kotlin/Wasm", "kind": "wasm", "role": "Emerging WebAssembly target." }
+  ],
+  "compilers": [
+    { "name": "kotlinc", "role": "Official compiler with JVM, Native, JS, and Wasm backends." }
+  ],
+  "asyncRuntimes": [
+    { "name": "Dispatchers.Default", "role": "Shared thread pool sized to CPU cores, for CPU-bound coroutines." },
+    { "name": "Dispatchers.IO", "role": "Expandable thread pool (up to 64 threads) for blocking I/O calls." },
+    { "name": "Dispatchers.Main", "role": "UI-thread dispatcher for Android, Swing, and JavaFX." },
+    { "name": "Ktor (Netty / CIO)", "role": "Async web framework; Netty backend for high performance, CIO for pure-Kotlin I/O." }
+  ],
   "concurrencyModel": "Coroutines (structured concurrency via kotlinx.coroutines)",
+  "concurrencyExample": {
+    "lang": "kotlin",
+    "caption": "4 workers computing i*i in parallel via coroutines",
+    "source": "import kotlinx.coroutines.*\n\nfun main() = runBlocking {\n    val results = (0..3).map { i ->\n        async { i * i }\n    }\n    println(results.map { it.await() }.joinToString(\" \"))\n}"
+  },
   "codeExample": {
     "lang": "kotlin",
-    "source": "import kotlinx.coroutines.*\n\nfun main() = runBlocking {\n    val result = async { computeAnswer() }\n    println(\"The answer is ${result.await()}\")\n}\n\nsuspend fun computeAnswer(): Int {\n    delay(100)\n    return 42\n}"
+    "caption": "Hello, World!",
+    "source": "fun main() {\n    println(\"Hello, World!\")\n}"
   }
 }

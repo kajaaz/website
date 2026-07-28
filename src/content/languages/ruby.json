@@ -1,13 +1,35 @@
 {
   "name": "Ruby",
   "year": 1995,
-  "paradigm": "object-oriented",
-  "note": "Pure-OO scripting language with heavy metaprogramming",
+  "paradigm": "multi-paradigm",
+  "note": "Object-oriented scripting language with blocks, functional idioms, and extensive metaprogramming",
   "typeSystem": "Dynamic, strong, duck-typed",
-  "runtime": "Interpreted on the YARV bytecode VM; garbage-collected",
-  "concurrencyModel": "Threads (GVL), Fibers, and Ractors (parallel actors)",
+  "typeSystemExample": {
+    "lang": "ruby",
+    "caption": "Generic max: duck-typed, any Comparable works",
+    "source": "def max_of(a, b)\n  a >= b ? a : b\nend\n\nputs max_of(3, 7)\nputs max_of(1.5, 2.8)"
+  },
+  "runtime": "CRuby compiles source to YARV bytecode and executes it on a garbage-collected VM, with optional JIT compilation",
+  "runtimes": [
+    { "name": "CRuby / YARV", "kind": "bytecode-vm", "role": "Reference implementation with a bytecode virtual machine." },
+    { "name": "YJIT", "kind": "jit", "role": "In-process JIT (written in Rust) that speeds up hot methods." },
+    { "name": "JRuby", "kind": "jit", "role": "Ruby on the JVM, benefiting from HotSpot's JIT." },
+    { "name": "TruffleRuby", "kind": "jit", "role": "GraalVM-based Ruby with an aggressive optimising JIT." }
+  ],
+  "compilers": [
+    { "name": "CRuby (MRI)", "role": "Reference interpreter and bytecode compiler." },
+    { "name": "JRuby", "role": "JVM implementation." },
+    { "name": "TruffleRuby", "role": "GraalVM implementation." }
+  ],
+  "concurrencyModel": "CRuby provides OS threads under a Global VM Lock, cooperative Fibers, and isolated Ractors that can run in parallel. Other implementations, including JRuby, can run Ruby threads in parallel without CRuby's GVL.",
+  "concurrencyExample": {
+    "lang": "ruby",
+    "caption": "4 workers computing i*i in parallel via threads",
+    "source": "threads = (0..3).map do |i|\n  Thread.new { i * i }\nend\n\nputs threads.map(&:value).join(' ')"
+  },
   "codeExample": {
     "lang": "ruby",
-    "source": "t = Thread.new { puts \"hello from thread\" }\nt.join"
+    "caption": "Hello, World!",
+    "source": "puts \"Hello, World!\""
   }
 }

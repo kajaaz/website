@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import PLTimeline from "../components/PLTimeline.svelte";
+import PLCompare from "../components/PLCompare.svelte";
 import { getCollection } from "astro:content";
 import {
   computeTimeline,
@@ -11,6 +12,7 @@ import {
   type LanguageEntry,
 } from "../lib/timeline";
 import { highlightCode } from "../lib/highlight";
+import { TRAITS } from "../lib/traits";
 
 const rawEntries = await getCollection("languages");
 
@@ -21,8 +23,13 @@ const entries: LanguageEntry[] = rawEntries.map((e) => ({
   paradigm: e.data.paradigm,
   note: e.data.note,
   typeSystem: e.data.typeSystem,
+  typeSystemExample: e.data.typeSystemExample,
   runtime: e.data.runtime,
+  runtimes: e.data.runtimes,
+  compilers: e.data.compilers,
+  asyncRuntimes: e.data.asyncRuntimes,
   concurrencyModel: e.data.concurrencyModel,
+  concurrencyExample: e.data.concurrencyExample,
   codeExample: e.data.codeExample,
 }));
 
@@ -61,6 +68,18 @@ for (const lang of computed) {
       entry.codeExample.source,
     );
   }
+  if (entry?.typeSystemExample) {
+    lang.typeSystemHtml = await highlightCode(
+      entry.typeSystemExample.lang,
+      entry.typeSystemExample.source,
+    );
+  }
+  if (entry?.concurrencyExample) {
+    lang.concurrencyHtml = await highlightCode(
+      entry.concurrencyExample.lang,
+      entry.concurrencyExample.source,
+    );
+  }
 }
 
 const config = {
@@ -70,17 +89,33 @@ const config = {
   paddingRight: DEFAULT_CONFIG.paddingRight,
 };
 
+const traitMeta = TRAITS.map((t) => ({ id: t.id, name: t.name, color: t.color }));
+const langTraitMap: Record<string, string[]> = {};
+for (const t of TRAITS) {
+  for (const name of t.languages) {
+    if (!langTraitMap[name]) langTraitMap[name] = [];
+    langTraitMap[name].push(t.id);
+  }
+}
+
 // Legend chips: split into "how you structure code" (procedural / OO /
 // functional / multi-paradigm) vs "declarative" families (logic, dependent
 // types), each with the plain-language gloss and one example.
 const legend: Record<string, string> = {
-  "imperative-procedural": "Step-by-step, no objects (C, Fortran)",
-  "object-oriented": "State bundled into objects (Java, Smalltalk)",
-  "multi-paradigm": "Mixes styles freely (Python, Rust, Go)",
-  "functional-impure": "Functions first, effects allowed (Lisp, OCaml)",
-  "functional-pure": "Functions first, effects tracked (Haskell)",
-  "logic-relational": "Describe facts & rules (Prolog)",
-  "dependently-typed": "Proofs as types (Coq, Lean)",
+  "imperative-procedural":
+    "Explicit step-by-step instructions that read and mutate state, grouped into reusable procedures rather than objects. (C, Fortran)",
+  "object-oriented":
+    "Data and the methods that operate on it are bundled into objects that talk via method calls, usually with inheritance and polymorphism. (Java, Smalltalk)",
+  "multi-paradigm":
+    "Deliberately supports several styles at once, so a single program can mix procedural, object-oriented and functional code. (Python, Rust, Go)",
+  "functional-impure":
+    "Programs are built by composing and passing functions, but side effects like I/O and mutation are allowed anywhere. (Lisp, OCaml)",
+  "functional-pure":
+    "Functions have no side effects and always return the same output for the same input; effects are isolated by the type system. (Haskell)",
+  "logic-relational":
+    "You state facts and rules and the engine searches for values that satisfy them, instead of you writing the control flow. (Prolog)",
+  "dependently-typed":
+    "Types can depend on values, so a type can express a full specification and type-checking the program becomes a proof it is correct. (Coq, Lean)",
 };
 const legendOrder = [
   "imperative-procedural",
@@ -94,24 +129,40 @@ const legendOrder = [
 ---
 
 <BaseLayout title="PL Timeline">
-  <h1 class="mb-4 text-3xl font-bold tracking-tight text-brand-text">
+  <h1 class="glitch is-intro mb-4 text-3xl font-bold tracking-tight text-brand-text" data-text="Programming Languages Timeline">
     Programming Languages Timeline
   </h1>
-  <p class="mb-2 max-w-2xl text-brand-body">
-    Languages by paradigm and year of first appearance. Click any marker to see
-    a code example, runtime, and concurrency model.
-  </p>
-  <p class="mb-6 max-w-2xl text-sm text-brand-muted">
-    Bands run from <strong class="font-semibold text-brand-body">imperative</strong>
-    at the bottom to <strong class="font-semibold text-brand-body">declarative</strong>
+
+  <!-- What is it? -->
+  <div class="mb-8 rounded-lg border-l-2 border-accent-green/40 bg-accent-green/5 px-4 py-3">
+    <h2 class="mb-1 text-sm font-bold text-brand-text">What is it?</h2>
+    <p class="text-sm leading-relaxed text-brand-body">
+      A big interactive map of programming languages, sorted by paradigm and year they first appeared.
+      Click any language to explore its type system, runtimes, compilers, concurrency model, and a code snippet.
+      You can highlight shared traits to see which ones have garbage collection, monads, async/await, etc., and compare up to four languages side by side.
+      I got the idea from{" "}
+      <a
+        href="https://github.com/enzet/symbolic-execution"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="text-accent-blue underline underline-offset-2 transition-colors hover:text-accent-emerald"
+      >enzet's symbolic-execution timeline</a>{" "}
+      (a gorgeous hand-drawn diagram of symbolic execution, SAT/SMT solvers, and fuzzing tools) and thought: why not do the same for programming languages?
+    </p>
+  </div>
+
+  <p class="mb-6 text-sm text-brand-muted">
+    Bands run from <strong class="font-semibold text-brand-body">imperative</strong>{" "}
+    at the bottom to <strong class="font-semibold text-brand-body">declarative</strong>{" "}
     at the top. Note these are two different axes: "imperative vs. declarative"
-    is about <em>how</em> you instruct the machine, while
-    <strong class="font-semibold text-brand-body">procedural</strong>,
-    <strong class="font-semibold text-brand-body">object-oriented</strong> and
-    <strong class="font-semibold text-brand-body">functional</strong> are about
-    how you <em>structure</em> code. So imperative splits into procedural and
-    object-oriented, while functional sits on the declarative side. Each language
-    sits in the family it was born into (a few are multi-paradigm today).
+    is about <em>how</em> you instruct the machine, while{" "}
+    <strong class="font-semibold text-brand-body">procedural</strong>,{" "}
+    <strong class="font-semibold text-brand-body">object-oriented</strong>{" "}
+    and <strong class="font-semibold text-brand-body">functional</strong>{" "}
+    are about how you <em>structure</em> code. So imperative splits into
+    procedural and object-oriented, while functional sits on the declarative
+    side. Each language sits in the family it was born into (a few are
+    multi-paradigm today).
   </p>
 
   <!-- Paradigm / colour legend -->
@@ -147,5 +198,91 @@ const legendOrder = [
     languages={computed}
     bands={bands}
     config={config}
+    traitMeta={traitMeta}
+    langTraitMap={langTraitMap}
   />
+
+  <!-- ====== COMPARE ====== -->
+  <section class="mt-16">
+    <p class="mono-eyebrow mb-1">// diff &lt;lang1&gt; &lt;lang2&gt;</p>
+    <h2
+      class="glitch mb-2 text-2xl font-bold tracking-tight text-brand-text"
+      data-text="Compare languages"
+    >
+      Compare languages
+    </h2>
+    <p class="mb-6 w-full text-sm text-brand-muted">
+      Pick up to four languages and see how they differ: type system, runtime,
+      concurrency model, and which traits they share. The default comparison
+      is C vs. Rust vs. Go vs. Python, four very different approaches to
+      systems and application programming.
+    </p>
+
+    <PLCompare
+      client:visible
+      languages={computed}
+      bands={bands.map((b) => ({ id: b.id, label: b.label, color: b.color }))}
+      traitMeta={traitMeta}
+      langTraitMap={langTraitMap}
+      defaults={["C", "Rust", "Go", "Python"]}
+    />
+  </section>
+
+  <!-- ====== SHARED TRAITS ====== -->
+  <section class="mt-16">
+    <p class="mono-eyebrow mb-1">// birds of a feather</p>
+    <h2
+      class="glitch mb-2 text-2xl font-bold tracking-tight text-brand-text"
+      data-text="Shared traits"
+    >
+      Shared traits
+    </h2>
+    <p class="mb-10 max-w-2xl text-sm text-brand-muted">
+      The same idea keeps reappearing across otherwise very different languages.
+      Each circle collects the languages that share a characteristic; most
+      languages belong to several circles at once. Widely-used languages (per the
+      2025 Stack Overflow survey) are shown in <strong
+        class="font-semibold text-brand-body">bold</strong
+      >.
+    </p>
+
+    <div class="grid gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
+      {
+        TRAITS.map((t) => (
+          <div class="flex flex-col items-center text-center">
+            <div
+              class="flex h-24 w-24 items-center justify-center rounded-full border-2"
+              style={`border-color:${t.color}; background:${t.color}14`}
+            >
+              <span
+                class="font-mono text-2xl font-bold"
+                style={`color:${t.color}`}
+              >
+                {t.languages.length}
+              </span>
+            </div>
+            <h3 class="mt-3 font-semibold text-brand-text">{t.name}</h3>
+            <p class="mt-1 max-w-xs text-xs leading-relaxed text-brand-muted">
+              {t.description}
+            </p>
+            <ul class="mt-3 flex flex-wrap justify-center gap-1.5">
+              {t.languages.map((name) => (
+                <li
+                  class:list={[
+                    "rounded-full border px-2 py-0.5",
+                    POPULAR.has(name)
+                      ? "text-[0.8125rem] font-extrabold text-brand-text"
+                      : "text-xs text-brand-body",
+                  ]}
+                  style={`border-color:${t.color}55`}
+                >
+                  {name}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      }
+    </div>
+  </section>
 </BaseLayout>

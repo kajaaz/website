@@ -2,8 +2,16 @@
   "name": "Prolog",
   "year": 1972,
   "paradigm": "logic-relational",
-  "typeSystem": "Untyped (terms are dynamically unified)",
-  "runtime": "Interpreted / WAM-compiled (SWI-Prolog, SICStus, GNU Prolog)",
+  "typeSystem": "Dynamically typed terms with no static type checking; unification operates on tagged terms such as atoms, numbers, variables, and compound terms.",
+  "runtime": "Typically compiled to implementation-specific virtual-machine instructions; some systems also compile to native code",
+  "runtimes": [
+    { "name": "Prolog VM (SWI / SICStus)", "kind": "bytecode-vm", "role": "Programs compile to implementation-specific virtual-machine code derived from or related to the Warren Abstract Machine." },
+    { "name": "GNU Prolog (native)", "kind": "native", "role": "Can compile programs to standalone native executables." }
+  ],
+  "compilers": [
+    { "name": "SWI-Prolog", "role": "Popular implementation with a virtual-machine compiler and rich libraries." },
+    { "name": "GNU Prolog", "role": "Compiles to native code." }
+  ],
   "concurrencyModel": "Implementation-dependent; SWI-Prolog supports native threads with message queues",
   "codeExample": {
     "lang": "prolog",

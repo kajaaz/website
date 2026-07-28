@@ -1,13 +1,31 @@
 {
   "name": "PHP",
   "year": 1995,
-  "paradigm": "object-oriented",
+  "paradigm": "multi-paradigm",
   "note": "Server-side scripting language for the web",
-  "typeSystem": "Dynamic, gradually typed; optional scalar type declarations",
-  "runtime": "Interpreted (Zend Engine), typically per-request",
+  "typeSystem": "Dynamic, with optional runtime-enforced declarations for parameters, returns, properties, and other constructs. Scalar calls are coercive by default; strict_types enables strict checking for most scalar parameter and return declarations.",
+  "typeSystemExample": {
+    "lang": "php",
+    "caption": "Generic max: no generics, uses union type hints (PHP 8+)",
+    "source": "<?php\nfunction max_of(int|float $a, int|float $b): int|float {\n    return $a >= $b ? $a : $b;\n}\n\necho max_of(3, 7) . \"\\n\";\necho max_of(1.5, 2.8) . \"\\n\";"
+  },
+  "runtime": "Compiled to Zend opcodes and executed by the Zend Engine, commonly in a per-request server model",
+  "runtimes": [
+    { "name": "Zend Engine", "kind": "bytecode-vm", "role": "Reference engine; compiles to opcodes executed per request." },
+    { "name": "OPcache + JIT (PHP 8+)", "kind": "jit", "role": "Caches opcodes and JIT-compiles hot paths." }
+  ],
+  "compilers": [
+    { "name": "php-src (Zend)", "role": "Reference compiler and runtime." }
+  ],
   "concurrencyModel": "Synchronous per request; Fibers (8.1+) and async extensions",
+  "concurrencyExample": {
+    "lang": "php",
+    "caption": "4 workers computing i*i via Fibers (PHP 8.1+)",
+    "source": "<?php\n$fibers = [];\nfor ($i = 0; $i < 4; $i++) {\n    $n = $i;\n    $fibers[] = new Fiber(function () use ($n) {\n        Fiber::suspend($n * $n);\n    });\n}\n\nforeach ($fibers as $f) {\n    echo $f->start() . ' ';\n}"
+  },
   "codeExample": {
     "lang": "php",
-    "source": "<?php\nfunction greet(string $name): string {\n    return \"hello, {$name}\";\n}\n\necho greet(\"world\");"
+    "caption": "Hello, World!",
+    "source": "<?php\necho \"Hello, World!\\n\";"
   }
 }

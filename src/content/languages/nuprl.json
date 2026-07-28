@@ -1,6 +1,6 @@
 {
-  "name": "NuPRL",
+  "name": "Nuprl",
   "year": 1984,
   "paradigm": "dependently-typed",
-  "note": "constructive type theory"
+  "note": "proof development system based on constructive computational type theory"
 }
