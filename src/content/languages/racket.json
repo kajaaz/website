@@ -1,6 +1,6 @@
 {
   "name": "Racket",
   "year": 1995,
-  "paradigm": "functional-impure",
+  "paradigm": "multi-paradigm",
   "note": "Scheme lineage; language-oriented"
 }

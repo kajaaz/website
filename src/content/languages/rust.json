@@ -2,11 +2,59 @@
   "name": "Rust",
   "year": 2015,
   "paradigm": "multi-paradigm",
-  "typeSystem": "Static, strong, inferred, affine types (ownership + borrowing)",
-  "runtime": "Compiled to native (LLVM), no GC, zero-cost abstractions",
-  "concurrencyModel": "Ownership prevents data races at compile time; async/await with Tokio/async-std; OS threads via std::thread",
+  "typeSystem": "Static, strong, inferred, with affine types. Ownership and borrowing let the compiler enforce memory and thread safety in safe Rust without a garbage collector; unsafe code can opt out of some checks.",
+  "typeSystemExample": {
+    "lang": "rust",
+    "caption": "Generic max with a trait bound on PartialOrd",
+    "source": "fn max<T: PartialOrd>(a: T, b: T) -> T {\n    if a >= b { a } else { b }\n}\n\nfn main() {\n    println!(\"{}\", max(3, 7));\n    println!(\"{}\", max(1.5, 2.8));\n}"
+  },
+  "runtime": "Usually compiled ahead-of-time via LLVM to native code, with no language VM or garbage collector. Programs may link the standard library's allocation, threading, and other platform support, or use no_std.",
+  "runtimes": [
+    {
+      "name": "Native (rustc + LLVM)",
+      "kind": "native",
+      "role": "Default backend: highly optimised machine code with zero-cost abstractions and no GC."
+    },
+    {
+      "name": "Native (rustc + Cranelift)",
+      "kind": "native",
+      "role": "Alternative backend focused on fast debug-build compile times rather than peak runtime speed."
+    },
+    {
+      "name": "WebAssembly (wasm32 targets)",
+      "kind": "wasm",
+      "role": "First-class WASM support for browsers, edge runtimes, and plugins."
+    },
+    {
+      "name": "Miri",
+      "kind": "interpreter",
+      "role": "Interpreter for Rust's mid-level IR that detects undefined behaviour in unsafe code."
+    }
+  ],
+  "compilers": [
+    { "name": "rustc", "role": "The official Rust compiler; uses LLVM by default." },
+    { "name": "rustc + Cranelift", "role": "Experimental nightly codegen backend aimed at faster debug builds." },
+    { "name": "gccrs", "role": "A Rust frontend for GCC, in development, widening platform reach." },
+    { "name": "mrustc", "role": "Independent compiler used mainly to bootstrap rustc from source." }
+  ],
+  "asyncRuntimes": [
+    { "name": "Tokio", "role": "Multi-threaded, work-stealing executor. The de-facto standard for server-side async Rust (HTTP, gRPC, databases)." },
+    { "name": "async-std", "role": "Mirrors the std API but async; multi-threaded executor with a familiar feel." },
+    { "name": "smol", "role": "Minimal, lightweight async runtime with a small API surface. Easy to embed." },
+    { "name": "Embassy", "role": "No-std async executor for embedded and bare-metal systems (ARM Cortex-M, RISC-V)." },
+    { "name": "Glommio", "role": "Thread-per-core executor using io_uring for high-throughput, low-latency I/O." },
+    { "name": "Compio", "role": "Completion-based async I/O (io_uring on Linux, IOCP on Windows, kqueue on macOS)." },
+    { "name": "Monoio", "role": "Thread-per-core io_uring-based executor from ByteDance, optimised for network services." }
+  ],
+  "concurrencyModel": "\"Fearless concurrency\": ownership and the Send/Sync traits prevent data races in safe Rust at compile time. OS threads are available via std::thread, plus async/await with pluggable executors (Tokio, smol, Embassy, etc.).",
+  "concurrencyExample": {
+    "lang": "rust",
+    "caption": "4 workers computing i*i in parallel via std::thread",
+    "source": "use std::thread;\n\nfn main() {\n    let handles: Vec<_> = (0..4)\n        .map(|i| thread::spawn(move || i * i))\n        .collect();\n\n    for h in handles {\n        print!(\"{} \", h.join().unwrap());\n    }\n}"
+  },
   "codeExample": {
     "lang": "rust",
-    "source": "use std::thread;\n\nfn main() {\n    let handles: Vec<_> = (0..4)\n        .map(|i| thread::spawn(move || {\n            println!(\"thread {i} running\");\n            i * i\n        }))\n        .collect();\n\n    for h in handles {\n        println!(\"result: {}\", h.join().unwrap());\n    }\n}"
+    "caption": "Hello, World!",
+    "source": "fn main() {\n    println!(\"Hello, World!\");\n}"
   }
 }

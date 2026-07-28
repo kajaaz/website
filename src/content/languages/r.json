@@ -3,8 +3,15 @@
   "year": 1993,
   "paradigm": "multi-paradigm",
   "note": "Statistics-focused language from the S lineage with a strong FP substrate",
-  "typeSystem": "Dynamic; vectors as the core type",
-  "runtime": "Interpreted; copy-on-modify semantics",
+  "typeSystem": "Dynamic. Atomic vectors and lists are fundamental data structures, and many operations use implicit vectorisation and coercion.",
+  "runtime": "GNU R evaluates expressions and can byte-compile functions; user-visible objects generally have copy-on-modify semantics",
+  "runtimes": [
+    { "name": "GNU R", "kind": "interpreter", "role": "Reference interpreter with an internal bytecode compiler." },
+    { "name": "FastR", "kind": "jit", "role": "GraalVM-based R implementation with a JIT." }
+  ],
+  "compilers": [
+    { "name": "GNU R", "role": "Reference implementation and bytecode compiler." }
+  ],
   "concurrencyModel": "Mostly single-threaded; parallel/future packages",
   "codeExample": {
     "lang": "r",

@@ -2,9 +2,19 @@
   "name": "OCaml",
   "year": 1996,
   "paradigm": "functional-impure",
-  "typeSystem": "Static, strong, inferred (Hindley-Milner), algebraic data types",
+  "typeSystem": "Static, strong, inferred (Hindley-Milner-based), algebraic data types",
   "runtime": "Compiled to native (ocamlopt) or bytecode (ocamlc), with GC",
-  "concurrencyModel": "OCaml 5: multicore via domains + effect handlers; pre-5: single-domain with Lwt/Async",
+  "runtimes": [
+    { "name": "Native (ocamlopt)", "kind": "native", "role": "Optimising native-code compiler for production builds." },
+    { "name": "Bytecode (ocamlrun)", "kind": "bytecode-vm", "role": "Portable bytecode run by the ocamlrun virtual machine." },
+    { "name": "js_of_ocaml", "kind": "transpile", "role": "Compiles OCaml bytecode to JavaScript for the web." }
+  ],
+  "compilers": [
+    { "name": "ocamlopt", "role": "Native-code compiler." },
+    { "name": "ocamlc", "role": "Bytecode compiler." },
+    { "name": "js_of_ocaml", "role": "Compiles to JavaScript." }
+  ],
+  "concurrencyModel": "OCaml 5: parallelism via domains; effect handlers support user-level schedulers; Lwt/Async provide cooperative concurrency",
   "codeExample": {
     "lang": "ocaml",
     "source": "let rec fib = function\n  | 0 -> 0\n  | 1 -> 1\n  | n -> fib (n - 1) + fib (n - 2)\n\nlet () =\n  List.init 10 Fun.id\n  |> List.map fib\n  |> List.iter (Printf.printf \"%d \")\n  |> print_newline"

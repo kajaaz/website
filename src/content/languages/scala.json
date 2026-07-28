@@ -5,9 +5,18 @@
   "note": "Explicit OO/FP fusion on the JVM",
   "typeSystem": "Static, strong, inferred; higher-kinded types",
   "runtime": "JVM bytecode (also Scala.js and Scala Native); garbage-collected",
+  "runtimes": [
+    { "name": "JVM (HotSpot)", "kind": "jit", "role": "Primary target with full Java interop." },
+    { "name": "Scala.js", "kind": "transpile", "role": "Compiles to JavaScript for the browser." },
+    { "name": "Scala Native (LLVM)", "kind": "native", "role": "AOT to native code for fast startup." }
+  ],
+  "compilers": [
+    { "name": "Scala 2 compiler (scalac)", "role": "Official compiler for Scala 2." },
+    { "name": "Scala 3 compiler (Dotty)", "role": "Official compiler for Scala 3, invoked via scalac." }
+  ],
   "concurrencyModel": "Futures, Akka actors, effect systems (cats-effect, ZIO)",
   "codeExample": {
     "lang": "scala",
-    "source": "import scala.concurrent.Future\nimport scala.concurrent.ExecutionContext.Implicits.global\n\n@main def run() =\n  Future { println(\"hello from future\") }"
+    "source": "import scala.concurrent.{Await, Future}\nimport scala.concurrent.duration.Duration\nimport scala.concurrent.ExecutionContext.Implicits.global\n\n@main def run() =\n  Await.result(Future { println(\"hello from future\") }, Duration.Inf)"
   }
 }

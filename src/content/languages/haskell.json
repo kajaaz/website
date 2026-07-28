@@ -2,8 +2,18 @@
   "name": "Haskell",
   "year": 1990,
   "paradigm": "functional-pure",
-  "typeSystem": "Static, strong, inferred (Hindley-Milner), type classes, lazy evaluation",
+  "note": "Pure functional language with non-strict (lazy) evaluation",
+  "typeSystem": "Static, strong, inferred (Hindley-Milner-based), type classes",
   "runtime": "Compiled to native (GHC), with RTS providing GC and green threads",
+  "runtimes": [
+    { "name": "Native (GHC RTS)", "kind": "native", "role": "AOT compiled; the runtime provides GC and lightweight green threads." },
+    { "name": "GHCi", "kind": "interpreter", "role": "Interactive environment that can execute interpreted bytecode and loaded object code." },
+    { "name": "WebAssembly (GHC wasm backend)", "kind": "wasm", "role": "Emerging support for compiling Haskell to WASM." }
+  ],
+  "compilers": [
+    { "name": "GHC", "role": "The Glasgow Haskell Compiler; the de-facto standard." },
+    { "name": "GHC (LLVM backend)", "role": "Alternative native-code generator built on LLVM." }
+  ],
   "concurrencyModel": "Lightweight green threads (forkIO), STM (Software Transactional Memory), sparks for parallelism",
   "codeExample": {
     "lang": "haskell",

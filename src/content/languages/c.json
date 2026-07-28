@@ -2,11 +2,46 @@
   "name": "C",
   "year": 1972,
   "paradigm": "imperative-procedural",
-  "typeSystem": "Static, weak, manifest",
-  "runtime": "Compiled to native (GCC, Clang, MSVC)",
-  "concurrencyModel": "POSIX threads (pthreads), manual memory shared-state",
+  "typeSystem": "Static and manifest, with many implicit arithmetic conversions and explicit pointer casts. C provides limited memory safety, and casts do not override rules such as alignment, object lifetime, and effective type.",
+  "typeSystemExample": {
+    "lang": "c",
+    "caption": "Generic max: no generics, so a macro is the closest equivalent",
+    "source": "#include <stdio.h>\n\n#define max(a, b) ((a) > (b) ? (a) : (b))\n\nint main(void) {\n    printf(\"%d\\n\", max(3, 7));\n    printf(\"%f\\n\", max(1.5, 2.8));\n    return 0;\n}"
+  },
+  "runtime": "Compiled ahead-of-time to native machine code; no managed runtime or garbage collector.",
+  "runtimes": [
+    {
+      "name": "Native (GCC / Clang / MSVC)",
+      "kind": "native",
+      "role": "Standard path: compiled directly to the target CPU's machine code and linked with startup code and, in hosted environments, a C standard library."
+    },
+    {
+      "name": "WebAssembly (Emscripten / clang --target=wasm32)",
+      "kind": "wasm",
+      "role": "Compiles C to WASM so it can run in browsers and WASM runtimes like Wasmtime."
+    },
+    {
+      "name": "TCC -run",
+      "kind": "native",
+      "role": "Tiny C Compiler can compile to memory and immediately execute the resulting native code."
+    }
+  ],
+  "compilers": [
+    { "name": "GCC", "role": "GNU Compiler Collection; a widely used C toolchain on Linux and embedded targets." },
+    { "name": "Clang", "role": "LLVM-based frontend with fast compiles and excellent diagnostics." },
+    { "name": "MSVC", "role": "Microsoft's compiler, the standard toolchain on Windows." },
+    { "name": "TCC", "role": "Tiny C Compiler; extremely fast, can compile and run in one step." },
+    { "name": "ICX", "role": "Intel's LLVM-based compiler tuned for x86 performance." }
+  ],
+  "concurrencyModel": "C11 defines a concurrency memory model, atomics, and an optional <threads.h> API. Programs also commonly use platform APIs such as POSIX threads; shared-state synchronisation remains explicit.",
+  "concurrencyExample": {
+    "lang": "c",
+    "caption": "4 workers computing i*i in parallel via pthreads",
+    "source": "#include <pthread.h>\n#include <stdio.h>\n\nlong indices[4];\nlong results[4];\n\nvoid *square(void *arg) {\n    long i = *(long *)arg;\n    results[i] = i * i;\n    return NULL;\n}\n\nint main(void) {\n    pthread_t t[4];\n    for (long i = 0; i < 4; i++) {\n        indices[i] = i;\n        pthread_create(&t[i], NULL, square, &indices[i]);\n    }\n    for (int i = 0; i < 4; i++)\n        pthread_join(t[i], NULL);\n    for (int i = 0; i < 4; i++)\n        printf(\"%ld \", results[i]);\n    return 0;\n}"
+  },
   "codeExample": {
     "lang": "c",
-    "source": "#include <stdio.h>\n\nint main(void) {\n    for (int i = 0; i < 10; i++) {\n        printf(\"Hello %d\\n\", i);\n    }\n    return 0;\n}"
+    "caption": "Hello, World!",
+    "source": "#include <stdio.h>\n\nint main(void) {\n    printf(\"Hello, World!\\n\");\n    return 0;\n}"
   }
 }

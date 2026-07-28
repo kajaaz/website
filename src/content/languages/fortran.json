@@ -2,9 +2,17 @@
   "name": "Fortran",
   "year": 1957,
   "paradigm": "imperative-procedural",
-  "typeSystem": "Static, strong, manifest",
+  "typeSystem": "Static, with intrinsic and user-defined types. Declarations may be explicit, or implicitly inferred from a name unless IMPLICIT NONE disables implicit typing; numeric assignments can perform implicit conversions.",
   "runtime": "Compiled to native (GCC/GFortran, Intel Fortran)",
-  "concurrencyModel": "Coarray Fortran (SPMD), OpenMP directives",
+  "runtimes": [
+    { "name": "Native (gfortran / ifx / flang)", "kind": "native", "role": "AOT compiled; excels at numerical and high-performance computing." }
+  ],
+  "compilers": [
+    { "name": "gfortran", "role": "GCC's Fortran compiler." },
+    { "name": "LLVM Flang", "role": "LLVM-based Fortran compiler." },
+    { "name": "Intel ifx", "role": "Intel's optimising Fortran compiler." }
+  ],
+  "concurrencyModel": "The standard coarray/image model supports SPMD parallelism; OpenMP directives and MPI are also common external approaches.",
   "codeExample": {
     "lang": "fortran",
     "source": "program hello\n  implicit none\n  integer :: i\n  do i = 1, 10\n    print *, 'Iteration', i\n  end do\nend program hello"

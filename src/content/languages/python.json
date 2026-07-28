@@ -2,11 +2,57 @@
   "name": "Python",
   "year": 1991,
   "paradigm": "multi-paradigm",
-  "typeSystem": "Dynamic, strong, duck-typed (optional type hints)",
-  "runtime": "Interpreted bytecode (CPython), JIT (PyPy), compiled (Cython)",
-  "concurrencyModel": "GIL-constrained threads, multiprocessing, asyncio coroutines",
+  "typeSystem": "Dynamic, strong, duck-typed. Types are checked at runtime, but optional type hints (PEP 484) let external tools like mypy or Pyright check code statically without changing execution.",
+  "typeSystemExample": {
+    "lang": "python",
+    "caption": "Generic max: duck-typed, with optional type hints",
+    "source": "from typing import TypeVar\n\nT = TypeVar(\"T\", int, float, str)\n\ndef max_of(a: T, b: T) -> T:\n    return a if a >= b else b\n\nprint(max_of(3, 7))\nprint(max_of(1.5, 2.8))"
+  },
+  "runtime": "CPython compiles source to bytecode executed by its virtual machine. PyPy adds a tracing JIT, while Cython and Nuitka use C/C++ toolchains to produce native extension modules or executables.",
+  "runtimes": [
+    {
+      "name": "CPython",
+      "kind": "bytecode-vm",
+      "role": "Reference implementation: compiles to bytecode run by a stack-based VM."
+    },
+    {
+      "name": "PyPy",
+      "kind": "jit",
+      "role": "Alternative Python implementation with a tracing JIT."
+    },
+    {
+      "name": "Cython / Nuitka",
+      "kind": "native",
+      "role": "Cython translates Python-like, optionally annotated code to C for extension modules; Nuitka translates Python programs to C and builds extension modules or executables."
+    },
+    {
+      "name": "MicroPython",
+      "kind": "bytecode-vm",
+      "role": "Compiles to MicroPython bytecode executed by its VM by default, with optional native emitters."
+    }
+  ],
+  "compilers": [
+    { "name": "CPython", "role": "Reference bytecode compiler and virtual machine." },
+    { "name": "PyPy", "role": "RPython-based implementation with a just-in-time compiler." },
+    { "name": "Cython", "role": "Compiles annotated Python to C for native extension modules." },
+    { "name": "Nuitka", "role": "Whole-program compiler translating Python to C-level code." },
+    { "name": "mypyc", "role": "Compiles type-annotated Python to fast C extensions." }
+  ],
+  "asyncRuntimes": [
+    { "name": "asyncio", "role": "Standard library event loop for cooperative async I/O (the default for async/await)." },
+    { "name": "uvloop", "role": "Drop-in asyncio replacement built on libuv; 2-4x faster than the default loop." },
+    { "name": "Trio", "role": "Structured concurrency library with strict task management and clear cancellation semantics." },
+    { "name": "AnyIO", "role": "Compatibility layer that runs the same async code on asyncio or Trio." }
+  ],
+  "concurrencyModel": "In standard GIL-enabled CPython builds, one thread executes Python bytecode at a time, though threads can overlap I/O; multiprocessing is commonly used for CPU parallelism. asyncio provides cooperative concurrency, usually on one event-loop thread.",
+  "concurrencyExample": {
+    "lang": "python",
+    "caption": "4 cooperatively scheduled tasks computing i*i via asyncio",
+    "source": "import asyncio\n\nasync def square(n: int) -> int:\n    await asyncio.sleep(0)\n    return n * n\n\nasync def main():\n    results = await asyncio.gather(*(square(i) for i in range(4)))\n    print(*results)\n\nasyncio.run(main())"
+  },
   "codeExample": {
     "lang": "python",
-    "source": "import asyncio\n\nasync def greet(name: str) -> str:\n    await asyncio.sleep(0.1)\n    return f\"Hello, {name}!\"\n\nasync def main():\n    result = await greet(\"world\")\n    print(result)\n\nasyncio.run(main())"
+    "caption": "Hello, World!",
+    "source": "print(\"Hello, World!\")"
   }
 }

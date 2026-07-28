@@ -4,10 +4,29 @@
   "paradigm": "multi-paradigm",
   "note": "Small embeddable language with closures and coroutines",
   "typeSystem": "Dynamic, strong; tables as the core data structure",
-  "runtime": "Register-based bytecode VM; incremental garbage collector",
+  "typeSystemExample": {
+    "lang": "lua",
+    "caption": "Generic max: dynamic typing, no annotations",
+    "source": "function max_of(a, b)\n  if a >= b then return a else return b end\nend\n\nprint(max_of(3, 7))\nprint(max_of(1.5, 2.8))"
+  },
+  "runtime": "Register-based bytecode VM; modern PUC-Lua versions provide incremental and generational garbage-collection modes",
+  "runtimes": [
+    { "name": "PUC-Lua", "kind": "bytecode-vm", "role": "Reference register-based bytecode virtual machine." },
+    { "name": "LuaJIT", "kind": "jit", "role": "Lua 5.1-compatible implementation with a tracing JIT compiler." }
+  ],
+  "compilers": [
+    { "name": "luac", "role": "Compiles Lua source to bytecode." },
+    { "name": "LuaJIT", "role": "JIT-compiling implementation." }
+  ],
   "concurrencyModel": "Cooperative coroutines",
+  "concurrencyExample": {
+    "lang": "lua",
+    "caption": "4 workers computing i*i via cooperative coroutines",
+    "source": "local results = {}\n\nfor i = 0, 3 do\n  local co = coroutine.create(function(n)\n    coroutine.yield(n * n)\n  end)\n  local _, val = coroutine.resume(co, i)\n  results[#results + 1] = val\nend\n\nprint(table.concat(results, \" \"))"
+  },
   "codeExample": {
     "lang": "lua",
-    "source": "local co = coroutine.create(function()\n  print(\"hello from coroutine\")\nend)\n\ncoroutine.resume(co)"
+    "caption": "Hello, World!",
+    "source": "print(\"Hello, World!\")"
   }
 }

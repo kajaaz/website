@@ -1,13 +1,39 @@
 {
   "name": "C#",
   "year": 2000,
-  "paradigm": "object-oriented",
+  "paradigm": "multi-paradigm",
   "note": "OO core that became increasingly functional over time",
   "typeSystem": "Static, strong, nominal; local type inference with var",
+  "typeSystemExample": {
+    "lang": "csharp",
+    "caption": "Generic max with an IComparable constraint",
+    "source": "T Max<T>(T a, T b) where T : IComparable<T>\n    => a.CompareTo(b) >= 0 ? a : b;\n\nConsole.WriteLine(Max(3, 7));\nConsole.WriteLine(Max(1.5, 2.8));"
+  },
   "runtime": ".NET CLR (JIT and AOT), garbage-collected",
+  "runtimes": [
+    { "name": ".NET runtime (CoreCLR/RyuJIT)", "kind": "jit", "role": "Primary modern .NET runtime; JIT-compiles CIL bytecode to native code." },
+    { "name": "Native AOT", "kind": "native", "role": "Ahead-of-time compiles to a self-contained native binary." },
+    { "name": "Mono", "kind": "jit", "role": "Cross-platform runtime used by Unity and mobile targets." },
+    { "name": "Blazor WebAssembly", "kind": "wasm", "role": "Runs .NET in the browser via WebAssembly." }
+  ],
+  "compilers": [
+    { "name": "Roslyn (csc)", "role": "Reference compiler; C# source to CIL bytecode." },
+    { "name": "ILC (Native AOT)", "role": "Compiles CIL to native machine code ahead of time." }
+  ],
+  "asyncRuntimes": [
+    { "name": ".NET ThreadPool", "role": "Default scheduler: tasks run on a managed thread pool with work-stealing." },
+    { "name": "ASP.NET Core Kestrel", "role": "High-performance async I/O pipeline for web servers, built on System.IO.Pipelines." },
+    { "name": "MAUI / WPF Dispatcher", "role": "UI-thread SynchronizationContext for desktop and mobile apps." }
+  ],
   "concurrencyModel": "Threads + Task-based async/await (TPL)",
+  "concurrencyExample": {
+    "lang": "csharp",
+    "caption": "4 workers computing i*i in parallel via Task.WhenAll",
+    "source": "var tasks = Enumerable.Range(0, 4)\n    .Select(i => Task.Run(() => i * i))\n    .ToArray();\n\nvar results = await Task.WhenAll(tasks);\nConsole.WriteLine(string.Join(\" \", results));"
+  },
   "codeExample": {
     "lang": "csharp",
-    "source": "using System;\nusing System.Threading.Tasks;\n\nclass Program {\n    static async Task Main() {\n        await Task.Run(() => Console.WriteLine(\"hello from task\"));\n    }\n}"
+    "caption": "Hello, World!",
+    "source": "Console.WriteLine(\"Hello, World!\");"
   }
 }

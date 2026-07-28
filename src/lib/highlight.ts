@@ -1,4 +1,5 @@
 import { createHighlighter, type Highlighter, type BundledLanguage } from "shiki";
+import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
 
 let highlighterPromise: Promise<Highlighter> | null = null;
 
@@ -31,9 +32,15 @@ const LANG_LIST: BundledLanguage[] = [
 
 function getHighlighter(): Promise<Highlighter> {
   if (!highlighterPromise) {
+    // Use the pure-JS RegExp engine instead of the default oniguruma WASM
+    // engine. The WASM engine intermittently crashes with "memory access out
+    // of bounds" when many large grammars (C++, Lisp, ...) are re-highlighted
+    // on every dev HMR reload. `forgiving` skips any TextMate rule the JS
+    // engine cannot translate rather than throwing.
     highlighterPromise = createHighlighter({
       themes: ["github-dark"],
       langs: LANG_LIST,
+      engine: createJavaScriptRegexEngine({ forgiving: true }),
     });
   }
   return highlighterPromise;

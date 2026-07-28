@@ -1,6 +1,6 @@
 {
   "name": "Leo",
-  "year": 2021,
-  "paradigm": "multi-paradigm",
+  "year": 2020,
+  "paradigm": "imperative-procedural",
   "note": "ZK circuits; Rust-inspired"
 }

@@ -3,11 +3,23 @@
   "year": 1977,
   "paradigm": "imperative-procedural",
   "note": "The Unix shell as a scripting language for gluing processes",
-  "typeSystem": "Untyped; every value is a string",
-  "runtime": "Interpreted by the shell; spawns external processes",
+  "typeSystem": "Untyped: shell parameters hold strings, while commands also produce integer exit statuses and the language has special arithmetic and test contexts.",
+  "runtime": "Parsed and executed by a shell, which handles built-ins and control flow and launches external programs",
+  "runtimes": [
+    { "name": "POSIX shell (for example dash or bash in POSIX mode)", "kind": "interpreter", "role": "Parses shell programs, executes built-ins and control flow, and launches external commands." }
+  ],
+  "compilers": [
+    { "name": "bash / dash / zsh", "role": "Shell interpreters that parse and execute shell scripts." }
+  ],
   "concurrencyModel": "Process-level: pipes, background jobs (&), wait",
+  "concurrencyExample": {
+    "lang": "bash",
+    "caption": "4 workers computing i*i in parallel via background jobs",
+    "source": "#!/bin/sh\nfor i in 0 1 2 3; do\n  echo $((i * i)) &\ndone\nwait"
+  },
   "codeExample": {
     "lang": "bash",
-    "source": "greet() {\n  echo \"hello, $1\"\n}\n\ngreet world"
+    "caption": "Hello, World!",
+    "source": "echo \"Hello, World!\""
   }
 }

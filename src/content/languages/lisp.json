@@ -4,6 +4,14 @@
   "paradigm": "functional-impure",
   "typeSystem": "Dynamic, strong",
   "runtime": "Interpreted or compiled (SBCL, CLISP, various implementations)",
+  "runtimes": [
+    { "name": "SBCL", "kind": "native", "role": "Common Lisp implementation that compiles to native code." },
+    { "name": "CLISP", "kind": "bytecode-vm", "role": "Portable bytecode implementation." }
+  ],
+  "compilers": [
+    { "name": "SBCL", "role": "Steel Bank Common Lisp; native-code compiler." },
+    { "name": "CCL", "role": "Clozure CL; another native-code compiler." }
+  ],
   "concurrencyModel": "Implementation-dependent; SBCL supports native threads; historically single-threaded",
   "codeExample": {
     "lang": "lisp",

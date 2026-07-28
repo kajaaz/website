@@ -1,6 +1,6 @@
 {
   "name": "ACL2",
   "year": 1990,
-  "paradigm": "dependently-typed",
-  "note": "first-order; heavily automated"
+  "paradigm": "functional-pure",
+  "note": "untyped applicative Common Lisp with automated first-order theorem proving"
 }

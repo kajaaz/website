@@ -3,7 +3,14 @@
   "year": 1989,
   "paradigm": "dependently-typed",
   "typeSystem": "Dependent types, Calculus of Inductive Constructions",
-  "runtime": "Proof assistant (terms extracted to OCaml, Haskell, or Scheme)",
+  "runtime": "The Coq/Rocq kernel checks proof terms and evaluators reduce terms inside the proof assistant; extracted programs can run through OCaml, Haskell, or Scheme toolchains",
+  "runtimes": [
+    { "name": "Coq/Rocq evaluator and proof kernel", "kind": "interpreter", "role": "Evaluators reduce terms for commands such as Compute, while the trusted kernel type-checks proof terms." },
+    { "name": "Extraction (OCaml/Haskell/Scheme)", "kind": "transpile", "role": "Extracts verified code to a host language so it can actually run." }
+  ],
+  "compilers": [
+    { "name": "coqc", "role": "Compiles and checks Coq/Rocq developments." }
+  ],
   "concurrencyModel": "N/A (proof assistant; extracted code inherits target language's model)",
   "codeExample": {
     "lang": "coq",

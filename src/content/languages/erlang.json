@@ -3,8 +3,15 @@
   "year": 1986,
   "paradigm": "functional-impure",
   "typeSystem": "Dynamic, strong",
-  "runtime": "BEAM VM (bytecode interpreted + JIT in OTP 25+)",
-  "concurrencyModel": "Actor model: lightweight processes with message passing, preemptive scheduling, no shared memory",
+  "runtime": "BEAM VM (bytecode execution, with a JIT available since OTP 24)",
+  "runtimes": [
+    { "name": "BEAM VM", "kind": "bytecode-vm", "role": "The Erlang virtual machine, built for massive concurrency and fault tolerance." },
+    { "name": "BEAM JIT (OTP 24+)", "kind": "jit", "role": "Translates BEAM instructions to native code as modules are loaded rather than using an adaptive hot-path optimiser." }
+  ],
+  "compilers": [
+    { "name": "erlc", "role": "Compiles Erlang source to BEAM bytecode." }
+  ],
+  "concurrencyModel": "Actor-style lightweight processes with isolated ordinary heaps, asynchronous message passing, and preemptive scheduling. Facilities such as ETS provide explicitly shared runtime-managed storage.",
   "codeExample": {
     "lang": "erlang",
     "source": "-module(hello).\n-export([start/0]).\n\nstart() ->\n    Pid = spawn(fun() -> loop() end),\n    Pid ! {self(), \"Hello!\"},\n    receive\n        {Pid, Reply} -> io:format(\"Got: ~s~n\", [Reply])\n    end.\n\nloop() ->\n    receive\n        {From, Msg} -> From ! {self(), Msg ++ \" World\"}\n    end."

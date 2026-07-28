@@ -1,5 +1,6 @@
 {
   "name": "Ada",
   "year": 1980,
-  "paradigm": "imperative-procedural"
+  "paradigm": "multi-paradigm",
+  "note": "DoD language for large-scale and real-time systems; revised standard published as Ada 83"
 }

@@ -2,5 +2,5 @@
   "name": "Caml",
   "year": 1985,
   "paradigm": "functional-impure",
-  "note": "INRIA ML lineage"
+  "note": "INRIA ML dialect; its first complete implementation was released in 1987"
 }

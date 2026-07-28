@@ -1,13 +1,35 @@
 {
   "name": "C++",
   "year": 1983,
-  "paradigm": "object-oriented",
-  "note": "Multi-paradigm systems language layered on top of C",
+  "paradigm": "multi-paradigm",
+  "note": "Multi-paradigm systems language that evolved from C with Classes",
   "typeSystem": "Static, strong, nominal; templates for generics",
-  "runtime": "Compiled to native; no managed runtime (RAII, manual/ smart-pointer memory)",
-  "concurrencyModel": "OS threads (std::thread), atomics, coroutines (C++20)",
+  "typeSystemExample": {
+    "lang": "cpp",
+    "caption": "Generic max via a function template",
+    "source": "#include <iostream>\n\ntemplate <typename T>\nT max_of(T a, T b) {\n    return a >= b ? a : b;\n}\n\nint main() {\n    std::cout << max_of(3, 7) << '\\n';\n    std::cout << max_of(1.5, 2.8) << '\\n';\n}"
+  },
+  "runtime": "Compiled to native; no managed runtime (RAII, manual/smart-pointer memory)",
+  "runtimes": [
+    { "name": "Native (GCC / Clang / MSVC)", "kind": "native", "role": "Standard path: AOT compiled to machine code with no VM or GC." },
+    { "name": "WebAssembly (Emscripten)", "kind": "wasm", "role": "Compiles C++ to WASM for browsers and WASM runtimes." },
+    { "name": "Cling", "kind": "interpreter", "role": "Interactive C++ interpreter from CERN, used for REPLs and notebooks." }
+  ],
+  "compilers": [
+    { "name": "GCC (g++)", "role": "Widely used GNU C++ compiler, especially on Linux." },
+    { "name": "Clang", "role": "LLVM frontend with fast builds and great diagnostics." },
+    { "name": "MSVC", "role": "Microsoft's compiler, standard on Windows." },
+    { "name": "Intel ICX", "role": "LLVM-based compiler tuned for x86 performance." }
+  ],
+  "concurrencyModel": "OS threads (std::thread), atomics, and C++20 stackless coroutines (scheduling is library-provided)",
+  "concurrencyExample": {
+    "lang": "cpp",
+    "caption": "4 workers computing i*i in parallel via std::thread",
+    "source": "#include <iostream>\n#include <thread>\n#include <vector>\n\nint main() {\n    int results[4];\n    std::vector<std::thread> threads;\n    for (int i = 0; i < 4; i++)\n        threads.emplace_back([&results, i] { results[i] = i * i; });\n    for (auto& t : threads) t.join();\n    for (int r : results) std::cout << r << ' ';\n}"
+  },
   "codeExample": {
     "lang": "cpp",
-    "source": "#include <iostream>\n#include <thread>\n\nvoid greet() { std::cout << \"hello from thread\\n\"; }\n\nint main() {\n    std::thread t(greet);\n    t.join();\n}"
+    "caption": "Hello, World!",
+    "source": "#include <iostream>\n\nint main() {\n    std::cout << \"Hello, World!\" << std::endl;\n}"
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "Dafny",
   "year": 2009,
-  "paradigm": "dependently-typed",
-  "note": "imperative surface; verification-oriented"
+  "paradigm": "multi-paradigm",
+  "note": "imperative, functional, and object-oriented; verification-oriented"
 }

@@ -51,6 +51,28 @@ export const BAND_META: Record<
   },
 };
 
+export interface CodeExample {
+  lang: string;
+  source: string;
+  caption?: string;
+}
+
+export interface RuntimeInfo {
+  name: string;
+  kind: string;
+  role: string;
+}
+
+export interface CompilerInfo {
+  name: string;
+  role: string;
+}
+
+export interface AsyncRuntimeInfo {
+  name: string;
+  role: string;
+}
+
 export interface LanguageEntry {
   id: string;
   name: string;
@@ -58,9 +80,14 @@ export interface LanguageEntry {
   paradigm: Paradigm;
   note?: string;
   typeSystem?: string;
+  typeSystemExample?: CodeExample;
   runtime?: string;
+  runtimes?: RuntimeInfo[];
+  compilers?: CompilerInfo[];
+  asyncRuntimes?: AsyncRuntimeInfo[];
   concurrencyModel?: string;
-  codeExample?: { lang: string; source: string };
+  concurrencyExample?: CodeExample;
+  codeExample?: CodeExample;
 }
 
 export interface ComputedLanguage extends LanguageEntry {
@@ -68,6 +95,8 @@ export interface ComputedLanguage extends LanguageEntry {
   band: number;
   lane: number;
   codeHtml: string;
+  typeSystemHtml: string;
+  concurrencyHtml: string;
   popular: boolean;
   hasDetail: boolean;
 }
@@ -84,8 +113,8 @@ export interface TimelineConfig {
 
 const DEFAULT_CONFIG: TimelineConfig = {
   plotWidth: 1100,
-  paddingLeft: 150,
-  paddingRight: 24,
+  paddingLeft: 110,
+  paddingRight: 60,
   laneHeight: 17,
   bandGap: 0,
   yearMin: 1955,
@@ -151,13 +180,17 @@ export function computeTimeline(
         band: bandIndex,
         lane: assignedLane,
         codeHtml: "",
+        typeSystemHtml: "",
+        concurrencyHtml: "",
         popular: false,
         hasDetail: Boolean(
           lang.typeSystem ||
             lang.runtime ||
             lang.concurrencyModel ||
             lang.codeExample ||
-            lang.note,
+            lang.note ||
+            lang.runtimes?.length ||
+            lang.compilers?.length,
         ),
       });
     }

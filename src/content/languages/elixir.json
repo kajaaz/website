@@ -1,6 +1,6 @@
 {
   "name": "Elixir",
-  "year": 2011,
+  "year": 2012,
   "paradigm": "functional-impure",
-  "note": "BEAM; Erlang semantics"
+  "note": "functional, concurrent language on BEAM; interoperates with Erlang"
 }

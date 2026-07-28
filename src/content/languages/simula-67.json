@@ -2,5 +2,5 @@
   "name": "Simula 67",
   "year": 1967,
   "paradigm": "object-oriented",
-  "note": "first OO language"
+  "note": "classes, inheritance, and virtual procedures"
 }

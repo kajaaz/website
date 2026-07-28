@@ -1,6 +1,6 @@
 {
   "name": "Isabelle",
   "year": 1986,
-  "paradigm": "dependently-typed",
-  "note": "generic proof assistant (HOL)"
+  "paradigm": "multi-paradigm",
+  "note": "generic theorem prover supporting multiple object logics; Isabelle/HOL is its most-used instance"
 }

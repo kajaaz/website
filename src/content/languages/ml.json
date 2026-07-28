@@ -2,5 +2,5 @@
   "name": "ML",
   "year": 1973,
   "paradigm": "functional-impure",
-  "note": "type inference; refs and exceptions"
+  "note": "Edinburgh LCF metalanguage with polymorphic type inference, assignment, and exceptions"
 }

@@ -1,12 +1,33 @@
 {
   "name": "Java",
   "year": 1995,
-  "paradigm": "object-oriented",
-  "typeSystem": "Static, strong, manifest with generics",
+  "paradigm": "multi-paradigm",
+  "typeSystem": "Static, strong, nominal; generics and local type inference with var",
+  "typeSystemExample": {
+    "lang": "java",
+    "caption": "Generic max with a Comparable bound",
+    "source": "public class Main {\n    static <T extends Comparable<T>> T max(T a, T b) {\n        return a.compareTo(b) >= 0 ? a : b;\n    }\n\n    public static void main(String[] args) {\n        System.out.println(max(3, 7));\n        System.out.println(max(1.5, 2.8));\n    }\n}"
+  },
   "runtime": "JVM bytecode (HotSpot, GraalVM, OpenJ9)",
-  "concurrencyModel": "OS threads + synchronized blocks, java.util.concurrent, virtual threads (Project Loom)",
+  "runtimes": [
+    { "name": "JVM (HotSpot)", "kind": "jit", "role": "Reference VM; interprets bytecode then JIT-compiles hot methods with C1/C2." },
+    { "name": "GraalVM native-image", "kind": "native", "role": "Ahead-of-time compiles a program to a standalone native binary with fast startup." },
+    { "name": "Eclipse OpenJ9", "kind": "jit", "role": "Alternative JVM tuned for low memory footprint and quick startup." }
+  ],
+  "compilers": [
+    { "name": "javac", "role": "Reference compiler; Java source to JVM bytecode." },
+    { "name": "ecj", "role": "Eclipse compiler used for incremental IDE builds." },
+    { "name": "GraalVM native-image", "role": "AOT compiler producing native executables." }
+  ],
+  "concurrencyModel": "Platform and virtual threads, synchronized blocks, and java.util.concurrent",
+  "concurrencyExample": {
+    "lang": "java",
+    "caption": "4 workers computing i*i in parallel via virtual threads",
+    "source": "import java.util.concurrent.*;\nimport java.util.stream.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        try (var exec = Executors.newVirtualThreadPerTaskExecutor()) {\n            var futures = IntStream.range(0, 4)\n                .mapToObj(i -> exec.submit(() -> i * i))\n                .toList();\n            for (var f : futures)\n                System.out.print(f.get() + \" \");\n        }\n    }\n}"
+  },
   "codeExample": {
     "lang": "java",
-    "source": "import java.util.stream.IntStream;\n\npublic class Main {\n    public static void main(String[] args) {\n        IntStream.range(0, 10)\n            .forEach(i -> System.out.println(\"Hello \" + i));\n    }\n}"
+    "caption": "Hello, World!",
+    "source": "public class Main {\n    public static void main(String[] args) {\n        System.out.println(\"Hello, World!\");\n    }\n}"
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "HOL",
   "year": 1988,
-  "paradigm": "dependently-typed",
-  "note": "higher-order logic"
+  "paradigm": "multi-paradigm",
+  "note": "interactive theorem prover for simply typed higher-order logic; ML metalanguage"
 }

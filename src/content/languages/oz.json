@@ -1,6 +1,6 @@
 {
   "name": "Oz",
   "year": 1991,
-  "paradigm": "logic-relational",
+  "paradigm": "multi-paradigm",
   "note": "multi-paradigm constraint language"
 }

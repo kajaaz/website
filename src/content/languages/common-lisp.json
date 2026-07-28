@@ -1,6 +1,6 @@
 {
   "name": "Common Lisp",
   "year": 1984,
-  "paradigm": "functional-impure",
-  "note": "multi-paradigm in practice"
+  "paradigm": "multi-paradigm",
+  "note": "Lisp dialect combining functional, procedural, and object-oriented programming"
 }
