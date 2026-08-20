@@ -1,0 +1,942 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { highlightCode } from "../lib/highlight";
+import RuntimeCompare from "../components/RuntimeCompare.svelte";
+
+const runtimeSnippets = [
+  {
+    runtime: "Python asyncio",
+    lang: "python",
+    accent: "#3B82F6",
+    note: "Single-threaded event loop. asyncio.Event for signalling, create_task for fan-out, gather to join.",
+    simpleDiff:
+      "One event loop on one thread. async def marks a coroutine; gather runs them concurrently but never truly in parallel (the GIL). The simplest mental model of the five.",
+    simpleSource: `import asyncio
+
+async def worker(i: int) -> int:
+    return i * i                       # a trivial async task
+
+async def main() -> None:
+    # create_task schedules them; gather awaits all, in order
+    tasks = [asyncio.create_task(worker(i)) for i in range(4)]
+    results = await asyncio.gather(*tasks)
+    print(results)                     # [0, 1, 4, 9]
+
+asyncio.run(main())                    # starts + drives the loop`,
+    diff:
+      "Wakeup uses asyncio.Event: you must clear() it yourself after each wait(). Fan-out is create_task + gather; everything shares one thread, so no locks are needed.",
+    source: `import asyncio
+
+class OutboxRelayWorker:
+    def __init__(self, worker_count: int = 4):
+        self._worker_count = worker_count
+
+    async def _listen_loop(self, wakeup: asyncio.Event) -> None:
+        while True:
+            await asyncio.sleep(1)      # stand-in for pg LISTEN/NOTIFY
+            wakeup.set()                # wake every waiter at once
+
+    async def _relay_loop(self, wakeup: asyncio.Event) -> None:
+        while True:
+            await wakeup.wait()         # suspend until signalled
+            wakeup.clear()              # must reset the flag manually
+            print("relaying outbox batch...")
+
+    async def run(self) -> None:
+        wakeup = asyncio.Event()
+        # create_task schedules coroutines on the single event loop
+        tasks = [
+            asyncio.create_task(self._listen_loop(wakeup), name="listen"),
+            *[
+                asyncio.create_task(self._relay_loop(wakeup), name=f"relay-{i}")
+                for i in range(self._worker_count)
+            ],
+        ]
+        await asyncio.gather(*tasks)    # join all tasks
+
+asyncio.run(OutboxRelayWorker().run())`,
+  },
+  {
+    runtime: "Rust / Tokio",
+    lang: "rust",
+    accent: "#D97706",
+    note: "Multi-threaded work-stealing scheduler. tokio::sync::Notify for wakeup, tokio::spawn for fan-out, JoinSet to collect handles.",
+    simpleDiff:
+      "#[tokio::main] bootstraps a multi-thread runtime. spawn moves each task onto a thread pool, so they can run in real parallel; the trade-off is that tasks must be Send + 'static.",
+    simpleSource: `#[tokio::main]                       // sets up the async runtime
+async fn main() {
+    let mut handles = Vec::new();
+    for i in 0..4 {
+        // each worker is a lightweight task (~hundreds of bytes)
+        handles.push(tokio::spawn(async move { i * i }));
+    }
+    // .await yields instead of blocking the thread
+    let mut results = Vec::new();
+    for h in handles {
+        results.push(h.await.unwrap());
+    }
+    println!("{:?}", results); // [0, 1, 4, 9]
+}`,
+    diff:
+      "Notify is shared via Arc because tasks land on different threads. notified() needs no manual clear. JoinSet owns the spawned handles and lets you join them all in one loop.",
+    source: `use tokio::sync::Notify;
+use std::sync::Arc;
+
+// Notify is shared via Arc because tasks run on different threads
+async fn listen_loop(wakeup: Arc<Notify>) {
+    loop {
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        wakeup.notify_waiters();        // wake all current waiters
+    }
+}
+
+async fn relay_loop(wakeup: Arc<Notify>) {
+    loop {
+        wakeup.notified().await;        // no manual clear needed
+        println!("relaying outbox batch...");
+    }
+}
+
+#[tokio::main]
+async fn main() {
+    let wakeup = Arc::new(Notify::new());
+    let mut set = tokio::task::JoinSet::new();
+
+    set.spawn(listen_loop(wakeup.clone()));    // onto the thread pool
+    for _ in 0..4 {
+        set.spawn(relay_loop(wakeup.clone())); // Send + 'static required
+    }
+    while set.join_next().await.is_some() {}   // join the whole set
+}`,
+  },
+  {
+    runtime: "Rust / smol",
+    lang: "rust",
+    accent: "#059669",
+    note: "Lightweight single-dependency executor. Same async/await, but uses smol::Timer and event_listener::Event instead of Tokio primitives.",
+    simpleDiff:
+      "No runtime macro: block_on drives the futures directly. You assemble exactly the pieces you need, keeping the dependency footprint tiny.",
+    simpleSource: `fn main() {
+    // block_on drives the futures; no #[main] macro needed
+    smol::block_on(async {
+        let mut handles = Vec::new();
+        for i in 0..4 {
+            handles.push(smol::spawn(async move { i * i }));
+        }
+        let mut results = Vec::new();
+        for h in handles {
+            results.push(h.await);   // smol tasks return the value directly
+        }
+        println!("{:?}", results);   // [0, 1, 4, 9]
+    });
+}`,
+    diff:
+      "Same async/await as Tokio, but the primitives come from small crates: event_listener::Event replaces Notify, and you build the multi-thread Executor by hand instead of getting it from a macro.",
+    source: `use event_listener::Event;
+use std::sync::Arc;
+
+// event_listener::Event is smol's stand-in for Tokio's Notify
+async fn listen_loop(wakeup: Arc<Event>) {
+    loop {
+        smol::Timer::after(std::time::Duration::from_secs(1)).await;
+        wakeup.notify(usize::MAX);      // wake all listeners
+    }
+}
+
+async fn relay_loop(wakeup: Arc<Event>) {
+    loop {
+        wakeup.listen().await;          // register + wait for a signal
+        println!("relaying outbox batch...");
+    }
+}
+
+fn main() {
+    let wakeup = Arc::new(Event::new());
+    // no runtime macro: build a multi-thread executor by hand
+    let ex = Arc::new(smol::Executor::new());
+    smol::block_on(ex.run(async {
+        ex.spawn(listen_loop(wakeup.clone())).detach();
+        for _ in 0..4 {
+            ex.spawn(relay_loop(wakeup.clone())).detach();
+        }
+        futures_lite::future::pending::<()>().await;
+    }));
+}`,
+  },
+  {
+    runtime: "Rust / glommio",
+    lang: "rust",
+    accent: "#be185d",
+    note: "Thread-per-core, io_uring-based. Each core runs its own executor with no cross-thread synchronisation. Best for storage-heavy workloads.",
+    simpleDiff:
+      "Thread-per-core: the executor is pinned to one CPU and spawn_local keeps tasks there. Because tasks never move, they need not be Send, so cheap Rc/RefCell work instead of Arc/Mutex.",
+    simpleSource: `fn main() {
+    // one executor pinned to the current core
+    let ex = glommio::LocalExecutor::default();
+    ex.run(async {
+        let mut handles = Vec::new();
+        for i in 0..4 {
+            // spawn_local: tasks stay on this core (no Send bound)
+            handles.push(glommio::spawn_local(async move { i * i }));
+        }
+        let mut results = Vec::new();
+        for h in handles {
+            results.push(h.await);
+        }
+        println!("{:?}", results); // [0, 1, 4, 9]
+    });
+}`,
+    diff:
+      "No cross-thread sync at all: Rc<RefCell<_>> replaces Arc<Notify>. There is no built-in Notify, so the workers poll a plain flag cooperatively. Runs on io_uring, Linux-only.",
+    source: `use glommio::{LocalExecutorBuilder, Placement};
+use std::{cell::RefCell, rc::Rc};
+
+// single core => Rc/RefCell instead of Arc/Mutex; no Notify built in
+async fn listen_loop(wakeup: Rc<RefCell<bool>>) {
+    loop {
+        glommio::timer::sleep(std::time::Duration::from_secs(1)).await;
+        *wakeup.borrow_mut() = true;         // set a plain flag
+    }
+}
+
+async fn relay_loop(wakeup: Rc<RefCell<bool>>) {
+    loop {
+        // no Notify: poll the flag cooperatively
+        while !*wakeup.borrow() {
+            glommio::timer::sleep(std::time::Duration::from_millis(10)).await;
+        }
+        *wakeup.borrow_mut() = false;
+        println!("relaying outbox batch...");
+    }
+}
+
+fn main() {
+    LocalExecutorBuilder::new(Placement::Fixed(0))  // pin to core 0
+        .spawn(|| async {
+            let wakeup = Rc::new(RefCell::new(false));
+            glommio::spawn_local(listen_loop(wakeup.clone())).detach();
+            for _ in 0..4 {
+                glommio::spawn_local(relay_loop(wakeup.clone())).detach();
+            }
+            futures_lite::future::pending::<()>().await;
+        })
+        .unwrap()
+        .join()
+        .unwrap();
+}`,
+  },
+  {
+    runtime: "Go (goroutines)",
+    lang: "go",
+    accent: "#00ADD8",
+    note: "M:N scheduler built into the runtime. No async/await: goroutines block transparently. Channels and sync primitives for coordination.",
+    simpleDiff:
+      "No async or await keywords at all. go f() starts a goroutine; a WaitGroup joins them. Blocking calls yield the thread transparently.",
+    simpleSource: `package main
+
+import (
+	"fmt"
+	"sync"
+)
+
+func main() {
+	results := make([]int, 4)
+	var wg sync.WaitGroup
+	for i := 0; i < 4; i++ {
+		wg.Add(1)
+		go func(i int) { // no async keyword, just "go"
+			defer wg.Done()
+			results[i] = i * i
+		}(i)
+	}
+	wg.Wait()            // join all goroutines
+	fmt.Println(results) // [0 1 4 9]
+}`,
+    diff:
+      "The channel *is* the signal: there is no separate Event/Notify type. Workers range over the channel; a WaitGroup replaces JoinSet/gather. Everything is plain blocking code the scheduler makes concurrent.",
+    source: `package main
+
+import (
+	"fmt"
+	"sync"
+	"time"
+)
+
+type OutboxRelayWorker struct {
+	workerCount int
+}
+
+func (w *OutboxRelayWorker) listenLoop(wakeup chan struct{}) {
+	for {
+		time.Sleep(1 * time.Second)
+		select {
+		case wakeup <- struct{}{}: // non-blocking send
+		default:                   // drop if no worker is ready
+		}
+	}
+}
+
+func (w *OutboxRelayWorker) relayLoop(wakeup chan struct{}, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for range wakeup { // ranges until the channel closes
+		fmt.Println("relaying outbox batch...")
+	}
+}
+
+func (w *OutboxRelayWorker) Run() {
+	wakeup := make(chan struct{}, 1) // the channel *is* the signal
+	var wg sync.WaitGroup
+
+	go w.listenLoop(wakeup) // no async keyword, just "go"
+
+	for i := 0; i < w.workerCount; i++ {
+		wg.Add(1)
+		go w.relayLoop(wakeup, &wg)
+	}
+	wg.Wait()
+}
+
+func main() {
+	(&OutboxRelayWorker{workerCount: 4}).Run()
+}`,
+  },
+];
+
+const runtimeComparison = [
+  {
+    property: "Scheduler",
+    values: {
+      "Python asyncio": "Single-threaded event loop (selector / IOCP)",
+      "Rust / Tokio": "Multi-threaded work-stealing (configurable thread count)",
+      "Rust / smol": "Single or multi-threaded (smol::Executor or global)",
+      "Rust / glommio": "Thread-per-core, no cross-thread work stealing",
+      "Go (goroutines)": "M:N scheduler, goroutines multiplexed on OS threads",
+    },
+  },
+  {
+    property: "I/O backend",
+    values: {
+      "Python asyncio": "epoll / kqueue / IOCP via selectors",
+      "Rust / Tokio": "epoll / kqueue / IOCP (mio)",
+      "Rust / smol": "epoll / kqueue / IOCP (polling crate)",
+      "Rust / glommio": "io_uring (Linux only)",
+      "Go (goroutines)": "netpoller (epoll / kqueue / IOCP)",
+    },
+  },
+  {
+    property: "Task model",
+    values: {
+      "Python asyncio": "Coroutines (async def), single-threaded",
+      "Rust / Tokio": "Futures (state machines), Send + 'static for spawn",
+      "Rust / smol": "Futures, same trait bounds as Tokio",
+      "Rust / glommio": "Futures, !Send (single-core, Rc is fine)",
+      "Go (goroutines)": "Goroutines (implicit green threads)",
+    },
+  },
+  {
+    property: "Wakeup / signal",
+    values: {
+      "Python asyncio": "asyncio.Event (set / wait / clear)",
+      "Rust / Tokio": "tokio::sync::Notify (notify_waiters / notified)",
+      "Rust / smol": "event_listener::Event (notify / listen)",
+      "Rust / glommio": "Manual polling or channels (no built-in Notify)",
+      "Go (goroutines)": "Channels (chan struct{}) or sync.Cond",
+    },
+  },
+  {
+    property: "Fan-out",
+    values: {
+      "Python asyncio": "asyncio.create_task + asyncio.gather",
+      "Rust / Tokio": "tokio::task::JoinSet or tokio::spawn",
+      "Rust / smol": "smol::spawn + futures_lite combinators",
+      "Rust / glommio": "glommio::spawn_local (single-core only)",
+      "Go (goroutines)": "go func() + sync.WaitGroup",
+    },
+  },
+  {
+    property: "Parallelism",
+    values: {
+      "Python asyncio": "No (GIL). Use multiprocessing for CPU work.",
+      "Rust / Tokio": "Yes, tasks distributed across a thread pool",
+      "Rust / smol": "Yes, with smol::Executor on multiple threads",
+      "Rust / glommio": "Yes, but via separate executors per core (shared-nothing)",
+      "Go (goroutines)": "Yes, GOMAXPROCS goroutines run in parallel",
+    },
+  },
+  {
+    property: "Best for",
+    values: {
+      "Python asyncio": "I/O-bound services, rapid prototyping, scripting",
+      "Rust / Tokio": "General-purpose servers, APIs, proxies",
+      "Rust / smol": "CLIs, small services, libraries wanting minimal deps",
+      "Rust / glommio": "Storage engines, databases, high-throughput I/O",
+      "Go (goroutines)": "Microservices, CLIs, network infrastructure",
+    },
+  },
+];
+
+// Pre-highlight all snippets and merge comparison properties at build time
+const highlightedSnippets = await Promise.all(
+  runtimeSnippets.map(async (s) => {
+    const props: Record<string, string> = {};
+    for (const row of runtimeComparison) {
+      const val = row.values[s.runtime as keyof typeof row.values];
+      if (val) props[row.property] = val;
+    }
+    return {
+      runtime: s.runtime,
+      accent: s.accent,
+      note: s.note,
+      simpleDiff: s.simpleDiff,
+      simpleHtml: await highlightCode(s.lang, s.simpleSource),
+      diff: s.diff,
+      html: await highlightCode(s.lang, s.source),
+      properties: props,
+    };
+  }),
+);
+
+// Sync vs async, focused on Rust
+const syncVsAsync = [
+  { property: "Concurrency unit", sync: "OS thread (1:1 with a kernel thread)", asyncv: "Future / task (M:N on a thread pool)" },
+  { property: "Spawned with", sync: "std::thread::spawn", asyncv: "tokio::spawn / smol::spawn" },
+  { property: "Cost per unit", sync: "~1–8 MB stack + kernel bookkeeping", asyncv: "~a few hundred bytes, no own stack" },
+  { property: "Practical count", sync: "Thousands", asyncv: "Millions" },
+  { property: "Scheduling", sync: "Pre-emptive, by the OS kernel", asyncv: "Cooperative, yields only at .await points" },
+  { property: "Blocking a call", sync: "Fine, only that one thread waits", asyncv: "Dangerous: stalls the whole executor (use spawn_blocking)" },
+  { property: "I/O", sync: "Blocking syscalls (read / write)", asyncv: "Non-blocking + epoll / kqueue / io_uring" },
+  { property: "CPU-bound work", sync: "Ideal (threads, rayon)", asyncv: "Poor: offload to a thread pool" },
+  { property: "Many connections", sync: "Limited by thread count", asyncv: "Excellent: the reason async exists" },
+  { property: "Cancellation", sync: "Hard: no safe way to kill a thread", asyncv: "Easy: just drop the future" },
+  { property: "Complexity", sync: "Simple, direct, no function colouring", asyncv: "async colouring, Send + 'static, Pin, lifetimes" },
+  { property: "Ecosystem", sync: "std, rayon, crossbeam", asyncv: "tokio, async-std, smol, futures" },
+];
+
+const syncAsyncCode = {
+  sync: `use std::thread;
+
+fn main() {
+    let mut handles = Vec::new();
+    for i in 0..4 {
+        // each worker gets its own OS thread (~MBs of stack)
+        handles.push(thread::spawn(move || i * i));
+    }
+    // join blocks the main thread until each finishes
+    let results: Vec<i32> = handles
+        .into_iter()
+        .map(|h| h.join().unwrap())
+        .collect();
+    println!("{:?}", results); // [0, 1, 4, 9]
+}`,
+  async: `#[tokio::main]                       // sets up the async runtime
+async fn main() {
+    let mut handles = Vec::new();
+    for i in 0..4 {
+        // each worker is a lightweight task (~hundreds of bytes)
+        handles.push(tokio::spawn(async move { i * i }));
+    }
+    // .await yields instead of blocking the thread
+    let mut results = Vec::new();
+    for h in handles {
+        results.push(h.await.unwrap());
+    }
+    println!("{:?}", results); // [0, 1, 4, 9]
+}`,
+};
+
+const syncAsyncHtml = {
+  sync: await highlightCode("rust", syncAsyncCode.sync),
+  async: await highlightCode("rust", syncAsyncCode.async),
+};
+
+const executionModels = [
+  {
+    id: "native",
+    name: "Native (AOT)",
+    accent: "#16653a",
+    desc: "Compiled ahead-of-time to machine code that the CPU runs directly. No layer in between: fastest, smallest, but tied to one platform.",
+    langs: ["C", "C++", "Rust", "Go", "Zig", "Fortran", "Swift", "OCaml"],
+  },
+  {
+    id: "jit",
+    name: "JIT (Just-In-Time)",
+    accent: "#4338CA",
+    desc: "Runs from bytecode, then recompiles hot paths into optimised native code while the program is running. Slow to warm up, near-native once hot.",
+    langs: ["Java (HotSpot)", "C# (.NET)", "JavaScript (V8)", "Julia", "LuaJIT", "PyPy"],
+  },
+  {
+    id: "bytecode-vm",
+    name: "Bytecode VM",
+    accent: "#B45309",
+    desc: "Compiled to portable bytecode that a virtual machine executes, providing GC and a sandbox. Write once, run anywhere the VM exists.",
+    langs: ["Java (JVM)", "C# (CLR)", "Erlang (BEAM)", "Python (CPython)", "Ruby (YARV)"],
+  },
+  {
+    id: "interpreter",
+    name: "Interpreter",
+    accent: "#be185d",
+    desc: "Reads and executes the source statement by statement, no compile step. Instant startup and a live REPL, but slowest for heavy CPU work.",
+    langs: ["Python", "Ruby", "PHP", "Perl", "sh / Bash", "R", "SQL"],
+  },
+  {
+    id: "wasm",
+    name: "WebAssembly",
+    accent: "#7C3AED",
+    desc: "Compiled to a portable binary that runs inside a sandbox (browser or Wasmtime). Near-native speed; I/O only through explicit host imports.",
+    langs: ["Rust", "C", "C++", "Go", "Zig", "AssemblyScript"],
+  },
+  {
+    id: "transpile",
+    name: "Transpiler",
+    accent: "#0891B2",
+    desc: "Translated to another high-level language (usually JS or C) rather than machine code, then that language's toolchain takes over.",
+    langs: ["TypeScript → JS", "Elm → JS", "PureScript → JS", "Cython → C"],
+  },
+];
+
+const asyncEcosystems = [
+  {
+    lang: "Rust",
+    accent: "#D97706",
+    model: "Stackless coroutines via async/await. The compiler generates state machines; a user-chosen executor polls them.",
+    runtimes: [
+      { name: "Tokio", role: "General-purpose multi-threaded, work-stealing scheduler. The default choice for servers." },
+      { name: "smol", role: "Lightweight, single-dependency executor. Good for CLIs and small services." },
+      { name: "embassy", role: "Async executor for embedded / bare-metal (no_std). Runs on microcontrollers." },
+      { name: "glommio", role: "Thread-per-core, io_uring-based. Optimised for high-throughput storage and networking." },
+      { name: "compio", role: "Completion-based (io_uring / IOCP). Cross-platform alternative to glommio." },
+    ],
+  },
+  {
+    lang: "JavaScript / TypeScript",
+    accent: "#F59E0B",
+    model: "Single-threaded event loop with async/await. I/O callbacks are queued; the microtask queue runs Promises.",
+    runtimes: [
+      { name: "V8 (Chrome, Node.js, Deno, Bun)", role: "JIT-compiled engine with libuv (Node) or native event loop (Deno/Bun)." },
+      { name: "SpiderMonkey (Firefox)", role: "Mozilla's engine with baseline + IonMonkey JIT tiers." },
+      { name: "JavaScriptCore (Safari, Bun)", role: "Apple's engine, also used by Bun for fast startup." },
+    ],
+  },
+  {
+    lang: "Python",
+    accent: "#3B82F6",
+    model: "asyncio event loop with async/await. The GIL limits true parallelism in CPython; use multiprocessing or a native extension for CPU work.",
+    runtimes: [
+      { name: "asyncio (stdlib)", role: "Default event loop. selector-based on Unix, IOCP on Windows." },
+      { name: "uvloop", role: "Drop-in replacement built on libuv. 2-4x faster than the default loop." },
+      { name: "Trio", role: "Structured-concurrency-first library: nurseries enforce task lifetime rules." },
+      { name: "AnyIO", role: "Compatibility layer that works on top of asyncio or Trio." },
+    ],
+  },
+  {
+    lang: "Go",
+    accent: "#00ADD8",
+    model: "M:N scheduling with goroutines (lightweight green threads) and channels. No async/await syntax needed: every function is implicitly non-blocking.",
+    runtimes: [
+      { name: "Go runtime", role: "Built-in scheduler multiplexes goroutines across OS threads. netpoller handles I/O." },
+    ],
+  },
+  {
+    lang: "Java / Kotlin (JVM)",
+    accent: "#DC2626",
+    model: "Platform threads mapped 1:1 to OS threads, plus (since Java 21) virtual threads via Project Loom for M:N scheduling.",
+    runtimes: [
+      { name: "Platform threads", role: "Classic OS threads, heavyweight (~1MB stack each)." },
+      { name: "Virtual threads (Loom)", role: "JVM-managed lightweight threads, millions per process. Blocking calls auto-yield." },
+      { name: "Kotlin coroutines", role: "Structured concurrency with suspend/resume, dispatched to thread pools." },
+    ],
+  },
+  {
+    lang: "C#",
+    accent: "#512BD4",
+    model: "Task-based asynchronous pattern (TAP) with async/await. The runtime schedules continuations on the thread pool or a synchronisation context.",
+    runtimes: [
+      { name: ".NET ThreadPool + Task scheduler", role: "Work-stealing thread pool. Task.Run dispatches CPU work; I/O operations use IOCP." },
+    ],
+  },
+  {
+    lang: "Erlang / Elixir",
+    accent: "#A855F7",
+    model: "Actor model on the BEAM VM: each process is an isolated lightweight unit with its own heap, communicating solely via message passing.",
+    runtimes: [
+      { name: "BEAM VM", role: "Preemptive scheduler with per-process reduction budgets. Millions of processes, no shared state." },
+      { name: "OTP", role: "Framework of supervisors, gen_servers and behaviours. Fault tolerance by design." },
+    ],
+  },
+];
+
+const comparisonTable = [
+  { model: "Native (AOT)",      startup: "Fast",        peak: "Highest",    memory: "Lowest",  portability: "Recompile per target", gc: "Manual / ownership" },
+  { model: "JIT",               startup: "Slow (warm-up)", peak: "Near-native", memory: "High", portability: "VM per platform",      gc: "GC (tracing)" },
+  { model: "Bytecode VM",       startup: "Medium",      peak: "Good",       memory: "Medium",  portability: "VM per platform",       gc: "GC (tracing)" },
+  { model: "Interpreter",       startup: "Instant",     peak: "Lowest",     memory: "Medium",  portability: "Interpreter per platform", gc: "GC (ref-counting / tracing)" },
+  { model: "WebAssembly",       startup: "Fast",        peak: "Near-native", memory: "Low",    portability: "Universal (sandboxed)",    gc: "Depends on source lang" },
+  { model: "Transpiler",        startup: "Depends on target", peak: "Depends on target", memory: "Depends on target", portability: "Same as target", gc: "Same as target" },
+];
+---
+
+<BaseLayout title="Runtimes">
+  <p class="mono-eyebrow mb-1"><span class="text-accent-blue">$</span> ldd --version # how does your code actually run?</p>
+  <h1 class="glitch is-intro mb-8 text-3xl font-bold tracking-tight text-brand-text" data-text="Runtimes">Runtimes</h1>
+
+  <!-- ====== INTRO ====== -->
+  <section class="mb-14">
+    <p class="mono-eyebrow mb-2">// execution-models</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Execution Models">Execution Models</h2>
+    <p class="mb-6 text-brand-body">
+      Every language needs a way to turn source code into running instructions. That "way" is the <strong class="text-brand-text">execution model</strong>, and it fundamentally determines startup time, peak performance, memory usage, and portability. The six families below cover essentially every language on the <a href="/pl-timeline" class="text-accent-blue underline underline-offset-2 transition-colors hover:text-accent-emerald">PL Timeline</a>.
+    </p>
+
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {executionModels.map((m) => (
+        <article class="flex flex-col rounded-xl border border-brand-border bg-white p-5" style={`border-top: 3px solid ${m.accent}`}>
+          <div class="mb-2 flex items-center gap-2">
+            <span class="inline-block h-3 w-3 rounded-sm" style={`background-color: ${m.accent}`}></span>
+            <h3 class="font-semibold text-brand-text">{m.name}</h3>
+          </div>
+          <p class="mb-3 text-sm text-brand-body">{m.desc}</p>
+
+          {/* SVG schema per execution model */}
+          <div class="mb-3 mt-auto rounded-lg bg-gray-50 p-3">
+            {m.id === "native" && (
+              <svg viewBox="0 0 240 60" class="mx-auto w-full max-w-[240px]" aria-hidden="true">
+                <rect x="2" y="18" width="52" height="24" rx="4" fill={m.accent} fill-opacity="0.12" stroke={m.accent} stroke-width="1.2"/>
+                <text x="28" y="33" text-anchor="middle" font-size="9" fill={m.accent} font-weight="600">source</text>
+                <text x="83" y="26" text-anchor="middle" font-size="7.5" fill="#6B7280">compile</text>
+                <line x1="54" y1="30" x2="110" y2="30" stroke={m.accent} stroke-width="1.2" marker-end="url(#rt-native-arr)"/>
+                <rect x="112" y="18" width="58" height="24" rx="4" fill={m.accent} fill-opacity="0.12" stroke={m.accent} stroke-width="1.2"/>
+                <text x="141" y="30" text-anchor="middle" font-size="8" fill={m.accent} font-weight="600" font-family="monospace">10110</text>
+                <text x="141" y="39" text-anchor="middle" font-size="6.5" fill="#6B7280">machine code</text>
+                <line x1="170" y1="30" x2="196" y2="30" stroke={m.accent} stroke-width="1.2" marker-end="url(#rt-native-arr)"/>
+                <rect x="198" y="18" width="40" height="24" rx="4" fill="#10B981" fill-opacity="0.12" stroke="#10B981" stroke-width="1.2"/>
+                <text x="218" y="33" text-anchor="middle" font-size="9" fill="#047857" font-weight="700">CPU</text>
+                <text x="120" y="55" text-anchor="middle" font-size="7" fill="#9CA3AF">no runtime layer in between</text>
+                <defs><marker id="rt-native-arr" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill={m.accent}/></marker></defs>
+              </svg>
+            )}
+
+            {m.id === "jit" && (
+              <svg viewBox="0 0 240 66" class="mx-auto w-full max-w-[240px]" aria-hidden="true">
+                <rect x="2" y="20" width="46" height="24" rx="4" fill={m.accent} fill-opacity="0.12" stroke={m.accent} stroke-width="1.2"/>
+                <text x="25" y="35" text-anchor="middle" font-size="8.5" fill={m.accent} font-weight="600">bytecode</text>
+                <line x1="48" y1="32" x2="74" y2="32" stroke={m.accent} stroke-width="1.2" marker-end="url(#rt-jit-arr)"/>
+                <rect x="76" y="14" width="60" height="36" rx="4" fill={m.accent} fill-opacity="0.12" stroke={m.accent} stroke-width="1.2"/>
+                <text x="106" y="28" text-anchor="middle" font-size="8" fill={m.accent} font-weight="700">JIT</text>
+                <text x="106" y="38" text-anchor="middle" font-size="6.5" fill="#6B7280">profiles hot</text>
+                <text x="106" y="46" text-anchor="middle" font-size="6.5" fill="#6B7280">paths</text>
+                <line x1="136" y1="32" x2="162" y2="32" stroke={m.accent} stroke-width="1.2" marker-end="url(#rt-jit-arr)"/>
+                <rect x="164" y="20" width="72" height="24" rx="4" fill="#10B981" fill-opacity="0.12" stroke="#10B981" stroke-width="1.2"/>
+                <text x="200" y="31" text-anchor="middle" font-size="8" fill="#047857" font-weight="600">optimised</text>
+                <text x="200" y="40" text-anchor="middle" font-size="6.5" fill="#6B7280">native code</text>
+                <text x="120" y="61" text-anchor="middle" font-size="7" fill="#9CA3AF">recompiles while running</text>
+                <defs><marker id="rt-jit-arr" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill={m.accent}/></marker></defs>
+              </svg>
+            )}
+
+            {m.id === "bytecode-vm" && (
+              <svg viewBox="0 0 240 66" class="mx-auto w-full max-w-[240px]" aria-hidden="true">
+                <rect x="60" y="2" width="120" height="46" rx="6" fill={m.accent} fill-opacity="0.06" stroke={m.accent} stroke-width="1.4"/>
+                <text x="120" y="14" text-anchor="middle" font-size="8" fill={m.accent} font-weight="700">Virtual Machine</text>
+                <rect x="72" y="20" width="46" height="20" rx="3" fill={m.accent} fill-opacity="0.15" stroke={m.accent} stroke-width="1"/>
+                <text x="95" y="33" text-anchor="middle" font-size="7.5" fill={m.accent} font-weight="600">bytecode</text>
+                <rect x="124" y="20" width="46" height="20" rx="3" fill="#10B981" fill-opacity="0.15" stroke="#10B981" stroke-width="1"/>
+                <text x="147" y="33" text-anchor="middle" font-size="7.5" fill="#047857" font-weight="600">GC</text>
+                <rect x="60" y="52" width="120" height="12" rx="3" fill="#9CA3AF" fill-opacity="0.15" stroke="#9CA3AF" stroke-width="0.8"/>
+                <text x="120" y="61" text-anchor="middle" font-size="7" fill="#6B7280">any OS / CPU</text>
+                <line x1="120" y1="48" x2="120" y2="52" stroke="#9CA3AF" stroke-width="1"/>
+              </svg>
+            )}
+
+            {m.id === "interpreter" && (
+              <svg viewBox="0 0 240 62" class="mx-auto w-full max-w-[240px]" aria-hidden="true">
+                <rect x="2" y="6" width="120" height="50" rx="4" fill="#F9FAFB" stroke={m.accent} stroke-width="1"/>
+                <text x="12" y="19" font-size="8" fill="#9CA3AF" font-family="monospace">x = 1</text>
+                <text x="12" y="33" font-size="8" fill={m.accent} font-family="monospace" font-weight="700">print(x)</text>
+                <text x="12" y="47" font-size="8" fill="#9CA3AF" font-family="monospace">x += 1</text>
+                <text x="104" y="33" font-size="9" fill={m.accent} font-weight="700">▶</text>
+                <line x1="122" y1="31" x2="150" y2="31" stroke={m.accent} stroke-width="1.2" marker-end="url(#rt-int-arr)"/>
+                <rect x="152" y="18" width="86" height="26" rx="4" fill={m.accent} fill-opacity="0.12" stroke={m.accent} stroke-width="1.2"/>
+                <text x="195" y="30" text-anchor="middle" font-size="8" fill={m.accent} font-weight="600">execute now</text>
+                <text x="195" y="39" text-anchor="middle" font-size="6.5" fill="#6B7280">line by line</text>
+                <defs><marker id="rt-int-arr" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill={m.accent}/></marker></defs>
+              </svg>
+            )}
+
+            {m.id === "wasm" && (
+              <svg viewBox="0 0 240 64" class="mx-auto w-full max-w-[240px]" aria-hidden="true">
+                <rect x="2" y="20" width="46" height="24" rx="4" fill={m.accent} fill-opacity="0.12" stroke={m.accent} stroke-width="1.2"/>
+                <text x="25" y="35" text-anchor="middle" font-size="8.5" fill={m.accent} font-weight="600">source</text>
+                <line x1="48" y1="32" x2="70" y2="32" stroke={m.accent} stroke-width="1.2" marker-end="url(#rt-wasm-arr)"/>
+                <rect x="74" y="6" width="160" height="52" rx="6" fill={m.accent} fill-opacity="0.05" stroke={m.accent} stroke-width="1.4" stroke-dasharray="4 3"/>
+                <text x="154" y="17" text-anchor="middle" font-size="7.5" fill={m.accent} font-weight="700">sandbox</text>
+                <rect x="86" y="24" width="48" height="22" rx="3" fill={m.accent} fill-opacity="0.15" stroke={m.accent} stroke-width="1"/>
+                <text x="110" y="38" text-anchor="middle" font-size="8" fill={m.accent} font-weight="600" font-family="monospace">.wasm</text>
+                <line x1="134" y1="35" x2="156" y2="35" stroke={m.accent} stroke-width="1.2" marker-end="url(#rt-wasm-arr)"/>
+                <rect x="158" y="24" width="66" height="22" rx="3" fill="#10B981" fill-opacity="0.12" stroke="#10B981" stroke-width="1"/>
+                <text x="191" y="38" text-anchor="middle" font-size="7.5" fill="#047857" font-weight="600">host runtime</text>
+                <defs><marker id="rt-wasm-arr" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill={m.accent}/></marker></defs>
+              </svg>
+            )}
+
+            {m.id === "transpile" && (
+              <svg viewBox="0 0 240 60" class="mx-auto w-full max-w-[240px]" aria-hidden="true">
+                <rect x="2" y="18" width="56" height="24" rx="4" fill={m.accent} fill-opacity="0.12" stroke={m.accent} stroke-width="1.2"/>
+                <text x="30" y="33" text-anchor="middle" font-size="8.5" fill={m.accent} font-weight="600">TypeScript</text>
+                <text x="86" y="26" text-anchor="middle" font-size="7" fill="#6B7280">transpile</text>
+                <line x1="58" y1="30" x2="114" y2="30" stroke={m.accent} stroke-width="1.2" marker-end="url(#rt-tr-arr)"/>
+                <rect x="116" y="18" width="56" height="24" rx="4" fill={m.accent} fill-opacity="0.12" stroke={m.accent} stroke-width="1.2"/>
+                <text x="144" y="33" text-anchor="middle" font-size="8.5" fill={m.accent} font-weight="600">JavaScript</text>
+                <line x1="172" y1="30" x2="196" y2="30" stroke={m.accent} stroke-width="1.2" marker-end="url(#rt-tr-arr)"/>
+                <rect x="198" y="18" width="40" height="24" rx="4" fill="#10B981" fill-opacity="0.12" stroke="#10B981" stroke-width="1.2"/>
+                <text x="218" y="30" text-anchor="middle" font-size="7.5" fill="#047857" font-weight="600">JS</text>
+                <text x="218" y="38" text-anchor="middle" font-size="6" fill="#6B7280">runtime</text>
+                <text x="120" y="55" text-anchor="middle" font-size="7" fill="#9CA3AF">reuses the target's toolchain</text>
+                <defs><marker id="rt-tr-arr" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill={m.accent}/></marker></defs>
+              </svg>
+            )}
+          </div>
+
+          <p class="font-mono text-[11px] uppercase tracking-wider text-accent-emerald">languages</p>
+          <p class="text-sm text-brand-body">{m.langs.join(", ")}</p>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <!-- ====== COMPARISON TABLE ====== -->
+  <section class="mb-14">
+    <p class="mono-eyebrow mb-2">// diff --side-by-side</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Side-by-Side Comparison">Side-by-Side Comparison</h2>
+    <p class="mb-6 text-brand-body">
+      A quick overview of the key trade-offs between execution models. Every choice is a compromise: native compilation gives you peak speed but locks you to a target; interpreters start instantly but pay for it every instruction.
+    </p>
+
+    <div class="overflow-x-auto rounded-xl border border-brand-border bg-white">
+      <table class="min-w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-200 bg-gray-50/80">
+            <th class="px-4 py-3 text-left font-semibold text-brand-text">Model</th>
+            <th class="px-4 py-3 text-left font-semibold text-brand-text">Startup</th>
+            <th class="px-4 py-3 text-left font-semibold text-brand-text">Peak perf.</th>
+            <th class="px-4 py-3 text-left font-semibold text-brand-text">Memory</th>
+            <th class="px-4 py-3 text-left font-semibold text-brand-text">Portability</th>
+            <th class="px-4 py-3 text-left font-semibold text-brand-text">Memory mgmt</th>
+          </tr>
+        </thead>
+        <tbody>
+          {comparisonTable.map((row, i) => (
+            <tr class={`border-b border-gray-100 ${i % 2 === 1 ? "bg-gray-50/40" : ""}`}>
+              <td class="whitespace-nowrap px-4 py-2.5 font-medium text-brand-text">{row.model}</td>
+              <td class="px-4 py-2.5 text-brand-body">{row.startup}</td>
+              <td class="px-4 py-2.5 text-brand-body">{row.peak}</td>
+              <td class="px-4 py-2.5 text-brand-body">{row.memory}</td>
+              <td class="px-4 py-2.5 text-brand-body">{row.portability}</td>
+              <td class="px-4 py-2.5 text-brand-body">{row.gc}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ====== SYNC VS ASYNC (RUST) ====== -->
+  <section class="mb-14">
+    <p class="mono-eyebrow mb-2">// std::thread vs async fn</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Synchronous vs Asynchronous (Rust)">Synchronous vs Asynchronous <span class="text-brand-muted">(Rust)</span></h2>
+    <p class="mb-6 text-brand-body">
+      Rust is unusual in giving you both models as first-class citizens with zero runtime by default. <strong class="text-brand-text">Synchronous</strong> code uses real OS threads and blocking calls: simple and perfect for CPU work. <strong class="text-brand-text">Asynchronous</strong> code uses <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">async</code>/<code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">.await</code> plus an executor (Tokio, smol…) to juggle millions of tasks on a few threads: the right tool when you're I/O-bound. Neither is "better"; they solve different problems.
+    </p>
+
+    <div class="overflow-x-auto rounded-xl border border-brand-border bg-white">
+      <table class="min-w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-200 bg-gray-50/80">
+            <th class="px-4 py-3 text-left font-semibold text-brand-text"></th>
+            <th class="px-4 py-3 text-left font-semibold" style="color:#16653a">
+              <span class="inline-flex items-center gap-1.5">
+                <span class="inline-block h-2.5 w-2.5 rounded-sm" style="background:#16653a"></span>
+                Synchronous <span class="font-normal text-brand-muted">(threads)</span>
+              </span>
+            </th>
+            <th class="px-4 py-3 text-left font-semibold" style="color:#D97706">
+              <span class="inline-flex items-center gap-1.5">
+                <span class="inline-block h-2.5 w-2.5 rounded-sm" style="background:#D97706"></span>
+                Asynchronous <span class="font-normal text-brand-muted">(async / await)</span>
+              </span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {syncVsAsync.map((row, i) => (
+            <tr class={`border-b border-gray-100 ${i % 2 === 1 ? "bg-gray-50/40" : ""}`}>
+              <td class="whitespace-nowrap px-4 py-2.5 font-mono text-xs font-semibold uppercase tracking-wider text-accent-emerald">{row.property}</td>
+              <td class="px-4 py-2.5 text-brand-body">{row.sync}</td>
+              <td class="px-4 py-2.5 text-brand-body">{row.asyncv}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Code comparison: same task both ways -->
+    <div class="mt-8">
+      <p class="mb-1 text-[10px] font-bold uppercase tracking-widest text-brand-muted">Same task, both ways</p>
+      <p class="mb-4 text-xs text-brand-muted">Spawn 4 workers, each computes <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">i * i</code>, then collect the results</p>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <p class="mb-1.5 flex items-center gap-2 text-xs font-semibold text-brand-body">
+            <span class="inline-block h-2 w-2 rounded-sm" style="background:#16653a"></span>
+            Synchronous <span class="font-normal text-brand-muted">: std::thread</span>
+          </p>
+          <div class="overflow-x-auto rounded-lg text-[11px] [&>pre]:!rounded-lg [&>pre]:!p-3" set:html={syncAsyncHtml.sync} />
+        </div>
+        <div>
+          <p class="mb-1.5 flex items-center gap-2 text-xs font-semibold text-brand-body">
+            <span class="inline-block h-2 w-2 rounded-sm" style="background:#D97706"></span>
+            Asynchronous <span class="font-normal text-brand-muted">: tokio::spawn</span>
+          </p>
+          <div class="overflow-x-auto rounded-lg text-[11px] [&>pre]:!rounded-lg [&>pre]:!p-3" set:html={syncAsyncHtml.async} />
+        </div>
+      </div>
+
+      <!-- What actually changes at runtime -->
+      <div class="mt-6 grid gap-4 md:grid-cols-2">
+        <div class="rounded-xl border border-brand-border bg-white p-4" style="border-left:3px solid #16653a">
+          <p class="mb-2 text-sm font-semibold" style="color:#16653a">What the sync version does</p>
+          <ul class="space-y-1.5 text-sm text-brand-body">
+            <li>Asks the OS for <strong class="text-brand-text">4 real threads</strong>, each with its own multi-MB stack. The kernel schedules them pre-emptively across cores.</li>
+            <li><code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">join()</code> <strong class="text-brand-text">blocks the main thread</strong> until each worker returns. While it waits, that thread does nothing else.</li>
+            <li>For CPU work this is exactly right: 4 threads can use 4 cores in true parallel. For 10,000 workers it collapses: thread creation and context switches dominate.</li>
+          </ul>
+        </div>
+        <div class="rounded-xl border border-brand-border bg-white p-4" style="border-left:3px solid #D97706">
+          <p class="mb-2 text-sm font-semibold" style="color:#D97706">What the async version does</p>
+          <ul class="space-y-1.5 text-sm text-brand-body">
+            <li>Creates <strong class="text-brand-text">4 tiny tasks</strong> (state machines of a few hundred bytes), all multiplexed onto Tokio's small thread pool. No new OS threads per worker.</li>
+            <li><code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">.await</code> <strong class="text-brand-text">yields instead of blocking</strong>: while one task waits, the thread runs another. A stray blocking call here would freeze all of them.</li>
+            <li>For pure <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">i * i</code> this adds overhead for no gain. The payoff appears with thousands of <em>I/O-bound</em> tasks (sockets, DB queries) idling at once.</li>
+          </ul>
+        </div>
+      </div>
+
+      <p class="mt-4 text-sm text-brand-muted">
+        <strong class="text-brand-text">Same output, different machine behaviour.</strong> Both print <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">[0, 1, 4, 9]</code>, but the sync version spends its cost on <em>threads and stacks</em> (great for CPU), while the async version spends it on <em>a scheduler and state machines</em> (great for waiting on I/O). The rule of thumb: threads when you're compute-bound, async when you're I/O-bound and highly concurrent.
+      </p>
+    </div>
+  </section>
+
+  <!-- ====== ASYNC / CONCURRENCY RUNTIMES ====== -->
+  <section class="mb-14">
+    <p class="mono-eyebrow mb-2">// tokio::spawn(async move &#123; ... &#125;)</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Async & Concurrency Runtimes">Async &amp; Concurrency Runtimes</h2>
+    <p class="mb-6 text-brand-body">
+      Beyond the base execution model, many languages need a <strong class="text-brand-text">concurrency runtime</strong> to schedule async tasks, manage I/O multiplexing, and distribute work across cores. Some languages bake it in (Go, Erlang); others let you choose (Rust, Python). The differences matter when you're building servers, embedded systems, or anything that waits on I/O.
+    </p>
+
+    <div class="grid gap-4 md:grid-cols-2">
+      {asyncEcosystems.map((eco) => (
+        <article class="rounded-xl border border-brand-border bg-white p-4" style={`border-left: 3px solid ${eco.accent}`}>
+          <div class="mb-1 flex items-center gap-2">
+            <span class="inline-block h-2.5 w-2.5 shrink-0 rounded-sm" style={`background-color: ${eco.accent}`}></span>
+            <h3 class="font-semibold text-brand-text">{eco.lang}</h3>
+          </div>
+          <p class="mb-3 text-xs leading-relaxed text-brand-muted">{eco.model}</p>
+          <ul class="space-y-2">
+            {eco.runtimes.map((rt) => (
+              <li class="border-t border-gray-100 pt-2">
+                <span class="mr-2 font-mono text-[13px] font-semibold text-brand-text">{rt.name}</span>
+                <span class="text-xs text-brand-muted">{rt.role}</span>
+              </li>
+            ))}
+          </ul>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <!-- ====== SAME PATTERN, DIFFERENT RUNTIMES ====== -->
+  <section class="mb-14">
+    <p class="mono-eyebrow mb-2">// same task, different runtimes</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Same Pattern, Different Runtimes">Same Pattern, Different Runtimes</h2>
+    <p class="mb-6 text-brand-body">
+      Pick up to four runtimes and compare them directly. First the same <strong class="text-brand-text">spawn &amp; collect</strong> task as above (4 workers computing <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">i * i</code>) to see the bare syntax, then a real-world <strong class="text-brand-text">outbox-relay worker</strong>: a listener watches for new work (e.g. database LISTEN/NOTIFY), signals a wakeup, and N relay workers pick it up and process it concurrently. Each snippet has a short note on what makes that runtime distinctive.
+    </p>
+
+    <RuntimeCompare
+      client:visible
+      runtimes={highlightedSnippets}
+      defaults={["Python asyncio", "Rust / Tokio", "Go (goroutines)", "Rust / smol"]}
+    />
+  </section>
+
+  <!-- ====== PIPELINE DIAGRAM ====== -->
+  <section class="mb-14">
+    <p class="mono-eyebrow mb-2">// from source to execution</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="The Big Picture">The Big Picture</h2>
+    <p class="mb-6 text-brand-body">
+      All execution models are variations on the same pipeline. The key question is <em>when</em> compilation happens and <em>how many layers</em> sit between your source code and the CPU.
+    </p>
+
+    <figure class="rounded-xl border border-brand-border bg-white p-4 sm:p-6">
+      <svg viewBox="0 0 800 260" class="h-auto w-full" role="img" aria-label="Source code to execution pipeline showing AOT, JIT, interpreter and Wasm paths">
+        <defs>
+          <marker id="rt-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#71717A" />
+          </marker>
+        </defs>
+        <g font-family="Inter, sans-serif" text-anchor="middle">
+          <!-- Source -->
+          <rect x="20" y="100" width="120" height="56" rx="9" fill="rgba(37,99,235,0.08)" stroke="#2563EB" stroke-width="1.5"/>
+          <text x="80" y="124" font-size="13" font-weight="700" fill="#18181B">Source code</text>
+          <text x="80" y="142" font-size="10" fill="#71717A">.rs / .c / .py / .js</text>
+
+          <!-- AOT path -->
+          <rect x="220" y="20" width="130" height="48" rx="9" fill="rgba(22,101,58,0.10)" stroke="#16653a" stroke-width="1.5"/>
+          <text x="285" y="42" font-size="12" font-weight="700" fill="#16653a">AOT compiler</text>
+          <text x="285" y="56" font-size="10" fill="#16653a">gcc, rustc, go</text>
+          <line x1="140" y1="118" x2="218" y2="50" stroke="#71717A" stroke-width="1.3" marker-end="url(#rt-arrow)"/>
+
+          <rect x="420" y="20" width="120" height="48" rx="9" fill="rgba(22,101,58,0.10)" stroke="#16653a" stroke-width="1.5"/>
+          <text x="480" y="42" font-size="12" font-weight="700" fill="#16653a">Machine code</text>
+          <text x="480" y="56" font-size="10" fill="#16653a">ELF / Mach-O / PE</text>
+          <line x1="350" y1="44" x2="418" y2="44" stroke="#71717A" stroke-width="1.3" marker-end="url(#rt-arrow)"/>
+
+          <!-- JIT path -->
+          <rect x="220" y="100" width="130" height="48" rx="9" fill="rgba(67,56,202,0.10)" stroke="#4338CA" stroke-width="1.5"/>
+          <text x="285" y="122" font-size="12" font-weight="700" fill="#4338CA">Bytecode + JIT</text>
+          <text x="285" y="136" font-size="10" fill="#4338CA">JVM, V8, CLR</text>
+          <line x1="140" y1="128" x2="218" y2="124" stroke="#71717A" stroke-width="1.3" marker-end="url(#rt-arrow)"/>
+
+          <rect x="420" y="100" width="120" height="48" rx="9" fill="rgba(67,56,202,0.10)" stroke="#4338CA" stroke-width="1.5"/>
+          <text x="480" y="122" font-size="12" font-weight="700" fill="#4338CA">Optimised code</text>
+          <text x="480" y="136" font-size="10" fill="#4338CA">at runtime</text>
+          <line x1="350" y1="124" x2="418" y2="124" stroke="#71717A" stroke-width="1.3" marker-end="url(#rt-arrow)"/>
+
+          <!-- Interpreter path -->
+          <rect x="220" y="180" width="130" height="48" rx="9" fill="rgba(190,24,93,0.10)" stroke="#be185d" stroke-width="1.5"/>
+          <text x="285" y="202" font-size="12" font-weight="700" fill="#be185d">Interpreter</text>
+          <text x="285" y="216" font-size="10" fill="#be185d">CPython, MRI, Bash</text>
+          <line x1="140" y1="138" x2="218" y2="198" stroke="#71717A" stroke-width="1.3" marker-end="url(#rt-arrow)"/>
+
+          <rect x="420" y="180" width="120" height="48" rx="9" fill="rgba(190,24,93,0.10)" stroke="#be185d" stroke-width="1.5"/>
+          <text x="480" y="202" font-size="12" font-weight="700" fill="#be185d">Executed live</text>
+          <text x="480" y="216" font-size="10" fill="#be185d">statement by stmt</text>
+          <line x1="350" y1="204" x2="418" y2="204" stroke="#71717A" stroke-width="1.3" marker-end="url(#rt-arrow)"/>
+
+          <!-- CPU -->
+          <rect x="620" y="80" width="140" height="76" rx="12" fill="rgba(16,185,129,0.12)" stroke="#10B981" stroke-width="2"/>
+          <text x="690" y="108" font-size="15" font-weight="800" fill="#047857">CPU</text>
+          <text x="690" y="126" font-size="10" fill="#059669">hardware execution</text>
+          <text x="690" y="142" font-size="9" fill="#6B7280">x86 / ARM / RISC-V</text>
+
+          <line x1="540" y1="44" x2="618" y2="100" stroke="#71717A" stroke-width="1.3" marker-end="url(#rt-arrow)"/>
+          <line x1="540" y1="124" x2="618" y2="118" stroke="#71717A" stroke-width="1.3" marker-end="url(#rt-arrow)"/>
+          <line x1="540" y1="204" x2="618" y2="140" stroke="#71717A" stroke-width="1.3" marker-end="url(#rt-arrow)"/>
+        </g>
+      </svg>
+      <figcaption class="mt-3 text-sm text-brand-muted">
+        AOT-compiled languages (Rust, C, Go) take the top path: everything is resolved before execution. JIT languages (Java, JS) defer optimisation to runtime. Interpreters (Python, Bash) skip compilation entirely.
+      </figcaption>
+    </figure>
+  </section>
+</BaseLayout>
