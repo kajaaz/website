@@ -213,6 +213,7 @@
       {#if openSlot === i}
         <div
           class="absolute left-0 top-full z-30 mt-1 w-60 rounded-lg border border-gray-200 bg-white shadow-xl"
+          role="listbox"
           onkeydown={handleDropdownKey}
         >
           <div class="border-b border-gray-100 px-3 py-2">
@@ -475,7 +476,7 @@
     </div>
   {/if}
 
-  <!-- Code examples: Type system — same task: generic max(a, b) -->
+  <!-- Code examples: Type system, same task: generic max(a, b) -->
   {#if activeLangs.some((l) => l.typeSystemHtml)}
     <div class="mt-10">
       <p class="mb-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">
@@ -503,7 +504,7 @@
     </div>
   {/if}
 
-  <!-- Code examples: Concurrency — same task: 4 parallel workers computing i*i -->
+  <!-- Code examples: Concurrency, same task: 4 parallel workers computing i*i -->
   {#if activeLangs.some((l) => l.concurrencyHtml)}
     <div class="mt-10">
       <p class="mb-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">

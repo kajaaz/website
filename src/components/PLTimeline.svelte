@@ -208,13 +208,15 @@
 
 <!-- Trait highlight bar -->
 {#if traitMeta.length > 0}
-  <div class="mb-6 rounded-xl border border-gray-200 bg-gradient-to-br from-gray-50/80 to-white p-4 shadow-sm">
+  <div class="mb-6 rounded-xl border border-gray-200 border-l-accent-emerald bg-gradient-to-br from-accent-emerald/5 to-white p-4 shadow-sm" style="border-left-width: 3px;">
     <div class="mb-3 flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" />
-        </svg>
-        <span class="text-sm font-semibold text-gray-700">Highlight shared traits</span>
+      <div class="flex items-center gap-2.5">
+        <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-emerald/15 text-accent-emerald">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.042 21.672 13.684 16.6m0 0-2.51 2.225.569-9.47 5.227 7.917-3.286-.672Zm-7.518-.267A8.25 8.25 0 1 1 20.25 10.5M8.288 14.212A5.25 5.25 0 1 1 17.25 10.5" />
+          </svg>
+        </span>
+        <span class="text-sm font-bold text-brand-text">Click a trait below to highlight matching languages on the timeline <span class="text-accent-emerald">&#8595;</span></span>
       </div>
       {#if activeTraits.size > 0}
         <button
@@ -225,8 +227,8 @@
         </button>
       {/if}
     </div>
-    <p class="mb-3 text-xs text-gray-400">
-      Toggle one or more traits to see which languages on the timeline share the same characteristic.
+    <p class="mb-3 text-xs text-gray-500">
+      You can toggle multiple traits at once. Matching languages will be highlighted and connected on the chart above.
     </p>
     <div class="flex flex-wrap gap-1.5">
       {#each traitMeta as trait}
@@ -490,7 +492,7 @@
   ></div>
 
   <!-- Panel -->
-  <aside
+  <div
     bind:this={panelEl}
     class="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col overflow-y-auto border-l border-gray-200 bg-white shadow-xl sm:w-[420px]"
     role="dialog"
@@ -716,5 +718,5 @@
         </p>
       {/if}
     </div>
-  </aside>
+  </div>
 {/if}

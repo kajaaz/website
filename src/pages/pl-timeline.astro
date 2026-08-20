@@ -57,6 +57,7 @@ const POPULAR = new Set([
   "Lua", // 9.2%
   "Ruby", // 6.4%
   "Swift", // 5.4%
+  "Zig", // rising
 ]);
 
 for (const lang of computed) {
@@ -98,24 +99,14 @@ for (const t of TRAITS) {
   }
 }
 
-// Legend chips: split into "how you structure code" (procedural / OO /
-// functional / multi-paradigm) vs "declarative" families (logic, dependent
-// types), each with the plain-language gloss and one example.
 const legend: Record<string, string> = {
-  "imperative-procedural":
-    "Explicit step-by-step instructions that read and mutate state, grouped into reusable procedures rather than objects. (C, Fortran)",
-  "object-oriented":
-    "Data and the methods that operate on it are bundled into objects that talk via method calls, usually with inheritance and polymorphism. (Java, Smalltalk)",
-  "multi-paradigm":
-    "Deliberately supports several styles at once, so a single program can mix procedural, object-oriented and functional code. (Python, Rust, Go)",
-  "functional-impure":
-    "Programs are built by composing and passing functions, but side effects like I/O and mutation are allowed anywhere. (Lisp, OCaml)",
-  "functional-pure":
-    "Functions have no side effects and always return the same output for the same input; effects are isolated by the type system. (Haskell)",
-  "logic-relational":
-    "You state facts and rules and the engine searches for values that satisfy them, instead of you writing the control flow. (Prolog)",
-  "dependently-typed":
-    "Types can depend on values, so a type can express a full specification and type-checking the program becomes a proof it is correct. (Coq, Lean)",
+  "imperative-procedural": "You tell the machine what to do, step by step. State is mutated directly. Code is organised into procedures (functions), not objects. Think C, Fortran, Zig.",
+  "object-oriented": "Data and the operations on it live together inside objects. Objects communicate via method calls, and behaviour is shared through inheritance or interfaces. Think Java, Smalltalk.",
+  "multi-paradigm": "The language supports several styles at once: you can write procedural, object-oriented, or functional code in the same program and pick whichever fits best. Think Python, Rust, Kotlin.",
+  "functional-impure": "Programs are built by composing and passing functions. Side effects like I/O or mutation are allowed anywhere, so you get functional style without strict purity. Think Lisp, OCaml, Elixir.",
+  "functional-pure": "Functions have no side effects and always return the same output for the same input. The type system tracks effects explicitly, making reasoning and testing easier. Think Haskell, Elm.",
+  "logic-relational": "You declare facts and rules, then ask questions. The engine searches for values that satisfy the constraints, instead of you writing the control flow. Think Prolog, SQL, Datalog.",
+  "dependently-typed": "Types can depend on values, so a type can express a full specification. If the code compiles, it is mathematically proven correct. Think Coq/Rocq, Lean, Agda.",
 };
 const legendOrder = [
   "imperative-procedural",
@@ -165,21 +156,133 @@ const legendOrder = [
     multi-paradigm today).
   </p>
 
-  <!-- Paradigm / colour legend -->
-  <ul class="mb-4 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
-    {legendOrder.map((id) => (
-      <li class="flex items-baseline gap-2">
-        <span
-          class="mt-1 inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-          style={`background-color: ${BAND_META[id as keyof typeof BAND_META].color}`}
-        ></span>
-        <span>
-          <span class="font-medium text-brand-text">{BAND_META[id as keyof typeof BAND_META].label}</span>
-          <span class="text-brand-muted">: {legend[id]}</span>
-        </span>
-      </li>
-    ))}
-  </ul>
+  <!-- Paradigm / colour legend with SVG diagrams -->
+  <div class="mb-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    {legendOrder.map((id) => {
+      const meta = BAND_META[id as keyof typeof BAND_META];
+      return (
+        <div class="flex flex-col items-center rounded-lg p-3" style={`background-color: ${meta.color}18; border: 1px solid ${meta.color}30;`}>
+          <div class="mb-1.5 self-start">
+            <span class="font-semibold" style={`color: ${meta.color}`}>{meta.label}</span>
+          </div>
+          <p class="mb-2 self-start text-xs text-brand-muted">{legend[id]}</p>
+
+          {/* SVG diagram on white background */}
+          <div class="mt-auto w-full rounded-md bg-white p-2">
+          {id === "imperative-procedural" && (
+            <svg viewBox="0 0 200 60" class="mx-auto w-full max-w-[220px]" aria-hidden="true">
+              <rect x="4" y="4" width="44" height="22" rx="4" fill={meta.color} fill-opacity="0.15" stroke={meta.color} stroke-width="1.2"/>
+              <text x="26" y="19" text-anchor="middle" font-size="10" fill={meta.color} font-weight="600">step 1</text>
+              <line x1="48" y1="15" x2="62" y2="15" stroke={meta.color} stroke-width="1.2" marker-end="url(#arr)"/>
+              <rect x="64" y="4" width="44" height="22" rx="4" fill={meta.color} fill-opacity="0.15" stroke={meta.color} stroke-width="1.2"/>
+              <text x="86" y="19" text-anchor="middle" font-size="10" fill={meta.color} font-weight="600">step 2</text>
+              <line x1="108" y1="15" x2="122" y2="15" stroke={meta.color} stroke-width="1.2" marker-end="url(#arr)"/>
+              <rect x="124" y="4" width="44" height="22" rx="4" fill={meta.color} fill-opacity="0.15" stroke={meta.color} stroke-width="1.2"/>
+              <text x="146" y="19" text-anchor="middle" font-size="10" fill={meta.color} font-weight="600">step 3</text>
+              <text x="26" y="44" text-anchor="middle" font-size="9" fill="#6B7280" font-family="monospace">x = 0</text>
+              <text x="86" y="44" text-anchor="middle" font-size="9" fill="#6B7280" font-family="monospace">x += 1</text>
+              <text x="146" y="44" text-anchor="middle" font-size="9" fill="#6B7280" font-family="monospace">print(x)</text>
+              <defs><marker id="arr" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill={meta.color}/></marker></defs>
+            </svg>
+          )}
+
+          {id === "object-oriented" && (
+            <svg viewBox="0 0 160 80" class="mx-auto w-full max-w-[200px]" aria-hidden="true">
+              <rect x="8" y="2" width="144" height="76" rx="5" fill={meta.color} fill-opacity="0.06" stroke={meta.color} stroke-width="1.2"/>
+              <text x="80" y="17" text-anchor="middle" font-size="11" fill={meta.color} font-weight="700">Object</text>
+              <line x1="8" y1="22" x2="152" y2="22" stroke={meta.color} stroke-width="0.8" stroke-opacity="0.4"/>
+              <rect x="16" y="28" width="56" height="18" rx="3" fill="#3B82F6" fill-opacity="0.15" stroke="#3B82F6" stroke-width="0.8"/>
+              <text x="44" y="41" text-anchor="middle" font-size="10" fill="#3B82F6" font-weight="600">data</text>
+              <rect x="84" y="28" width="60" height="18" rx="3" fill="#10B981" fill-opacity="0.15" stroke="#10B981" stroke-width="0.8"/>
+              <text x="114" y="41" text-anchor="middle" font-size="10" fill="#10B981" font-weight="600">methods</text>
+              <text x="80" y="66" text-anchor="middle" font-size="9" fill="#6B7280" font-family="monospace">dog.bark()</text>
+            </svg>
+          )}
+
+          {id === "multi-paradigm" && (
+            <svg viewBox="0 0 180 70" class="mx-auto w-full max-w-[210px]" aria-hidden="true">
+              <circle cx="52" cy="32" r="28" fill="#3B82F6" fill-opacity="0.1" stroke="#3B82F6" stroke-width="0.8"/>
+              <circle cx="90" cy="32" r="28" fill="#10B981" fill-opacity="0.1" stroke="#10B981" stroke-width="0.8"/>
+              <circle cx="128" cy="32" r="28" fill={meta.color} fill-opacity="0.1" stroke={meta.color} stroke-width="0.8"/>
+              <text x="38" y="35" text-anchor="middle" font-size="9" fill="#3B82F6" font-weight="700">Proc.</text>
+              <text x="90" y="35" text-anchor="middle" font-size="9" fill="#374151" font-weight="700">OO</text>
+              <text x="142" y="35" text-anchor="middle" font-size="9" fill="#10B981" font-weight="700">FP</text>
+              <text x="90" y="66" text-anchor="middle" font-size="8" fill="#6B7280">pick whichever fits</text>
+            </svg>
+          )}
+
+          {id === "functional-impure" && (
+            <svg viewBox="0 0 200 62" class="mx-auto w-full max-w-[220px]" aria-hidden="true">
+              <rect x="2" y="10" width="34" height="20" rx="4" fill="#9CA3AF" fill-opacity="0.2" stroke="#9CA3AF" stroke-width="0.8"/>
+              <text x="19" y="24" text-anchor="middle" font-size="9" fill="#6B7280">input</text>
+              <line x1="36" y1="20" x2="50" y2="20" stroke={meta.color} stroke-width="1.2" marker-end="url(#arr2)"/>
+              <rect x="52" y="6" width="34" height="28" rx="10" fill={meta.color} fill-opacity="0.15" stroke={meta.color} stroke-width="1.2"/>
+              <text x="69" y="24" text-anchor="middle" font-size="11" fill={meta.color} font-weight="700">f</text>
+              <line x1="86" y1="20" x2="100" y2="20" stroke={meta.color} stroke-width="1.2" marker-end="url(#arr2)"/>
+              <rect x="102" y="6" width="34" height="28" rx="10" fill={meta.color} fill-opacity="0.15" stroke={meta.color} stroke-width="1.2"/>
+              <text x="119" y="24" text-anchor="middle" font-size="11" fill={meta.color} font-weight="700">g</text>
+              <line x1="136" y1="20" x2="150" y2="20" stroke={meta.color} stroke-width="1.2" marker-end="url(#arr2)"/>
+              <rect x="152" y="10" width="42" height="20" rx="4" fill="#9CA3AF" fill-opacity="0.2" stroke="#9CA3AF" stroke-width="0.8"/>
+              <text x="173" y="24" text-anchor="middle" font-size="9" fill="#6B7280">output</text>
+              <line x1="119" y1="34" x2="119" y2="50" stroke="#EF4444" stroke-width="1" stroke-dasharray="3 2"/>
+              <text x="119" y="59" text-anchor="middle" font-size="8" fill="#EF4444" font-weight="500">side effect !</text>
+              <defs><marker id="arr2" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill={meta.color}/></marker></defs>
+            </svg>
+          )}
+
+          {id === "functional-pure" && (
+            <svg viewBox="0 0 200 50" class="mx-auto w-full max-w-[220px]" aria-hidden="true">
+              <rect x="2" y="10" width="34" height="20" rx="4" fill="#9CA3AF" fill-opacity="0.2" stroke="#9CA3AF" stroke-width="0.8"/>
+              <text x="19" y="24" text-anchor="middle" font-size="9" fill="#6B7280">input</text>
+              <line x1="36" y1="20" x2="50" y2="20" stroke={meta.color} stroke-width="1.2" marker-end="url(#arr3)"/>
+              <rect x="52" y="6" width="34" height="28" rx="10" fill={meta.color} fill-opacity="0.15" stroke={meta.color} stroke-width="1.2"/>
+              <text x="69" y="24" text-anchor="middle" font-size="11" fill={meta.color} font-weight="700">f</text>
+              <line x1="86" y1="20" x2="100" y2="20" stroke={meta.color} stroke-width="1.2" marker-end="url(#arr3)"/>
+              <rect x="102" y="6" width="34" height="28" rx="10" fill={meta.color} fill-opacity="0.15" stroke={meta.color} stroke-width="1.2"/>
+              <text x="119" y="24" text-anchor="middle" font-size="11" fill={meta.color} font-weight="700">g</text>
+              <line x1="136" y1="20" x2="150" y2="20" stroke={meta.color} stroke-width="1.2" marker-end="url(#arr3)"/>
+              <rect x="152" y="10" width="42" height="20" rx="4" fill="#9CA3AF" fill-opacity="0.2" stroke="#9CA3AF" stroke-width="0.8"/>
+              <text x="173" y="24" text-anchor="middle" font-size="9" fill="#6B7280">output</text>
+              <text x="100" y="46" text-anchor="middle" font-size="8" fill={meta.color} font-weight="500">same input → same output, always</text>
+              <defs><marker id="arr3" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill={meta.color}/></marker></defs>
+            </svg>
+          )}
+
+          {id === "logic-relational" && (
+            <svg viewBox="0 0 200 62" class="mx-auto w-full max-w-[220px]" aria-hidden="true">
+              <rect x="2" y="6" width="50" height="32" rx="4" fill={meta.color} fill-opacity="0.12" stroke={meta.color} stroke-width="1.2"/>
+              <text x="27" y="20" text-anchor="middle" font-size="10" fill={meta.color} font-weight="600">Facts</text>
+              <text x="27" y="32" text-anchor="middle" font-size="8" fill="#6B7280">+ Rules</text>
+              <line x1="52" y1="22" x2="68" y2="22" stroke={meta.color} stroke-width="1.2" marker-end="url(#arr4)"/>
+              <rect x="70" y="6" width="56" height="32" rx="4" fill={meta.color} fill-opacity="0.2" stroke={meta.color} stroke-width="1.2"/>
+              <text x="98" y="20" text-anchor="middle" font-size="10" fill={meta.color} font-weight="700">Engine</text>
+              <text x="98" y="32" text-anchor="middle" font-size="8" fill="#6B7280">search</text>
+              <line x1="126" y1="22" x2="142" y2="22" stroke={meta.color} stroke-width="1.2" marker-end="url(#arr4)"/>
+              <rect x="144" y="8" width="50" height="28" rx="4" fill="#10B981" fill-opacity="0.15" stroke="#10B981" stroke-width="0.8"/>
+              <text x="169" y="26" text-anchor="middle" font-size="10" fill="#10B981" font-weight="600">Answer</text>
+              <text x="27" y="55" font-size="8" fill="#6B7280" font-family="monospace">?- query(X)</text>
+              <text x="144" y="55" font-size="8" fill="#10B981" font-family="monospace">X = result</text>
+              <defs><marker id="arr4" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill={meta.color}/></marker></defs>
+            </svg>
+          )}
+
+          {id === "dependently-typed" && (
+            <svg viewBox="0 0 180 62" class="mx-auto w-full max-w-[210px]" aria-hidden="true">
+              <rect x="2" y="6" width="60" height="28" rx="4" fill={meta.color} fill-opacity="0.12" stroke={meta.color} stroke-width="1.2"/>
+              <text x="32" y="19" text-anchor="middle" font-size="10" fill={meta.color} font-weight="700">Type</text>
+              <text x="32" y="30" text-anchor="middle" font-size="8" fill="#6B7280">= Specification</text>
+              <text x="78" y="23" text-anchor="middle" font-size="13" fill="#6B7280">≡</text>
+              <rect x="92" y="6" width="60" height="28" rx="4" fill="#10B981" fill-opacity="0.12" stroke="#10B981" stroke-width="1.2"/>
+              <text x="122" y="19" text-anchor="middle" font-size="10" fill="#10B981" font-weight="700">Proof</text>
+              <text x="122" y="30" text-anchor="middle" font-size="8" fill="#6B7280">= Program</text>
+              <text x="90" y="52" text-anchor="middle" font-size="9" fill={meta.color} font-weight="500">compiles ⟹ correct ✓</text>
+            </svg>
+          )}
+          </div>
+        </div>
+      );
+    })}
+  </div>
 
   <p class="mb-8 text-sm text-brand-muted">
     <strong class="font-semibold text-brand-body">Bold</strong> names are still
