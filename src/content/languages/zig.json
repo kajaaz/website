@@ -1,5 +1,44 @@
 {
   "name": "Zig",
   "year": 2016,
-  "paradigm": "imperative-procedural"
+  "paradigm": "imperative-procedural",
+  "typeSystem": "Static, strong, inferred. Comptime (compile-time evaluation) replaces generics and macros: type parameters are ordinary values computed at compile time, giving duck-typed generics without a separate syntax.",
+  "typeSystemExample": {
+    "lang": "zig",
+    "caption": "Generic max via comptime type parameter",
+    "source": "const std = @import(\"std\");\n\nfn max(comptime T: type, a: T, b: T) T {\n    return if (a >= b) a else b;\n}\n\npub fn main() void {\n    std.debug.print(\"{d}\\n\", .{max(i32, 3, 7)});\n    std.debug.print(\"{d}\\n\", .{max(f64, 1.5, 2.8)});\n}"
+  },
+  "runtime": "Compiled ahead-of-time to native code via LLVM (or its own x86-64 backend). No hidden control flow, no garbage collector; optional safety checks can be disabled in release builds.",
+  "runtimes": [
+    {
+      "name": "Native (LLVM backend)",
+      "kind": "native",
+      "role": "Default production backend using LLVM for optimised machine code across many targets."
+    },
+    {
+      "name": "Native (self-hosted x86_64 backend)",
+      "kind": "native",
+      "role": "Incremental backend written in Zig, aimed at much faster debug-build compile times."
+    },
+    {
+      "name": "WebAssembly (wasm32-freestanding / wasm32-wasi)",
+      "kind": "wasm",
+      "role": "First-class WASM targets for browsers and WASI runtimes."
+    }
+  ],
+  "compilers": [
+    { "name": "zig (self-hosted)", "role": "The official compiler, itself written in Zig; uses LLVM or its own codegen backend." },
+    { "name": "zig cc", "role": "Drop-in C/C++ cross-compiler wrapping Clang/LLVM, bundled with the Zig toolchain." }
+  ],
+  "concurrencyModel": "Async/await with stackless coroutines existed in earlier versions but was removed in 0.11. Current Zig relies on OS threads (std.Thread) plus an event-based I/O model (std.io.poll). No hidden allocations or runtime scheduler.",
+  "concurrencyExample": {
+    "lang": "zig",
+    "caption": "4 threads computing i*i in parallel via std.Thread",
+    "source": "const std = @import(\"std\");\n\nfn square(n: usize) usize {\n    return n * n;\n}\n\npub fn main() !void {\n    var threads: [4]std.Thread = undefined;\n    var results: [4]usize = undefined;\n\n    for (0..4) |i| {\n        threads[i] = try std.Thread.spawn(.{}, struct {\n            fn run(idx: usize, res: *[4]usize) void {\n                res[idx] = square(idx);\n            }\n        }.run, .{ i, &results });\n    }\n    for (&threads) |*t| t.join();\n\n    for (results) |r| std.debug.print(\"{d} \", .{r});\n}"
+  },
+  "codeExample": {
+    "lang": "zig",
+    "caption": "Hello, World!",
+    "source": "const std = @import(\"std\");\n\npub fn main() void {\n    std.debug.print(\"Hello, World!\\n\", .{});\n}"
+  }
 }
