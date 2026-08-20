@@ -1,0 +1,404 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const proofAssistants = [
+  {
+    name: "Rocq (Coq)",
+    accent: "#8B5CF6",
+    trust: "kernel-checked",
+    foundation: "Calculus of Inductive Constructions, full dependent types.",
+    codeOut: "Extraction to OCaml / Haskell / Scheme; CertiCoq & CertiRocq to C; Fiat-Crypto to C / Rust / Go / Zig.",
+    sweet: "Maximal expressiveness: verified compilers and deep mathematics.",
+    wild: "CompCert, seL4 (partial), Fiat-Crypto in BoringSSL & Linux crypto.",
+  },
+  {
+    name: "Lean 4",
+    accent: "#8B5CF6",
+    trust: "kernel-checked",
+    foundation: "Dependent type theory with first-class metaprogramming.",
+    codeOut: "Built-in Lean→C backend (reference counting), no extraction step.",
+    sweet: "Unified maths library (Mathlib); best fit for LLM-assisted proving.",
+    wild: "Mathlib, a fast-growing AI theorem-proving research ecosystem.",
+  },
+  {
+    name: "Isabelle/HOL",
+    accent: "#0EA5E9",
+    trust: "kernel-checked",
+    foundation: "Higher-order logic on a tiny LCF-style kernel.",
+    codeOut: "Code generation to Haskell / SML / OCaml; AutoCorres verifies existing C.",
+    sweet: "Large-scale system proofs; Sledgehammer automation (E, Vampire, Z3).",
+    wild: "seL4 verified microkernel, TLS 1.3 analysis, concurrent-GC proofs.",
+  },
+  {
+    name: "F*",
+    accent: "#2563EB",
+    trust: "SMT-backed",
+    foundation: "Dependent + refinement types + effects, discharged by Z3.",
+    codeOut: "KaRaMeL extracts a low-level, constant-time C subset (no GC).",
+    sweet: "Verified cryptography with high automation.",
+    wild: "HACL*, EverCrypt, miTLS: shipping in Firefox and Linux.",
+  },
+  {
+    name: "SPARK / Ada",
+    accent: "#D97706",
+    trust: "SMT-backed",
+    foundation: "Contract-based (pre/post, invariants), not a full proof assistant.",
+    codeOut: "Native GNAT compiler; bare-metal, no GC, WCET-friendly.",
+    sweet: "Fully automatic proofs for safety-critical embedded code.",
+    wild: "Airbus A350, Ariane 6, DO-178C avionics, secure microcontrollers.",
+  },
+];
+
+const smtTools = [
+  {
+    name: "Frama-C",
+    lang: "C",
+    accent: "#2563EB",
+    how: "ACSL contracts in /*@ … */ comments. The WP plugin generates weakest-preconditions, sent through Why3 to Z3 / CVC5 / Alt-Ergo.",
+    edge: "The most mature C verifier: copes with pointers, unions and volatile in real industrial code.",
+    wild: "Aerospace, automotive (ISO 26262), verified TLS fragments.",
+  },
+  {
+    name: "Creusot",
+    lang: "Rust",
+    accent: "#D97706",
+    how: "Pearlite specs as Rust proc-macros. Translates ownership-typed Rust into WhyML, then Why3 dispatches to SMT solvers.",
+    edge: "High automation that stays close to the normal Rust workflow; handles iterators and closures.",
+    wild: "CreuSAT: a fully verified SAT solver written in Rust.",
+  },
+  {
+    name: "Aeneas",
+    lang: "Rust",
+    accent: "#059669",
+    how: "Lifts safe Rust (via the Charon/LLBC frontend) into pure functional models; proofs are then written in Lean, Rocq, F* or HOL4.",
+    edge: "Rust's borrow checker removes aliasing, so the generated models are clean and pointer-free.",
+    wild: "Verified cryptographic primitives; shares Charon with hax & Eurydice.",
+  },
+  {
+    name: "hax",
+    lang: "Rust",
+    accent: "#059669",
+    how: "Extracts Rust to F* or Rocq for proofs, or to ProVerif for protocol analysis. Trait contracts guide the translation.",
+    edge: "Crypto-focused and plugs into the existing F* / HACL* ecosystem.",
+    wild: "libcrux and formally verified ML-KEM (post-quantum KEM).",
+  },
+  {
+    name: "Kani",
+    lang: "Rust",
+    accent: "#0EA5E9",
+    how: "Bounded model checking: translates Rust MIR to CBMC and exhaustively explores all paths up to a bound. Harnesses look like tests.",
+    edge: "Very low adoption cost: great for memory-safety, panic-freedom and API contracts.",
+    wild: "AWS Firecracker, s2n-quic, the Rust std-library verification effort.",
+  },
+];
+---
+
+<BaseLayout title="Formal Verification">
+  <p class="mono-eyebrow mb-1"><span class="text-accent-blue">$</span> coqc -Q . FV</p>
+  <h1 class="glitch is-intro mb-8 text-3xl font-bold tracking-tight text-brand-text" data-text="Formal Verification">Formal Verification</h1>
+
+  <!-- ====== WHAT & WHY ====== -->
+  <section class="mb-16">
+    <p class="mono-eyebrow mb-2">// why formal methods?</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="What & Why">What &amp; Why</h2>
+    <div class="space-y-4 leading-relaxed text-brand-body">
+      <p>
+        Formal verification is the act of <strong class="text-brand-text">mathematically proving</strong> that a program meets its specification, not testing it on a handful of inputs, but guaranteeing correctness across <em>all</em> possible executions.
+      </p>
+      <p>
+        I am deeply invested in this field and convinced that the future of computer-science security runs through writing programs in formal languages. As software grows more complex and AI-generated code spreads, stating a property once and getting a machine-checked proof that it holds forever is the strongest assurance we can offer. Rather than patching vulnerabilities after deployment, we prevent them at the source, by making incorrect programs impossible to express.
+      </p>
+    </div>
+
+    <div class="mt-8 grid gap-4 sm:grid-cols-2">
+      <div class="rounded-xl border border-brand-border bg-white p-5">
+        <p class="font-mono text-xs uppercase tracking-wider text-brand-muted">Testing</p>
+        <p class="mt-2 text-2xl font-bold text-brand-text">finds bugs</p>
+        <p class="mt-2 text-sm text-brand-body">Runs the program on chosen inputs. A green suite means "no bug seen yet": the untested paths stay unknown.</p>
+      </div>
+      <div class="rounded-xl border border-accent-green/40 bg-accent-green/5 p-5">
+        <p class="font-mono text-xs uppercase tracking-wider text-accent-emerald">Proving</p>
+        <p class="mt-2 text-2xl font-bold text-brand-text">proves their absence</p>
+        <p class="mt-2 text-sm text-brand-body">A machine-checked argument covers every input at once. If it type-checks, the property holds, permanently.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== GENERAL-PURPOSE PROOF ASSISTANTS ====== -->
+  <section class="mb-16">
+    <p class="mono-eyebrow mb-2">// proof-assistants</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="General-Purpose Proof Assistants">General-Purpose Proof Assistants</h2>
+    <p class="mb-6 text-brand-body">
+      These systems let you state arbitrary theorems about programs and prove them interactively. They (almost) all share the same pipeline: you write a specification and a proof, a tiny <strong class="text-brand-text">trusted kernel</strong> checks it, and then verified code is extracted or compiled out.
+    </p>
+
+    <!-- Workflow diagram -->
+    <figure class="mb-8 rounded-xl border border-brand-border bg-white p-4 sm:p-6">
+      <svg viewBox="0 0 760 140" class="h-auto w-full" role="img" aria-label="Proof-assistant workflow: specification, proof script, trusted kernel check, extraction, executable">
+        <defs>
+          <marker id="pa-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#71717A" />
+          </marker>
+        </defs>
+        <!-- boxes -->
+        <g font-family="Inter, sans-serif">
+          <!-- 1 spec -->
+          <rect x="12" y="42" width="120" height="56" rx="9" fill="rgba(37,99,235,0.08)" stroke="#2563EB" stroke-width="1.5" />
+          <text x="72" y="66" text-anchor="middle" font-size="13" font-weight="700" fill="#18181B">Specification</text>
+          <text x="72" y="84" text-anchor="middle" font-size="10" fill="#71717A">what "correct" means</text>
+          <!-- 2 proof -->
+          <rect x="172" y="42" width="120" height="56" rx="9" fill="rgba(37,99,235,0.08)" stroke="#2563EB" stroke-width="1.5" />
+          <text x="232" y="66" text-anchor="middle" font-size="13" font-weight="700" fill="#18181B">Proof script</text>
+          <text x="232" y="84" text-anchor="middle" font-size="10" fill="#71717A">tactics / terms</text>
+          <!-- 3 kernel (highlight) -->
+          <rect x="332" y="42" width="120" height="56" rx="9" fill="rgba(16,185,129,0.12)" stroke="#10B981" stroke-width="2" />
+          <text x="392" y="66" text-anchor="middle" font-size="13" font-weight="700" fill="#047857">Kernel check</text>
+          <text x="392" y="84" text-anchor="middle" font-size="10" fill="#047857">small trusted core</text>
+          <!-- 4 extraction -->
+          <rect x="492" y="42" width="120" height="56" rx="9" fill="rgba(37,99,235,0.08)" stroke="#2563EB" stroke-width="1.5" />
+          <text x="552" y="66" text-anchor="middle" font-size="13" font-weight="700" fill="#18181B">Extraction</text>
+          <text x="552" y="84" text-anchor="middle" font-size="10" fill="#71717A">to OCaml / C / …</text>
+          <!-- 5 executable -->
+          <rect x="652" y="42" width="100" height="56" rx="9" fill="rgba(37,99,235,0.08)" stroke="#2563EB" stroke-width="1.5" />
+          <text x="702" y="66" text-anchor="middle" font-size="13" font-weight="700" fill="#18181B">Executable</text>
+          <text x="702" y="84" text-anchor="middle" font-size="10" fill="#71717A">proven correct</text>
+          <!-- arrows -->
+          <line x1="134" y1="70" x2="170" y2="70" stroke="#71717A" stroke-width="1.5" marker-end="url(#pa-arrow)" />
+          <line x1="294" y1="70" x2="330" y2="70" stroke="#71717A" stroke-width="1.5" marker-end="url(#pa-arrow)" />
+          <line x1="454" y1="70" x2="490" y2="70" stroke="#71717A" stroke-width="1.5" marker-end="url(#pa-arrow)" />
+          <line x1="614" y1="70" x2="650" y2="70" stroke="#71717A" stroke-width="1.5" marker-end="url(#pa-arrow)" />
+          <text x="392" y="24" text-anchor="middle" font-size="10" font-style="italic" fill="#059669">↑ the only code you must trust</text>
+        </g>
+      </svg>
+      <figcaption class="mt-3 text-sm text-brand-muted">The whole edifice rests on the kernel: if it accepts the proof, the theorem is true, even if the proof was written by a machine or an LLM.</figcaption>
+    </figure>
+
+    <p class="mb-4 text-sm text-brand-body">
+      They differ mainly in <strong class="text-brand-text">where trust lives</strong>. Kernel-checked systems re-verify every proof through a minimal core; SMT-backed systems trade some trust for automation by leaning on an external solver (Z3) that sits inside the trusted base.
+    </p>
+
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {proofAssistants.map((t) => (
+        <article class="flex flex-col rounded-xl border border-brand-border bg-white p-5" style={`border-top: 3px solid ${t.accent}`}>
+          <div class="mb-3 flex items-center justify-between gap-2">
+            <h3 class="font-semibold text-brand-text">{t.name}</h3>
+            <span class="rounded-full px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider" style={`color:${t.accent}; background:${t.accent}1a`}>{t.trust}</span>
+          </div>
+          <dl class="space-y-2 text-sm">
+            <div><dt class="font-mono text-[11px] uppercase tracking-wider text-accent-emerald">foundation</dt><dd class="text-brand-body">{t.foundation}</dd></div>
+            <div><dt class="font-mono text-[11px] uppercase tracking-wider text-accent-emerald">get code out</dt><dd class="text-brand-body">{t.codeOut}</dd></div>
+            <div><dt class="font-mono text-[11px] uppercase tracking-wider text-accent-emerald">sweet spot</dt><dd class="text-brand-body">{t.sweet}</dd></div>
+            <div><dt class="font-mono text-[11px] uppercase tracking-wider text-accent-emerald">in the wild</dt><dd class="text-brand-body">{t.wild}</dd></div>
+          </dl>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <!-- ====== CRYPTOGRAPHIC VERIFICATION ====== -->
+  <section class="mb-16">
+    <p class="mono-eyebrow mb-2">// verify --crypto</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Cryptographic Verification">Cryptographic Verification</h2>
+    <p class="mb-6 text-brand-body">
+      Cryptography needs two guarantees at once: the <strong class="text-brand-text">maths</strong> must be secure (a break implies solving a hard problem) and the <strong class="text-brand-text">implementation</strong> must match that maths, in constant time, down to the assembly. No single tool does everything, so they hand off to one another across four layers: from a high-level security model down to the running binary.
+    </p>
+
+    <!-- Pipeline diagram (recreated, not pasted) -->
+    <figure class="mb-8 rounded-xl border border-brand-border bg-white p-4 sm:p-6">
+      <svg viewBox="0 0 780 400" class="h-auto w-full" role="img" aria-label="Cryptographic verification pipeline across model, spec, code and binary layers for EasyCrypt, Jasmin, CryptoBAP and CryptoVerif">
+        <defs>
+          <marker id="cx-solid" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#52525B" />
+          </marker>
+          <marker id="cx-hand" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#A1A1AA" />
+          </marker>
+          <marker id="cx-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#8B5CF6" />
+          </marker>
+        </defs>
+
+        <!-- row guide lines + labels -->
+        <g font-family="'JetBrains Mono', monospace" font-size="11" fill="#A1A1AA">
+          <text x="6" y="99">model</text>
+          <text x="6" y="174">spec</text>
+          <text x="6" y="249">code</text>
+          <text x="6" y="324">binary</text>
+        </g>
+        <g stroke="#E4E4E7" stroke-width="1" stroke-dasharray="4 4">
+          <line x1="95" y1="132" x2="770" y2="132" />
+          <line x1="95" y1="207" x2="770" y2="207" />
+          <line x1="95" y1="282" x2="770" y2="282" />
+        </g>
+
+        <!-- column headers -->
+        <g font-family="Inter, sans-serif" text-anchor="middle">
+          <text x="175" y="22" font-size="13" font-weight="700" fill="#18181B">EasyCrypt</text>
+          <text x="175" y="38" font-size="11" fill="#71717A">prove</text>
+          <text x="345" y="22" font-size="13" font-weight="700" fill="#18181B">Jasmin</text>
+          <text x="345" y="38" font-size="11" fill="#71717A">compile</text>
+          <text x="515" y="22" font-size="13" font-weight="700" fill="#18181B">CryptoBAP</text>
+          <text x="515" y="38" font-size="11" fill="#71717A">recover</text>
+          <text x="685" y="22" font-size="13" font-weight="700" fill="#18181B">CryptoVerif</text>
+          <text x="685" y="38" font-size="11" fill="#71717A">prove</text>
+        </g>
+
+        <!-- arrows first (behind boxes) -->
+        <g>
+          <!-- EasyCrypt model <-> spec -->
+          <line x1="175" y1="120" x2="175" y2="145" stroke="#8B5CF6" stroke-width="1.6" marker-start="url(#cx-purple)" marker-end="url(#cx-purple)" />
+          <!-- EasyCrypt spec -> Jasmin code (handoff) -->
+          <line x1="247" y1="178" x2="275" y2="232" stroke="#A1A1AA" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#cx-hand)" />
+          <!-- Jasmin code -> binary (compile) -->
+          <line x1="345" y1="270" x2="345" y2="295" stroke="#52525B" stroke-width="1.6" marker-end="url(#cx-solid)" />
+          <!-- CryptoBAP binary -> code (lift) -->
+          <line x1="515" y1="295" x2="515" y2="271" stroke="#52525B" stroke-width="1.6" marker-end="url(#cx-solid)" />
+          <!-- CryptoBAP code -> model (recover) -->
+          <line x1="515" y1="220" x2="515" y2="121" stroke="#52525B" stroke-width="1.6" marker-end="url(#cx-solid)" />
+          <!-- CryptoBAP model -> CryptoVerif model (handoff) -->
+          <line x1="588" y1="95" x2="611" y2="95" stroke="#A1A1AA" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#cx-hand)" />
+          <!-- CryptoVerif model -> spec -->
+          <line x1="685" y1="120" x2="685" y2="145" stroke="#8B5CF6" stroke-width="1.6" marker-end="url(#cx-purple)" />
+        </g>
+
+        <!-- boxes -->
+        <g font-family="Inter, sans-serif" text-anchor="middle">
+          <!-- EasyCrypt -->
+          <rect x="103" y="70" width="144" height="50" rx="8" fill="rgba(139,92,246,0.12)" stroke="#8B5CF6" stroke-width="1.5" />
+          <text x="175" y="91" font-size="12" font-weight="700" fill="#6D28D9">Security spec</text>
+          <text x="175" y="107" font-size="10" fill="#7C3AED">+ proof</text>
+          <rect x="103" y="145" width="144" height="50" rx="8" fill="rgba(139,92,246,0.12)" stroke="#8B5CF6" stroke-width="1.5" />
+          <text x="175" y="166" font-size="12" font-weight="700" fill="#6D28D9">Extracted model</text>
+          <text x="175" y="182" font-size="10" fill="#7C3AED">checked vs spec</text>
+
+          <!-- Jasmin -->
+          <rect x="273" y="220" width="144" height="50" rx="8" fill="rgba(16,185,129,0.12)" stroke="#10B981" stroke-width="1.5" />
+          <text x="345" y="241" font-size="12" font-weight="700" fill="#047857">Jasmin source</text>
+          <text x="345" y="257" font-size="10" fill="#059669">.jazz</text>
+          <rect x="273" y="295" width="144" height="50" rx="8" fill="rgba(217,119,6,0.12)" stroke="#D97706" stroke-width="1.5" />
+          <text x="345" y="316" font-size="12" font-weight="700" fill="#B45309">Assembly</text>
+          <text x="345" y="332" font-size="10" fill="#D97706">verified</text>
+
+          <!-- CryptoBAP -->
+          <rect x="443" y="70" width="144" height="50" rx="8" fill="rgba(139,92,246,0.12)" stroke="#8B5CF6" stroke-width="1.5" />
+          <text x="515" y="91" font-size="12" font-weight="700" fill="#6D28D9">Recovered model</text>
+          <text x="515" y="107" font-size="10" fill="#7C3AED">sound abstraction</text>
+          <rect x="443" y="220" width="144" height="50" rx="8" fill="rgba(16,185,129,0.12)" stroke="#10B981" stroke-width="1.5" />
+          <text x="515" y="241" font-size="12" font-weight="700" fill="#047857">Lift + sym-exec</text>
+          <text x="515" y="257" font-size="10" fill="#059669">binary → model</text>
+          <rect x="443" y="295" width="144" height="50" rx="8" fill="rgba(16,185,129,0.12)" stroke="#10B981" stroke-width="1.5" />
+          <text x="515" y="316" font-size="12" font-weight="700" fill="#047857">Existing binary</text>
+          <text x="515" y="332" font-size="10" fill="#059669">not yours</text>
+
+          <!-- CryptoVerif -->
+          <rect x="613" y="70" width="144" height="50" rx="8" fill="rgba(139,92,246,0.12)" stroke="#8B5CF6" stroke-width="1.5" />
+          <text x="685" y="91" font-size="12" font-weight="700" fill="#6D28D9">Protocol model</text>
+          <text x="685" y="107" font-size="10" fill="#7C3AED">hand-written</text>
+          <rect x="613" y="145" width="144" height="50" rx="8" fill="rgba(139,92,246,0.12)" stroke="#8B5CF6" stroke-width="1.5" />
+          <text x="685" y="166" font-size="12" font-weight="700" fill="#6D28D9">Security proof</text>
+          <text x="685" y="182" font-size="10" fill="#7C3AED">automated games</text>
+        </g>
+
+        <!-- legend -->
+        <g font-family="Inter, sans-serif" font-size="11" fill="#52525B">
+          <rect x="103" y="370" width="12" height="12" rx="3" fill="rgba(139,92,246,0.15)" stroke="#8B5CF6" />
+          <text x="121" y="380">proof / model</text>
+          <rect x="228" y="370" width="12" height="12" rx="3" fill="rgba(16,185,129,0.15)" stroke="#10B981" />
+          <text x="246" y="380">code / binary</text>
+          <rect x="350" y="370" width="12" height="12" rx="3" fill="rgba(217,119,6,0.15)" stroke="#D97706" />
+          <text x="368" y="380">compiler out</text>
+          <line x1="470" y1="376" x2="500" y2="376" stroke="#A1A1AA" stroke-width="1.6" stroke-dasharray="5 4" />
+          <text x="506" y="380">tool hand-off</text>
+        </g>
+      </svg>
+      <figcaption class="mt-3 text-sm text-brand-muted">Read it bottom-up on the right (recover a model from an untrusted binary) and top-down on the left (prove a spec, then compile it to verified assembly).</figcaption>
+    </figure>
+
+    <div class="grid gap-4 sm:grid-cols-2">
+      <article class="rounded-xl border border-brand-border bg-white p-5" style="border-left:3px solid #10B981">
+        <h3 class="font-semibold text-brand-text">Jasmin <span class="font-normal text-brand-muted">: write it</span></h3>
+        <p class="mt-2 text-sm text-brand-body">An assembly-like language whose <em>compiler is itself proved correct</em>. You get predictable, constant-time machine code with no hidden compiler surprises, ideal for primitives like ChaCha20 or Kyber.</p>
+      </article>
+      <article class="rounded-xl border border-brand-border bg-white p-5" style="border-left:3px solid #8B5CF6">
+        <h3 class="font-semibold text-brand-text">EasyCrypt <span class="font-normal text-brand-muted">: prove the maths</span></h3>
+        <p class="mt-2 text-sm text-brand-body">Game-based proofs: it formalises reductions such as "breaking this scheme means solving a hard problem" (IND-CCA2, EUF-CMA), and its extracted model is checked against the Jasmin code.</p>
+      </article>
+      <article class="rounded-xl border border-brand-border bg-white p-5" style="border-left:3px solid #8B5CF6">
+        <h3 class="font-semibold text-brand-text">CryptoVerif <span class="font-normal text-brand-muted">: prove the protocol</span></h3>
+        <p class="mt-2 text-sm text-brand-body">Works in the computational model and automates the sequence of game transformations, proving whole protocols secure: TLS 1.3, Signal, WireGuard.</p>
+      </article>
+      <article class="rounded-xl border border-brand-border bg-white p-5" style="border-left:3px solid #10B981">
+        <h3 class="font-semibold text-brand-text">CryptoBAP <span class="font-normal text-brand-muted">: audit what you can't rewrite</span></h3>
+        <p class="mt-2 text-sm text-brand-body">Lifts an existing binary through symbolic execution into a <em>sound</em> formal model, so a deployed closed-source library can be fed to CryptoVerif or EasyCrypt for analysis.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- ====== SMT-BASED PROGRAM VERIFIERS ====== -->
+  <section class="mb-14">
+    <p class="mono-eyebrow mb-2">// verify --smt &lt;program&gt;</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="SMT-Based Verifiers">SMT-Based Verifiers</h2>
+    <p class="mb-6 text-brand-body">
+      Instead of interactive proofs, these tools verify programs written in <strong class="text-brand-text">mainstream languages</strong> (Rust, C…). You annotate the code with contracts; the tool turns the "what could go wrong?" question into logical formulas and hands them to an automated solver. When it succeeds there is no manual proof to write; when it fails you often get a concrete counterexample.
+    </p>
+
+    <!-- Workflow diagram -->
+    <figure class="mb-8 rounded-xl border border-brand-border bg-white p-4 sm:p-6">
+      <svg viewBox="0 0 760 170" class="h-auto w-full" role="img" aria-label="SMT verification workflow: annotated source, verification-condition generation, SMT solver, then proved or counterexample">
+        <defs>
+          <marker id="smt-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#71717A" />
+          </marker>
+        </defs>
+        <g font-family="Inter, sans-serif" text-anchor="middle">
+          <!-- source -->
+          <rect x="18" y="58" width="150" height="56" rx="9" fill="rgba(16,185,129,0.10)" stroke="#10B981" stroke-width="1.5" />
+          <text x="93" y="82" font-size="13" font-weight="700" fill="#047857">Source + specs</text>
+          <text x="93" y="100" font-size="10" fill="#059669">contracts, invariants</text>
+          <!-- VC gen -->
+          <rect x="228" y="58" width="150" height="56" rx="9" fill="rgba(37,99,235,0.08)" stroke="#2563EB" stroke-width="1.5" />
+          <text x="303" y="82" font-size="13" font-weight="700" fill="#18181B">VC generation</text>
+          <text x="303" y="100" font-size="10" fill="#71717A">weakest precondition</text>
+          <!-- solver -->
+          <rect x="438" y="58" width="150" height="56" rx="9" fill="rgba(14,165,233,0.12)" stroke="#0EA5E9" stroke-width="2" />
+          <text x="513" y="82" font-size="13" font-weight="700" fill="#0369A1">SMT solver</text>
+          <text x="513" y="100" font-size="10" fill="#0369A1">Z3 / CVC5 / Alt-Ergo</text>
+          <!-- proved -->
+          <rect x="628" y="20" width="118" height="46" rx="9" fill="rgba(16,185,129,0.12)" stroke="#10B981" stroke-width="1.5" />
+          <text x="687" y="40" font-size="12" font-weight="700" fill="#047857">✓ Proved</text>
+          <text x="687" y="56" font-size="10" fill="#059669">holds ∀ inputs</text>
+          <!-- counterexample -->
+          <rect x="628" y="106" width="118" height="46" rx="9" fill="rgba(220,38,38,0.10)" stroke="#DC2626" stroke-width="1.5" />
+          <text x="687" y="126" font-size="12" font-weight="700" fill="#B91C1C">✗ Counter-ex.</text>
+          <text x="687" y="142" font-size="10" fill="#DC2626">an input that breaks it</text>
+          <!-- arrows -->
+          <line x1="168" y1="86" x2="226" y2="86" stroke="#71717A" stroke-width="1.5" marker-end="url(#smt-arrow)" />
+          <line x1="378" y1="86" x2="436" y2="86" stroke="#71717A" stroke-width="1.5" marker-end="url(#smt-arrow)" />
+          <path d="M588,74 C610,74 610,43 626,43" fill="none" stroke="#71717A" stroke-width="1.5" marker-end="url(#smt-arrow)" />
+          <path d="M588,98 C610,98 610,129 626,129" fill="none" stroke="#71717A" stroke-width="1.5" marker-end="url(#smt-arrow)" />
+        </g>
+      </svg>
+      <figcaption class="mt-3 text-sm text-brand-muted">The solver sits in the trusted base: you trust that Z3's "yes" is sound, in exchange for push-button automation.</figcaption>
+    </figure>
+
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {smtTools.map((t) => (
+        <article class="flex flex-col rounded-xl border border-brand-border bg-white p-5" style={`border-top: 3px solid ${t.accent}`}>
+          <div class="mb-3 flex items-center justify-between gap-2">
+            <h3 class="font-semibold text-brand-text">{t.name}</h3>
+            <span class="rounded-full px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider" style={`color:${t.accent}; background:${t.accent}1a`}>{t.lang}</span>
+          </div>
+          <dl class="space-y-2 text-sm">
+            <div><dt class="font-mono text-[11px] uppercase tracking-wider text-accent-emerald">how it works</dt><dd class="text-brand-body">{t.how}</dd></div>
+            <div><dt class="font-mono text-[11px] uppercase tracking-wider text-accent-emerald">why it stands out</dt><dd class="text-brand-body">{t.edge}</dd></div>
+            <div><dt class="font-mono text-[11px] uppercase tracking-wider text-accent-emerald">in the wild</dt><dd class="text-brand-body">{t.wild}</dd></div>
+          </dl>
+        </article>
+      ))}
+    </div>
+
+    <p class="mt-5 text-sm text-brand-muted">
+      A companion worth noting: <strong class="text-brand-text">Eurydice</strong> is not a verifier but a compiler that turns a safe Rust subset (via the same Charon frontend as Aeneas &amp; hax) into readable low-level C, the bridge from Rust-based proofs to embedded and kernel deployment.
+    </p>
+  </section>
+</BaseLayout>
