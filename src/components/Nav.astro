@@ -1,14 +1,21 @@
 ---
 const currentPath = Astro.url.pathname;
 
-const links = [
+const links: ({ href: string; label: string } | { label: string; children: { href: string; label: string }[] })[] = [
   { href: "/", label: "Home" },
   { href: "/about", label: "About" },
   { href: "/projects", label: "Projects" },
   { href: "/phd", label: "PhD" },
   { href: "/interviews", label: "Interviews" },
   { href: "/publications", label: "Publications" },
-  { href: "/pl-timeline", label: "PL Timeline" },
+  {
+    label: "Cheat Sheets",
+    children: [
+      { href: "/pl-timeline", label: "PL Timeline" },
+      { href: "/runtimes", label: "Runtimes" },
+      { href: "/fv", label: "Formal Verification" },
+    ],
+  },
   { href: "/contact", label: "Contact" },
 ];
 
@@ -16,6 +23,9 @@ function isActive(href: string) {
   if (href === "/") return currentPath === "/";
   return currentPath.startsWith(href);
 }
+
+const cheatSheetPaths = ["/pl-timeline", "/runtimes", "/fv"];
+const cheatSheetActive = cheatSheetPaths.some((p) => currentPath.startsWith(p));
 ---
 
 <header class="sticky top-0 z-50 border-b border-brand-border bg-brand-bg/95 backdrop-blur supports-[backdrop-filter]:bg-brand-bg/80">
@@ -40,40 +50,105 @@ function isActive(href: string) {
     </button>
 
     <ul id="nav-links" class="hidden items-center gap-1 md:flex">
-      {links.map(({ href, label }) => (
+      {links.map((item) => {
+        if ("children" in item) {
+          return (
+            <li class="group relative">
+              <button
+                class:list={[
+                  "relative flex items-center gap-0.5 rounded-md px-3 py-1.5 text-sm transition-colors after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:origin-left after:scale-x-0 after:bg-gradient-to-r after:from-accent-blue after:to-accent-green after:transition-transform hover:after:scale-x-100",
+                  cheatSheetActive
+                    ? "font-medium text-brand-text after:scale-x-100"
+                    : "text-brand-muted hover:text-brand-text",
+                ]}
+                aria-haspopup="true"
+              >
+                {item.label}
+                <svg class="h-3.5 w-3.5 opacity-50 transition-transform group-hover:rotate-180" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
+              </button>
+              <ul class="invisible absolute left-0 top-full z-50 mt-1 min-w-[180px] rounded-lg border border-brand-border bg-brand-bg/95 py-1.5 shadow-lg backdrop-blur transition-all group-hover:visible">
+                {item.children.map(({ href, label }) => (
+                  <li>
+                    <a
+                      href={href}
+                      class:list={[
+                        "block px-4 py-1.5 text-sm transition-colors hover:bg-accent-green/10",
+                        isActive(href)
+                          ? "font-medium text-brand-text"
+                          : "text-brand-muted hover:text-brand-text",
+                      ]}
+                    >
+                      {label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </li>
+          );
+        }
+        const { href, label } = item;
+        return (
+          <li>
+            <a
+              href={href}
+              class:list={[
+                "relative rounded-md px-3 py-1.5 text-sm transition-colors after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:origin-left after:scale-x-0 after:bg-gradient-to-r after:from-accent-blue after:to-accent-green after:transition-transform hover:after:scale-x-100",
+                isActive(href)
+                  ? "font-medium text-brand-text after:scale-x-100"
+                  : "text-brand-muted hover:text-brand-text",
+              ]}
+            >
+              {label}
+            </a>
+          </li>
+        );
+      })}
+    </ul>
+  </nav>
+
+  <ul id="mobile-nav" class="hidden border-t border-brand-border px-4 pb-4 pt-2 md:hidden">
+    {links.map((item) => {
+      if ("children" in item) {
+        return (
+          <li>
+            <span class="block px-3 pb-0.5 pt-3 font-mono text-[10px] uppercase tracking-widest text-brand-muted">{item.label}</span>
+            <ul>
+              {item.children.map(({ href, label }) => (
+                <li>
+                  <a
+                    href={href}
+                    class:list={[
+                      "block rounded-md border-l-2 px-3 py-2 pl-6 text-sm transition-colors",
+                      isActive(href)
+                        ? "border-accent-green bg-brand-text/5 font-medium text-brand-text"
+                        : "border-transparent text-brand-muted hover:border-accent-blue hover:text-brand-text",
+                    ]}
+                  >
+                    {label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </li>
+        );
+      }
+      const { href, label } = item;
+      return (
         <li>
           <a
             href={href}
             class:list={[
-              "relative rounded-md px-3 py-1.5 text-sm transition-colors after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:origin-left after:scale-x-0 after:bg-gradient-to-r after:from-accent-blue after:to-accent-green after:transition-transform hover:after:scale-x-100",
+              "block rounded-md border-l-2 px-3 py-2 text-sm transition-colors",
               isActive(href)
-                ? "font-medium text-brand-text after:scale-x-100"
-                : "text-brand-muted hover:text-brand-text",
+                ? "border-accent-green bg-brand-text/5 font-medium text-brand-text"
+                : "border-transparent text-brand-muted hover:border-accent-blue hover:text-brand-text",
             ]}
           >
             {label}
           </a>
         </li>
-      ))}
-    </ul>
-  </nav>
-
-  <ul id="mobile-nav" class="hidden border-t border-brand-border px-4 pb-4 pt-2 md:hidden">
-    {links.map(({ href, label }) => (
-      <li>
-        <a
-          href={href}
-          class:list={[
-            "block rounded-md border-l-2 px-3 py-2 text-sm transition-colors",
-            isActive(href)
-              ? "border-accent-green bg-brand-text/5 font-medium text-brand-text"
-              : "border-transparent text-brand-muted hover:border-accent-blue hover:text-brand-text",
-          ]}
-        >
-          {label}
-        </a>
-      </li>
-    ))}
+      );
+    })}
   </ul>
 </header>
 
