@@ -1,5 +1,22 @@
 {
   "name": "COBOL",
   "year": 1959,
-  "paradigm": "imperative-procedural"
+  "paradigm": "imperative-procedural",
+  "note": "Business-oriented language designed for readable, English-like data processing",
+  "typeSystem": "Static and strongly record/field-oriented. PICTURE clauses describe a data item's category and presentation, such as digits, sign, and decimal position, while USAGE and the implementation determine its physical representation. Modern COBOL also includes general numeric and object-oriented facilities.",
+  "runtime": "Compiled ahead-of-time to native machine code; COBOL programs very commonly run inside a transaction-processing environment such as IBM CICS on mainframes, handling large volumes of business transactions.",
+  "runtimes": [
+    { "name": "Native (GnuCOBOL, IBM Enterprise COBOL)", "kind": "native", "role": "Compiles COBOL to native machine code, often via a generated C intermediate step (GnuCOBOL) or directly (mainframe compilers)." }
+  ],
+  "compilers": [
+    { "name": "GnuCOBOL", "role": "Open-source compiler that translates COBOL to C, then to native code." },
+    { "name": "IBM Enterprise COBOL", "role": "Mainframe compiler still widely used in banking and government systems." },
+    { "name": "Micro Focus COBOL", "role": "Commercial compiler suite for Windows/Unix and mainframe targets." }
+  ],
+  "concurrencyModel": "Portable COBOL has no construct for spawning threads. Concurrency is usually supplied by the surrounding environment, and implementations such as IBM Enterprise COBOL can compile reentrant programs for invocation concurrently from multiple threads.",
+  "codeExample": {
+    "lang": "cobol",
+    "caption": "Hello, World!",
+    "source": "IDENTIFICATION DIVISION.\nPROGRAM-ID. HELLO.\nPROCEDURE DIVISION.\n    DISPLAY \"Hello, World!\".\n    STOP RUN."
+  }
 }

@@ -8,7 +8,7 @@
     "caption": "Generic max via comptime type parameter",
     "source": "const std = @import(\"std\");\n\nfn max(comptime T: type, a: T, b: T) T {\n    return if (a >= b) a else b;\n}\n\npub fn main() void {\n    std.debug.print(\"{d}\\n\", .{max(i32, 3, 7)});\n    std.debug.print(\"{d}\\n\", .{max(f64, 1.5, 2.8)});\n}"
   },
-  "runtime": "Compiled ahead-of-time to native code via LLVM (or its own x86-64 backend). No hidden control flow, no garbage collector; optional safety checks can be disabled in release builds.",
+  "runtime": "Compiled ahead-of-time to native code via LLVM or self-hosted code-generation backends. Zig has no garbage collector; safety checks depend on the selected optimization mode and can be disabled.",
   "runtimes": [
     {
       "name": "Native (LLVM backend)",
@@ -18,7 +18,7 @@
     {
       "name": "Native (self-hosted x86_64 backend)",
       "kind": "native",
-      "role": "Incremental backend written in Zig, aimed at much faster debug-build compile times."
+      "role": "Backend written in Zig and used by default for many x86-64 Debug builds since 0.15, with target and platform exceptions; LLVM remains the main optimising production backend."
     },
     {
       "name": "WebAssembly (wasm32-freestanding / wasm32-wasi)",
@@ -30,7 +30,7 @@
     { "name": "zig (self-hosted)", "role": "The official compiler, itself written in Zig; uses LLVM or its own codegen backend." },
     { "name": "zig cc", "role": "Drop-in C/C++ cross-compiler wrapping Clang/LLVM, bundled with the Zig toolchain." }
   ],
-  "concurrencyModel": "Async/await with stackless coroutines existed in earlier versions but was removed in 0.11. Current Zig relies on OS threads (std.Thread) plus an event-based I/O model (std.io.poll). No hidden allocations or runtime scheduler.",
+  "concurrencyModel": "Earlier stackless async functionality became unavailable during the 0.11 development period, and the async/await language keywords were formally removed in 0.15. Zig 0.16 uses OS threads plus the standard-library std.Io interface, whose backends may provide threaded or event-driven I/O and library-level futures; scheduling behavior depends on the chosen Io implementation.",
   "concurrencyExample": {
     "lang": "zig",
     "caption": "4 threads computing i*i in parallel via std.Thread",

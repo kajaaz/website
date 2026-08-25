@@ -21,13 +21,13 @@
   "asyncRuntimes": [
     { "name": "Node.js", "role": "libuv-based event loop; the most popular server-side JS platform." },
     { "name": "Deno", "role": "Tokio-based (Rust) event loop with built-in permissions and TypeScript support." },
-    { "name": "Bun", "role": "Custom event loop written in Zig, optimised for startup and throughput." },
+    { "name": "Bun", "role": "JavaScriptCore-based runtime with its own event loop, optimised for startup and throughput." },
     { "name": "Browser", "role": "Platform event loop with Web APIs (fetch, setTimeout, requestAnimationFrame)." }
   ],
   "concurrencyModel": "Per-agent event loop with run-to-completion jobs, Promises/async-await, and parallel Web Workers",
   "concurrencyExample": {
     "lang": "javascript",
-    "caption": "4 workers computing i*i in parallel via Promise.all",
+    "caption": "Computing 4 squares and aggregating the results with Promise.all",
     "source": "async function square(n) {\n  return n * n;\n}\n\nconst results = await Promise.all(\n  [0, 1, 2, 3].map(square)\n);\nconsole.log(...results);"
   },
   "codeExample": {

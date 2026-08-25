@@ -1,5 +1,17 @@
 {
   "name": "AWK",
   "year": 1977,
-  "paradigm": "imperative-procedural"
+  "paradigm": "imperative-procedural",
+  "note": "Named after its creators, Aho, Weinberger, and Kernighan",
+  "typeSystem": "Dynamic; an expression can have a string value, a numeric value, or both. AWK converts implicitly according to context, a model well suited to splitting and reformatting lines of text.",
+  "runtime": "An AWK program is a set of pattern-action rules; the interpreter reads its input one record (typically a line) at a time, splits it into fields, and runs any rule whose pattern matches.",
+  "runtimes": [
+    { "name": "awk / gawk / mawk", "kind": "interpreter", "role": "Reads input line by line, automatically splitting each line into fields, and executes matching pattern-action rules." }
+  ],
+  "concurrencyModel": "N/A; a single AWK process reads and processes its input sequentially, one record at a time.",
+  "codeExample": {
+    "lang": "awk",
+    "caption": "Hello, World!",
+    "source": "BEGIN { print \"Hello, World!\" }"
+  }
 }

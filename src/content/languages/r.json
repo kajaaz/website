@@ -7,12 +7,12 @@
   "runtime": "GNU R evaluates expressions and can byte-compile functions; user-visible objects generally have copy-on-modify semantics",
   "runtimes": [
     { "name": "GNU R", "kind": "interpreter", "role": "Reference interpreter with an internal bytecode compiler." },
-    { "name": "FastR", "kind": "jit", "role": "GraalVM-based R implementation with a JIT." }
+    { "name": "FastR", "kind": "jit", "role": "GraalVM-based R implementation with a JIT; now in maintenance mode, with 22.3.1 the last released version and newer availability limited to source." }
   ],
   "compilers": [
     { "name": "GNU R", "role": "Reference implementation and bytecode compiler." }
   ],
-  "concurrencyModel": "Mostly single-threaded; parallel/future packages",
+  "concurrencyModel": "R's C API and ordinary R evaluation are primarily single-threaded. Base R's parallel package and third-party frameworks use worker processes, while native libraries may use threads when they do not call the R API.",
   "codeExample": {
     "lang": "r",
     "source": "greet <- function(name) paste0(\"hello, \", name)\nprint(greet(\"world\"))"

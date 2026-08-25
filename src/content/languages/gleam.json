@@ -2,5 +2,20 @@
   "name": "Gleam",
   "year": 2016,
   "paradigm": "functional-impure",
-  "note": "typed BEAM language"
+  "note": "typed BEAM language",
+  "typeSystem": "Static, strong, Hindley-Milner-based type inference (similar in spirit to OCaml and Elm), with no null, no language-level exception-handling mechanism, and no implicit type coercion. Expected failures use Result, although panic and unsafe foreign code can still terminate execution.",
+  "runtime": "Compiles to Erlang source for subsequent compilation to BEAM bytecode, or directly to JavaScript, so the same source can target either backend.",
+  "runtimes": [
+    { "name": "BEAM VM", "kind": "bytecode-vm", "role": "Compiles to Erlang, then BEAM bytecode, gaining full OTP interoperability." },
+    { "name": "JavaScript", "kind": "transpile", "role": "Compiles to JavaScript for browser and Node.js targets." }
+  ],
+  "compilers": [
+    { "name": "gleam build", "role": "The reference compiler, itself written in Rust, targeting either BEAM (via Erlang) or JavaScript." }
+  ],
+  "concurrencyModel": "On the BEAM target, inherits Erlang/OTP's lightweight actor processes and supervision trees; on the JavaScript target, concurrency follows the host's event loop.",
+  "codeExample": {
+    "lang": "gleam",
+    "caption": "Hello, World! plus a recursive factorial",
+    "source": "import gleam/int\nimport gleam/io\n\npub fn fact(n: Int) -> Int {\n  case n {\n    0 -> 1\n    _ -> n * fact(n - 1)\n  }\n}\n\npub fn main() {\n  io.println(int.to_string(fact(10)))\n}"
+  }
 }

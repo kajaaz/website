@@ -2,5 +2,19 @@
   "name": "Cairo 1",
   "year": 2023,
   "paradigm": "multi-paradigm",
-  "note": "Rust-inspired; linear types"
+  "note": "Rust-inspired; linear types",
+  "typeSystem": "Static, strong, Rust-inspired type system (structs, enums, traits, generics) layered on top of Cairo's underlying field-element (felt252) primitives, with linear types ensuring certain resources (like builtins) are used exactly once - far safer and more expressive than Cairo 0's bare assembly-like style.",
+  "runtime": "Compiles down through Sierra (a safe intermediate representation that guarantees provable execution) to Cairo assembly (CASM), executed by the Cairo VM to produce a trace for STARK proving, as used by StarkNet.",
+  "runtimes": [
+    { "name": "Cairo VM (via Sierra \u2192 CASM)", "kind": "bytecode-vm", "role": "Executes CASM compiled from Sierra, producing an execution trace consumed by a STARK prover; StarkNet's execution layer." }
+  ],
+  "compilers": [
+    { "name": "cairo-compile / scarb", "role": "Compiles Cairo 1 source through Sierra to CASM; Scarb is Cairo's package manager and build tool." }
+  ],
+  "concurrencyModel": "N/A (single deterministic execution trace, later proved and verified; no concurrency).",
+  "codeExample": {
+    "lang": "rust",
+    "caption": "A function returning a greeting",
+    "source": "fn greet() -> felt252 {\n    'Hello, World!'\n}\n\nfn main() -> felt252 {\n    greet()\n}"
+  }
 }

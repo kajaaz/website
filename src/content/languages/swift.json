@@ -9,7 +9,7 @@
     "caption": "Generic max with a Comparable constraint",
     "source": "func maxOf<T: Comparable>(_ a: T, _ b: T) -> T {\n    a >= b ? a : b\n}\n\nprint(maxOf(3, 7))\nprint(maxOf(1.5, 2.8))"
   },
-  "runtime": "Compiled to native (LLVM); automatic reference counting (ARC)",
+  "runtime": "Compiled ahead-of-time to native code through LLVM. ARC manages reference types and shared heap storage, while value types are not themselves universally reference-counted.",
   "runtimes": [
     { "name": "Native (LLVM)", "kind": "native", "role": "AOT compiled; memory managed by automatic reference counting (ARC)." },
     { "name": "WebAssembly (SwiftWasm)", "kind": "wasm", "role": "Community toolchain targeting WebAssembly." }
@@ -18,14 +18,14 @@
     { "name": "swiftc", "role": "The official Swift compiler, built on LLVM." }
   ],
   "asyncRuntimes": [
-    { "name": "Cooperative thread pool", "role": "Built-in global executor: tasks are scheduled on a pool sized to CPU cores." },
-    { "name": "Custom SerialExecutor", "role": "User-defined executors for actors; e.g., MainActor dispatches to the UI thread." },
+    { "name": "Default global executor", "role": "Schedules tasks cooperatively using a platform-specific implementation; pool sizing and actual parallel execution are runtime details, not language guarantees." },
+    { "name": "Custom SerialExecutor", "role": "User-defined serial executors can control where an actor's jobs run; MainActor is a separate built-in global actor using the platform main executor." },
     { "name": "SwiftNIO", "role": "Event-loop framework for high-performance networking (similar to Netty)." }
   ],
   "concurrencyModel": "async/await, actors, structured concurrency",
   "concurrencyExample": {
     "lang": "swift",
-    "caption": "4 workers computing i*i in parallel via TaskGroup",
+    "caption": "4 child tasks computing i*i concurrently via TaskGroup",
     "source": "import Foundation\n\n@main\nstruct App {\n    static func main() async {\n        let results = await withTaskGroup(of: Int.self) { group in\n            for i in 0..<4 {\n                group.addTask { i * i }\n            }\n            var r: [Int] = []\n            for await v in group { r.append(v) }\n            return r\n        }\n        print(results.map(String.init).joined(separator: \" \"))\n    }\n}"
   },
   "codeExample": {

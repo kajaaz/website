@@ -12,28 +12,36 @@ export const TRAITS: Trait[] = [
     id: "gc",
     name: "Garbage collected",
     description:
-      "The runtime automatically reclaims memory you are no longer using, so you never have to call free() or worry about memory leaks. The trade-off is occasional pauses while the collector runs.",
+      "The runtime automatically reclaims at least some unreachable memory, using tracing, reference counting, cycle collection, or a combination. This removes most explicit deallocation, but logical leaks and implementation-dependent collection overhead or pauses are still possible.",
     color: "#059669",
     languages: [
       "Java", "C#", "Kotlin", "Scala", "Clojure", "Groovy", "Go", "Python",
       "JavaScript", "TypeScript", "Ruby", "PHP", "Lua", "R", "Haskell",
       "OCaml", "F#", "Erlang", "Elixir", "Gleam", "Lisp", "Scheme", "Racket",
-      "Smalltalk", "Julia",
+      "Smalltalk", "Julia", "Common Lisp", "Standard ML", "ML", "Caml",
+      "Miranda", "Clean", "Elm", "PureScript", "Mercury", "Prolog",
+      "Wolfram Language", "Idris", "Agda", "Coq", "Rocq", "Lean", "Lean 4",
+      "F*", "D", "Nim", "Crystal", "Visual Basic", "Self", "Logo", "Dafny",
+      "Eiffel", "HOL", "Isabelle", "PVS", "Nuprl", "ACL2", "LCF", "Twelf",
+      "Simula 67", "Perl", "Oz",
     ],
   },
   {
     id: "manual-memory",
     name: "Manual memory",
     description:
-      "You allocate and free memory yourself (malloc/free, new/delete). This gives maximum control and predictable performance, but one mistake can cause crashes, leaks, or security vulnerabilities.",
+      "The language supports explicit allocation and deallocation, such as malloc/free, new/delete, storage pools, or equivalent facilities. Idiomatic programs may also use scopes, RAII, or managed types, but incorrect manual lifetime handling can cause leaks, crashes, or security vulnerabilities.",
     color: "#9F1239",
-    languages: ["C", "C++", "Fortran", "Pascal", "Ada", "Zig", "Forth"],
+    languages: [
+      "C", "C++", "Fortran", "Pascal", "Ada", "Zig", "Forth", "COBOL",
+      "PL/I", "Delphi",
+    ],
   },
   {
     id: "ownership",
     name: "Ownership & affine types",
     description:
-      "The compiler tracks who 'owns' each piece of data and ensures it is freed exactly once. You get memory safety without a garbage collector, at the cost of stricter rules about how you pass data around.",
+      "The type system restricts how values or resources are copied, moved, borrowed, dropped, or destroyed. Depending on the language, this can enforce memory safety, resource discipline, or VM invariants without requiring every value to be managed by a tracing garbage collector.",
     color: "#D97706",
     languages: ["Rust", "Move", "Cairo 1"],
   },
@@ -43,53 +51,62 @@ export const TRAITS: Trait[] = [
     id: "static-typing",
     name: "Statically typed",
     description:
-      "Every variable has a type known at compile time. The compiler catches type errors before your program ever runs, which helps prevent bugs in large codebases.",
+      "The language checks declared or inferred type constraints before execution. Gradual and dynamically extensible systems may retain escape hatches or defer some checks, but static checking can catch many mismatches before affected code runs.",
     color: "#0EA5E9",
     languages: [
       "C", "C++", "C#", "Java", "Kotlin", "Scala", "Go", "Rust", "Swift",
       "TypeScript", "Haskell", "OCaml", "F#", "Standard ML", "Ada", "Zig",
       "Nim", "D", "Crystal", "Elm", "PureScript", "Gleam", "Solidity",
+      "Fortran", "COBOL", "Pascal", "Mercury", "Caml", "ML", "Simula 67",
+      "Eiffel", "Delphi", "Idris", "Agda", "Coq", "Rocq", "Lean", "Lean 4",
+      "F*", "PL/I", "Move", "Cairo 1", "Vyper", "Leo", "Noir", "Michelson",
+      "Dafny", "Why3", "Objective-C", "ALGOL 60", "ALGOL 68", "ALGOL 58",
+      "Mojo", "Carbon", "Miranda", "Clean", "HOL", "Isabelle", "PVS", "Alloy",
+      "Nuprl", "LCF", "Twelf", "Automath",
     ],
   },
   {
     id: "dynamic-typing",
     name: "Dynamically typed",
     description:
-      "Variables can hold any type, and type errors only appear when the code actually executes. This makes prototyping fast and code concise, but bugs can hide until a specific code path is hit at runtime.",
+      "Values carry runtime types and many type checks occur as operations execute rather than in a mandatory whole-program compile-time pass. This can support flexible, concise code, while some mismatches remain latent until the relevant path runs.",
     color: "#8B5CF6",
     languages: [
       "Python", "JavaScript", "Ruby", "PHP", "Lua", "R", "Perl", "Lisp",
       "Common Lisp", "Scheme", "Racket", "Clojure", "Erlang", "Elixir",
-      "Smalltalk",
+      "Smalltalk", "Prolog", "Julia", "Groovy", "Wolfram Language", "APL",
+      "AWK", "Self", "Logo", "SASL", "BASIC", "Oz",
     ],
   },
   {
     id: "null-safety",
     name: "Null safety",
     description:
-      "The type system prevents null-pointer errors at compile time, usually via Option/Maybe types. Instead of crashing with 'null reference', the compiler forces you to handle the 'no value' case explicitly.",
+      "The type system distinguishes potentially absent values, often through Option/Maybe or nullable types, and requires many uses to handle that case explicitly. Configuration, interoperability, assertions, or unsafe escape hatches may still permit null-related runtime failures.",
     color: "#0F766E",
     languages: [
       "Rust", "Kotlin", "Swift", "TypeScript", "F#", "OCaml", "Haskell",
-      "Elm", "Gleam",
+      "Elm", "Gleam", "PureScript",
     ],
   },
   {
     id: "generics",
     name: "Parametric polymorphism",
     description:
-      "Write a single function or data structure that works with many types (like List<T>). The compiler generates specialised code for each type you use, without you copying and pasting.",
+      "A function or data structure can be parameterised over types, such as List<T>, without duplicating its source. Implementations may erase parameters, share runtime code, pass type information through dictionaries, or generate specialised code.",
     color: "#DC2626",
     languages: [
       "C++", "Java", "C#", "Kotlin", "Scala", "Go", "Rust", "Swift",
       "TypeScript", "Haskell", "OCaml", "F#", "Standard ML", "Ada", "D", "Nim",
+      "ML", "Caml", "Miranda", "Clean", "Eiffel", "Crystal", "PureScript",
+      "Elm", "Mercury", "Move", "Cairo 1", "Zig", "Julia", "Gleam",
     ],
   },
   {
     id: "hm-inference",
     name: "Hindley-Milner inference",
     description:
-      "The compiler figures out types automatically, without you writing annotations, using an algorithm from the ML family. You get the safety of static types with the feel of a dynamically typed language.",
+      "An ML-family inference system derives many types without annotations and generalises eligible bindings polymorphically. Listed languages may extend or restrict classic Hindley-Milner with features such as type classes, rows, subtyping, or platform interoperability.",
     color: "#65A30D",
     languages: [
       "ML", "Standard ML", "Caml", "OCaml", "F#", "Haskell", "Elm",
@@ -103,8 +120,8 @@ export const TRAITS: Trait[] = [
       "Types can depend on values: for example, 'a list of exactly 5 integers' or 'a sorted array'. This lets you express program properties as types and mathematically prove they hold.",
     color: "#6D28D9",
     languages: [
-      "Coq", "Lean", "Lean 4", "Agda", "Idris", "F*", "Twelf", "Isabelle",
-      "Dafny", "Rocq",
+      "Coq", "Lean", "Lean 4", "Agda", "Idris", "F*", "Twelf", "Rocq", "PVS",
+      "Automath", "Nuprl",
     ],
   },
 
@@ -113,83 +130,92 @@ export const TRAITS: Trait[] = [
     id: "first-class-fns",
     name: "First-class functions",
     description:
-      "Functions are values: you can store them in variables, pass them as arguments, and return them from other functions. This is the foundation of functional programming and enables patterns like map/filter/reduce.",
+      "The language supports callable values—direct functions, closures, delegates, blocks, or functional-interface objects—that can be stored, passed, and returned. The exact representation differs, but it enables higher-order patterns such as map, filter, and reduce.",
     color: "#2563EB",
     languages: [
       "JavaScript", "TypeScript", "Python", "Ruby", "Lua", "R", "Perl",
       "Swift", "Kotlin", "Scala", "Go", "Rust", "C#", "Haskell", "OCaml",
       "F#", "Elixir", "Erlang", "Clojure", "Lisp", "Scheme", "Racket",
-      "Smalltalk", "Julia",
+      "Smalltalk", "Julia", "PHP", "Java", "C++", "Common Lisp",
+      "Standard ML", "ML", "Caml", "Miranda", "Clean", "Groovy",
+      "Wolfram Language", "Gleam", "PureScript", "Elm", "Idris", "Agda",
+      "Lean", "Lean 4", "Coq", "Rocq", "F*", "Mercury", "Logo", "Dafny",
+      "Why3", "PVS", "D", "Nim", "Crystal", "Objective-C", "Self", "APL",
     ],
   },
   {
     id: "adts",
     name: "ADTs & pattern matching",
     description:
-      "Data is modelled as tagged unions (sum types) and records (product types). Pattern matching lets you destructure values by shape, like a powerful switch/case that the compiler checks for completeness.",
+      "The language provides algebraic or inductive data types—such as tagged unions and product types—together with pattern matching or case analysis. Static systems can often diagnose missing cases, although the strength of exhaustiveness checking varies.",
     color: "#0D9488",
     languages: [
       "Haskell", "OCaml", "F#", "Standard ML", "Elm", "PureScript", "Rust",
-      "Scala", "Swift", "Elixir", "Erlang", "Gleam", "Miranda", "Clean",
+      "Scala", "Swift", "Gleam", "Miranda", "Clean",
+      "ML", "Caml", "Idris", "Agda", "Lean", "Lean 4", "Coq", "F*",
+      "Mercury", "Kotlin", "TypeScript", "Zig", "Rocq", "Dafny", "Why3",
+      "PVS", "Isabelle", "HOL",
     ],
   },
   {
     id: "monads",
     name: "Monads / typed effects",
     description:
-      "Side effects (I/O, errors, state) are wrapped in special types that the compiler tracks. This makes it explicit where effects happen, so pure functions stay pure and bugs from hidden side effects are eliminated.",
+      "The language uses monadic interfaces, effect types, managed commands, or uniqueness/world types to represent at least some effects explicitly. Coverage varies by language, and these abstractions improve composition and reasoning without eliminating effect-related bugs.",
     color: "#7C3AED",
-    languages: ["Haskell", "PureScript", "F#", "Scala", "Idris", "Elm", "Clean"],
+    languages: ["Haskell", "PureScript", "Idris", "Elm", "Clean", "F*", "Lean 4"],
   },
   {
     id: "immutability",
     name: "Immutable by default",
     description:
-      "Values cannot be changed after creation. To 'update' something you create a new copy. This eliminates a whole class of bugs around shared mutable state and makes concurrent code much safer.",
+      "Bindings or commonly used data structures are immutable by default, so updates often produce new values. Some listed languages still provide explicit mutable references, arrays, fields, variables, or controlled interior mutation.",
     color: "#0891B2",
     languages: [
       "Haskell", "Elm", "PureScript", "Clojure", "Erlang", "Elixir", "Gleam",
-      "Rust", "OCaml", "Clean",
+      "Rust", "OCaml", "Clean", "F#", "Idris", "Agda", "Lean", "Lean 4",
+      "Coq", "F*", "Miranda", "Standard ML", "ML", "Caml", "Mercury",
+      "Datalog",
     ],
   },
   {
     id: "lazy",
     name: "Lazy evaluation",
     description:
-      "Expressions are not computed until their result is actually needed. This lets you work with infinite data structures (like an infinite list of primes) and skip unnecessary work, though it can make performance harder to predict.",
+      "The language uses call-by-need broadly or delays important constructs such as function arguments until their values are demanded. Laziness can support infinite data and avoid unused work, but its scope and performance effects vary by language.",
     color: "#C026D3",
-    languages: ["Haskell", "Miranda", "Clean"],
+    languages: ["Haskell", "Miranda", "Clean", "SASL", "R"],
   },
   {
     id: "homoiconic",
     name: "Homoiconic macros",
     description:
-      "Code and data share the same structure (usually nested lists). Programs can inspect and rewrite their own source code at compile time using macros, enabling powerful metaprogramming that other languages cannot express.",
+      "Code has a language-level data representation—such as lists, terms, symbolic expressions, or AST objects—that programs and macros can inspect and transform. Quoting, expansion phase, hygiene, and evaluation rules differ between languages.",
     color: "#9333EA",
     languages: [
       "Lisp", "Common Lisp", "Scheme", "Racket", "Clojure", "Elixir", "Julia",
+      "Logo", "Prolog", "R", "Wolfram Language",
     ],
   },
 
   // ── Concurrency: how tasks coordinate ──────────────────────────────
-  // These three traits describe the *model* of coordination and are largely
-  // mutually exclusive, so a language usually lights up under one of them.
+  // These traits describe complementary scheduling and coordination features;
+  // a language may support more than one through its runtime or libraries.
   {
     id: "async-await",
     name: "Async / await",
     description:
-      "The language has explicit async/await syntax: functions are marked async, and await suspends them at I/O points so other tasks can run. The scheduler may be single-threaded (JS, Python) or multi-threaded (Rust Tokio, C# ThreadPool, Kotlin coroutines). Go is NOT here because goroutines already make all code implicitly non-blocking: you write synchronous-looking code and the runtime handles scheduling, so async/await syntax is unnecessary.",
+      "The language has explicit async/await syntax or equivalent built-in forms: an async computation can suspend at await points while other work proceeds. Execution may use an event loop, thread pool, or pluggable executor, and suspension does not by itself imply parallel execution.",
     color: "#E11D48",
     languages: [
-      "JavaScript", "TypeScript", "Python", "C#", "Rust", "Kotlin", "Swift",
-      "F#", "Dart",
+      "JavaScript", "TypeScript", "Python", "C#", "Rust", "Swift",
     ],
   },
   {
     id: "actors",
     name: "Actor model: message passing",
     description:
-      "Each actor (process) has its own private heap and no shared memory at all; the only way to interact is to send an asynchronous message to another actor's mailbox. This removes data races and locks entirely and underpins 'let it crash' fault-tolerant supervision.",
+      "The BEAM ecosystem supports lightweight actors with isolated process state and asynchronous mailboxes, commonly combined with links and supervision. Most ordinary messages are copied, while runtime facilities such as shared binaries or ETS mean isolation is not literally an absence of all shared memory.",
     color: "#DB2777",
     languages: ["Erlang", "Elixir", "Gleam"],
   },
@@ -197,7 +223,7 @@ export const TRAITS: Trait[] = [
     id: "green-threads",
     name: "Lightweight concurrency",
     description:
-      "The runtime multiplexes many user-space tasks (goroutines, BEAM processes, virtual threads) onto a small pool of OS threads. Because each task has a tiny growable stack instead of a fixed ~1 MB OS-thread stack, a process can hold hundreds of thousands or millions of them. This is a property of the scheduler, independent of how tasks coordinate (channels, actors, or shared memory).",
+      "Major runtimes or libraries can multiplex many lightweight tasks—such as goroutines, BEAM processes, coroutines, or virtual threads—over operating-system threads. Their stacks or suspended state are represented differently, and capacity and scheduling behavior depend on the implementation and workload.",
     color: "#15803D",
     languages: ["Go", "Erlang", "Elixir", "Gleam", "Haskell", "Java", "Kotlin"],
   },
@@ -207,18 +233,21 @@ export const TRAITS: Trait[] = [
     id: "native",
     name: "Compiled to native",
     description:
-      "The compiler produces machine code directly, with no VM or interpreter at runtime. This gives maximum performance and small standalone binaries that run anywhere without installing a runtime.",
+      "A major implementation can compile programs ahead of time to platform-native machine code. The resulting binary may still include or depend on a language runtime, garbage collector, system libraries, and a specific operating-system and processor ABI.",
     color: "#B45309",
     languages: [
       "C", "C++", "Rust", "Go", "Zig", "Swift", "Fortran", "Ada", "Pascal",
-      "Haskell", "OCaml", "Nim", "D", "Crystal",
+      "Haskell", "OCaml", "Nim", "D", "Crystal", "COBOL", "PL/I",
+      "Objective-C", "Eiffel", "Delphi", "Simula 67", "Mercury", "Idris",
+      "Lean 4", "ALGOL 58", "ALGOL 60", "ALGOL 68", "Common Lisp",
+      "Standard ML", "Clean", "Carbon", "Mojo", "Racket",
     ],
   },
   {
     id: "managed-vm",
     name: "Runs on a managed VM",
     description:
-      "Code runs on a virtual machine (JVM, BEAM, CLR) that handles memory, security, and portability. You write once and run on any platform that has the VM, and you get features like hot code reloading for free.",
+      "A major implementation runs compiled code on a managed virtual machine such as the JVM, CLR, or BEAM. The VM commonly supplies automatic memory management, portability services, and runtime tooling, while deployment behavior and features vary by platform.",
     color: "#F59E0B",
     languages: [
       "Java", "Kotlin", "Scala", "Groovy", "Clojure", "C#", "F#",
@@ -229,20 +258,23 @@ export const TRAITS: Trait[] = [
     id: "jit",
     name: "JIT-compiled",
     description:
-      "A Just-In-Time compiler translates code to machine instructions while the program runs. It watches which code paths are 'hot' and optimises them aggressively, giving scripting-like convenience with near-native speed.",
+      "A major implementation translates source, bytecode, or emitted code to native instructions during execution or module loading. Some JITs optimise frequently executed paths adaptively; others perform non-adaptive load-time compilation.",
     color: "#4338CA",
     languages: [
       "Java", "C#", "JavaScript", "TypeScript", "Julia", "Erlang", "Elixir",
+      "Kotlin", "Scala", "Groovy", "Clojure", "Gleam", "PHP", "F#",
+      "Visual Basic", "Self", "Smalltalk", "Ruby", "Lua",
     ],
   },
   {
     id: "interpreted",
     name: "Interpreted / scripting",
     description:
-      "No separate compile step: you write a file and run it directly. The interpreter reads and executes your code line by line (some use a bytecode VM internally). Development is fast, but execution is typically slower than compiled languages.",
+      "A major implementation supports running source directly without a separate user-visible build step. It may parse an AST, compile bytecode, execute a query plan, or combine interpretation with JIT compilation; performance depends on the implementation and workload.",
     color: "#EA580C",
     languages: [
-      "Python", "Ruby", "PHP", "Lua", "R", "Perl", "sh",
+      "Python", "Ruby", "PHP", "Lua", "R", "Perl", "sh", "Wolfram Language",
+      "APL", "AWK", "BASIC", "Forth", "JavaScript", "SQL",
     ],
   },
 ];

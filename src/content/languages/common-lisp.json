@@ -2,5 +2,22 @@
   "name": "Common Lisp",
   "year": 1984,
   "paradigm": "multi-paradigm",
-  "note": "Lisp dialect combining functional, procedural, and object-oriented programming"
+  "note": "first de facto specification published in 1984; ANSI standard approved in 1994",
+  "typeSystem": "Dynamic by default, with declarations that assert types and can enable compiler optimisation; implementations are not generally required to check those assertions. CLOS (the Common Lisp Object System) adds multiple dispatch and multiple inheritance.",
+  "runtime": "Most implementations compile to native machine code ahead of time or on first use despite the language being dynamically typed; interactive, REPL-driven development is a first-class workflow alongside batch compilation.",
+  "runtimes": [
+    { "name": "SBCL", "kind": "native", "role": "Widely used open-source, high-performance implementation that compiles to native code." },
+    { "name": "CCL (Clozure CL)", "kind": "native", "role": "Native-code implementation supporting x86-64 on macOS, Linux, and other platforms; currently in limited maintenance." },
+    { "name": "CLISP", "kind": "bytecode-vm", "role": "Portable bytecode implementation, useful where a native compiler isn't available." }
+  ],
+  "compilers": [
+    { "name": "SBCL", "role": "High-performance, mostly conforming native-code compiler and interactive environment." },
+    { "name": "CCL", "role": "Alternative native-code compiler." }
+  ],
+  "concurrencyModel": "Implementation-dependent: SBCL and CCL provide native OS threads; the language standard itself does not mandate a concurrency model.",
+  "codeExample": {
+    "lang": "lisp",
+    "caption": "A CLOS class with a generic method",
+    "source": "(defclass animal ()\n  ((name :initarg :name :accessor name)))\n\n(defgeneric speak (a))\n(defmethod speak ((a animal))\n  (format t \"~a makes a sound.~%\" (name a)))\n\n(speak (make-instance 'animal :name \"Rex\"))"
+  }
 }

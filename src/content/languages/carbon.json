@@ -1,5 +1,20 @@
 {
   "name": "Carbon",
   "year": 2022,
-  "paradigm": "object-oriented"
+  "paradigm": "multi-paradigm",
+  "note": "Experimental Google-led successor language for large C++ codebases",
+  "typeSystem": "Static and C++-inspired, with a redesigned generics model. Carbon is developing a rigorous memory-safe mode, but that design and implementation remain experimental and are not yet a production-ready language guarantee.",
+  "runtime": "The experimental toolchain lowers Carbon through semantic IR and LLVM IR to native object code; the language and toolchain are not yet production-ready.",
+  "runtimes": [
+    { "name": "Native (LLVM, experimental toolchain)", "kind": "native", "role": "Experimental compiler targeting native code through LLVM while C++ interoperability is still being implemented." }
+  ],
+  "compilers": [
+    { "name": "carbon (experimental)", "role": "Google-led open-source experimental compiler and toolchain, not yet production-ready." }
+  ],
+  "concurrencyModel": "Not yet finalised; Carbon remains an experimental, evolving language without a stable concurrency model as of its public design documents.",
+  "codeExample": {
+    "lang": "carbon",
+    "caption": "Hello, World!",
+    "source": "import Core library \"io\";\n\nfn Run() {\n  Core.Print(\"Hello, World!\");\n}"
+  }
 }

@@ -2,5 +2,19 @@
   "name": "Alloy",
   "year": 1997,
   "paradigm": "logic-relational",
-  "note": "relational model finding"
+  "note": "relational model finding",
+  "typeSystem": "A minimal, statically checked relational logic: every expression denotes a relation, with a scalar represented as a singleton unary relation; signatures declare typed sets, and fields declare typed relations between them.",
+  "runtime": "There is no execution in the traditional sense: the Alloy Analyzer translates a model and an assertion or predicate into a Boolean satisfiability (SAT) problem and hands it to a SAT solver to find an instance or establish that none exists within the selected finite scope.",
+  "runtimes": [
+    { "name": "Alloy Analyzer (JVM, SAT-based)", "kind": "jit", "role": "Java tool that translates Alloy models to SAT instances and calls an underlying SAT solver such as MiniSat or Glucose to search for satisfying instances within a bounded scope." }
+  ],
+  "compilers": [
+    { "name": "Alloy Analyzer", "role": "Compiles Alloy specifications to CNF for SAT solving and renders any found instance as a visual object graph." }
+  ],
+  "concurrencyModel": "N/A (declarative modelling and bounded model-checking language, not an execution language)",
+  "codeExample": {
+    "lang": "alloy",
+    "caption": "A signature and a fact constraining a simple ancestor relation",
+    "source": "sig Person {\n  parent: set Person\n}\n\nfun ancestor: Person -> Person {\n  ^parent\n}\n\nassert NoSelfAncestor {\n  no p: Person | p in p.ancestor\n}\ncheck NoSelfAncestor for 10"
+  }
 }

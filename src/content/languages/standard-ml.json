@@ -2,5 +2,23 @@
   "name": "Standard ML",
   "year": 1983,
   "paradigm": "functional-impure",
-  "note": "standardization began in 1983; its formal Definition was published in 1990"
+  "note": "standardization began in 1983; its formal Definition was published in 1990",
+  "typeSystem": "Static, strong, Hindley-Milner type inference with parametric polymorphism, algebraic datatypes, and pattern matching, plus an explicit module system (structures, signatures, and functors) and a fully formal semantics published as 'The Definition of Standard ML'.",
+  "runtime": "Compiled to native code by most modern implementations; some provide an interactive, incremental top-level for exploratory development alongside batch compilation.",
+  "runtimes": [
+    { "name": "SML/NJ", "kind": "native", "role": "Influential optimizing implementation with an interactive top level and native code generation." },
+    { "name": "MLton", "kind": "native", "role": "Whole-program optimising compiler that produces highly efficient native binaries." },
+    { "name": "PolyML", "kind": "native", "role": "Fast native-code implementation, widely used to host the Isabelle and HOL4 theorem provers." }
+  ],
+  "compilers": [
+    { "name": "SML/NJ", "role": "Influential optimizing compiler and interactive top level." },
+    { "name": "MLton", "role": "Whole-program optimising batch compiler." },
+    { "name": "PolyML", "role": "Native-code compiler, often embedded inside other tools." }
+  ],
+  "concurrencyModel": "Implementation-dependent: Poly/ML provides OS-level parallel threads; SML/NJ's Concurrent ML and MLton provide user-level concurrency.",
+  "codeExample": {
+    "lang": "ocaml",
+    "caption": "Hello, World! plus a recursive factorial",
+    "source": "fun fact 0 = 1\n  | fact n = n * fact (n - 1)\n\nval () = print (Int.toString (fact 10) ^ \"\\n\")"
+  }
 }

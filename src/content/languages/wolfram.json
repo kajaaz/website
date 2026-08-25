@@ -2,5 +2,19 @@
   "name": "Wolfram Language",
   "year": 1988,
   "paradigm": "multi-paradigm",
-  "note": "term rewriting core"
+  "note": "term rewriting core",
+  "typeSystem": "Dynamic, symbolic: every piece of code and data (numbers, strings, functions, unevaluated expressions) is represented uniformly as a symbolic expression, and evaluation proceeds by repeatedly applying term-rewriting rules until a fixed point is reached.",
+  "runtime": "Expressions are evaluated by the Wolfram Kernel, which repeatedly pattern-matches an expression tree against built-in and user-defined transformation rules and rewrites it until no further rule applies.",
+  "runtimes": [
+    { "name": "Wolfram Kernel", "kind": "interpreter", "role": "Evaluates expressions via term rewriting: it repeatedly matches patterns against rules and rewrites the expression until it stabilises." }
+  ],
+  "compilers": [
+    { "name": "Wolfram Kernel (Compile[])", "role": "The reference evaluator; its Compile[] function additionally compiles numerical code paths for speed." }
+  ],
+  "concurrencyModel": "Explicit parallel primitives (ParallelMap, ParallelTable, Parallelize) distribute evaluation across local kernels or a cluster; ordinary evaluation is otherwise single-threaded per kernel.",
+  "codeExample": {
+    "lang": "wolfram",
+    "caption": "Hello, World!",
+    "source": "Print[\"Hello, World!\"]"
+  }
 }

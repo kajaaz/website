@@ -2,5 +2,20 @@
   "name": "Noir",
   "year": 2022,
   "paradigm": "multi-paradigm",
-  "note": "ZK circuits; Rust-inspired"
+  "note": "ZK circuits; Rust-inspired",
+  "typeSystem": "Static and strong, with Rust-inspired syntax specialised for zero-knowledge programs. Constrained code requires statically bounded control flow, while current Noir also has dynamically sized vectors and permits runtime-bounded loops in unconstrained Brillig code.",
+  "runtime": "Noir compiles constrained computation to ACIR and unconstrained witness-generation code to Brillig bytecode. A proving backend such as Barretenberg executes the workflow and produces or verifies a zero-knowledge proof.",
+  "runtimes": [
+    { "name": "ACVM + proving backend", "kind": "interpreter", "role": "ACVM evaluates ACIR constraints and coordinates a proving backend such as Barretenberg; unconstrained witness-generation code is executed separately as Brillig bytecode." },
+    { "name": "Brillig VM", "kind": "bytecode-vm", "role": "Executes unconstrained Noir code used during witness generation, whose relevant results must be constrained by the circuit." }
+  ],
+  "compilers": [
+    { "name": "nargo", "role": "Noir's build tool and compiler, compiling source to ACIR and orchestrating proof generation/verification." }
+  ],
+  "concurrencyModel": "N/A (circuit-based; describes a single deterministic computation to be proved, not a concurrent process).",
+  "codeExample": {
+    "lang": "rust",
+    "caption": "A minimal Noir circuit asserting two values differ",
+    "source": "fn main(x: Field, y: pub Field) {\n    assert(x != y);\n}"
+  }
 }

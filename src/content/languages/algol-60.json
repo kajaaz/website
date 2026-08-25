@@ -2,5 +2,16 @@
   "name": "ALGOL 60",
   "year": 1960,
   "paradigm": "imperative-procedural",
-  "note": "recursion + BNF"
+  "note": "recursion, call-by-name, and a famously formal syntax",
+  "typeSystem": "Static; supported recursive procedures and both call-by-name and call-by-value parameter passing. Its report famously used and popularised a formal syntax notation developed by John Backus for the earlier IAL work and adapted by Peter Naur, later called Backus-Naur Form (BNF).",
+  "runtime": "Compiled ahead-of-time to native machine code by era implementations; the Burroughs B5000 famously co-designed its stack-based hardware architecture specifically to run ALGOL 60 efficiently.",
+  "runtimes": [
+    { "name": "Native (e.g. Burroughs B5000, GIER ALGOL)", "kind": "native", "role": "Multiple independent native-code compilers implemented the ALGOL 60 report; the Burroughs B5000 built stack-oriented hardware support directly around it." }
+  ],
+  "concurrencyModel": "N/A (no concurrency constructs in the standard)",
+  "codeExample": {
+    "lang": "algol60",
+    "caption": "A counted loop; print is an implementation-specific I/O procedure",
+    "source": "begin\n  integer i;\n  for i := 1 step 1 until 10 do\n    print(i)\nend"
+  }
 }

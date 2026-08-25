@@ -40,11 +40,11 @@
   ],
   "asyncRuntimes": [
     { "name": "asyncio", "role": "Standard library event loop for cooperative async I/O (the default for async/await)." },
-    { "name": "uvloop", "role": "Drop-in asyncio replacement built on libuv; 2-4x faster than the default loop." },
+    { "name": "uvloop", "role": "Alternative asyncio event loop built on libuv that can improve performance for some workloads." },
     { "name": "Trio", "role": "Structured concurrency library with strict task management and clear cancellation semantics." },
     { "name": "AnyIO", "role": "Compatibility layer that runs the same async code on asyncio or Trio." }
   ],
-  "concurrencyModel": "In standard GIL-enabled CPython builds, one thread executes Python bytecode at a time, though threads can overlap I/O; multiprocessing is commonly used for CPU parallelism. asyncio provides cooperative concurrency, usually on one event-loop thread.",
+  "concurrencyModel": "In standard GIL-enabled CPython builds, one thread executes Python bytecode at a time, though threads can overlap I/O; multiprocessing is commonly used for CPU parallelism. Free-threaded CPython builds, available since 3.13, can run Python threads in parallel across cores. asyncio provides cooperative concurrency, usually on one event-loop thread.",
   "concurrencyExample": {
     "lang": "python",
     "caption": "4 cooperatively scheduled tasks computing i*i via asyncio",

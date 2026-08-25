@@ -1,6 +1,21 @@
 {
   "name": "ACL2",
-  "year": 1990,
+  "year": 1989,
   "paradigm": "functional-pure",
-  "note": "untyped applicative Common Lisp with automated first-order theorem proving"
+  "note": "untyped applicative Common Lisp with automated first-order theorem proving",
+  "typeSystem": "Untyped, first-order, side-effect-free (applicative) subset of Common Lisp: every value is ordinary Lisp data (conses, symbols, numbers, strings), checked only at run time, with no separate static type layer.",
+  "runtime": "Runs as a read-eval-print loop hosted inside a full Common Lisp implementation; ACL2 functions are ordinary (compiled) Lisp functions, so the theorem prover and the executable logic share the same evaluator.",
+  "runtimes": [
+    { "name": "SBCL (host)", "kind": "native", "role": "Supported Common Lisp host; compiled ACL2 definitions can run as native machine code for fast execution and proof checking." },
+    { "name": "CCL (host)", "kind": "native", "role": "Supported native-code Common Lisp host, and the recommended host for the experimental ACL2(p) parallel extension." }
+  ],
+  "compilers": [
+    { "name": "certify-book", "role": "Certifies libraries ('books') of ACL2 definitions and proved theorems so they can be trusted and reused without re-proving." }
+  ],
+  "concurrencyModel": "Standard ACL2's applicative logic has no built-in concurrency constructs. The experimental ACL2(p) extension supports parallel execution and proof, and host Lisps may provide threads outside the logic.",
+  "codeExample": {
+    "lang": "lisp",
+    "caption": "A recursive definition with a proved theorem about it",
+    "source": "(defun fact (n)\n  (if (zp n)\n      1\n      (* n (fact (1- n)))))\n\n(defthm fact-positive\n  (implies (natp n) (> (fact n) 0)))"
+  }
 }

@@ -2,5 +2,22 @@
   "name": "Clojure",
   "year": 2007,
   "paradigm": "functional-impure",
-  "note": "Lisp with persistent data structures"
+  "note": "Lisp with persistent data structures",
+  "typeSystem": "Dynamic, strong; runs on the JVM (or JavaScript via ClojureScript) and emphasises immutable, persistent data structures (vectors, maps, sets) shared efficiently through structural sharing rather than in-place mutation.",
+  "runtime": "Compiles to JVM bytecode at load time (or ahead-of-time), then benefits from the standard JVM JIT; ClojureScript instead compiles to JavaScript.",
+  "runtimes": [
+    { "name": "JVM (HotSpot)", "kind": "jit", "role": "Primary target: Clojure forms compile to JVM bytecode, then JIT-compile like any other JVM bytecode." },
+    { "name": "ClojureScript (compiles to JS)", "kind": "transpile", "role": "Compiles Clojure syntax to JavaScript for browsers and Node.js." },
+    { "name": "babashka (SCI in a GraalVM native image)", "kind": "interpreter", "role": "Fast-starting scripting environment whose native executable interprets a substantial subset of Clojure through SCI." }
+  ],
+  "compilers": [
+    { "name": "clojure (JVM compiler)", "role": "Compiles Clojure forms to JVM bytecode, typically on the fly as code loads." },
+    { "name": "ClojureScript compiler", "role": "Compiles Clojure to optimised JavaScript." }
+  ],
+  "concurrencyModel": "Software transactional memory (refs) for coordinated synchronous state, atoms for uncoordinated synchronous state, agents for asynchronous state, and core.async for CSP-style channels and lightweight processes.",
+  "codeExample": {
+    "lang": "lisp",
+    "caption": "Hello, World! plus a recursive factorial",
+    "source": "(defn fact [n]\n  (if (zero? n) 1 (* n (fact (dec n)))))\n\n(println (fact 10))"
+  }
 }

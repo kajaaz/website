@@ -2,19 +2,17 @@
   "name": "Lisp",
   "year": 1958,
   "paradigm": "functional-impure",
-  "typeSystem": "Dynamic, strong",
-  "runtime": "Interpreted or compiled (SBCL, CLISP, various implementations)",
+  "typeSystem": "The original Lisp was dynamically typed; the broader Lisp family now includes dynamically typed dialects such as Common Lisp and Scheme as well as statically typed descendants.",
+  "runtime": "Lisp denotes a language family rather than one modern runtime. Early Lisp had both interpreters and compilers; current dialects use implementations ranging from interpreters and bytecode virtual machines to native-code compilers.",
   "runtimes": [
-    { "name": "SBCL", "kind": "native", "role": "Common Lisp implementation that compiles to native code." },
-    { "name": "CLISP", "kind": "bytecode-vm", "role": "Portable bytecode implementation." }
+    { "name": "Lisp 1.5 interpreter", "kind": "interpreter", "role": "Historical implementation described in the Lisp 1.5 Programmer's Manual." }
   ],
   "compilers": [
-    { "name": "SBCL", "role": "Steel Bank Common Lisp; native-code compiler." },
-    { "name": "CCL", "role": "Clozure CL; another native-code compiler." }
+    { "name": "Lisp 1.5 compiler", "role": "Historical compiler described alongside the interpreter in the Lisp 1.5 system." }
   ],
-  "concurrencyModel": "Implementation-dependent; SBCL supports native threads; historically single-threaded",
+  "concurrencyModel": "No single model applies to the Lisp family; concurrency facilities vary by dialect and implementation.",
   "codeExample": {
     "lang": "lisp",
-    "source": "(defun factorial (n)\n  (if (<= n 1)\n      1\n      (* n (factorial (- n 1)))))\n\n(format t \"10! = ~a~%\" (factorial 10))"
+    "source": "(defun factorial (n)\n  (if (<= n 1)\n      1\n      (* n (factorial (- n 1)))))\n\n(print (factorial 10))"
   }
 }

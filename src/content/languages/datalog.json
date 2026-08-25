@@ -2,5 +2,20 @@
   "name": "Datalog",
   "year": 1977,
   "paradigm": "logic-relational",
-  "note": "function-free declarative logic language for recursive database queries"
+  "note": "function-free declarative logic for recursive database queries; its deductive-database roots date to 1977, while the name Datalog was coined in the mid-1980s",
+  "typeSystem": "Classical Datalog is untyped: facts and rules are first-order terms over relations with no function symbols. Particular descendants may add a type system; for example, Soufflé statically checks declared relation-column types and also supports records and algebraic data types.",
+  "runtime": "A Datalog engine repeatedly applies rules to a database of facts until a fixed point is reached (naive or semi-naive evaluation), then answers queries against the resulting relations.",
+  "runtimes": [
+    { "name": "Soufflé", "kind": "native", "role": "Ahead-of-time compiles Datalog programs to highly optimised C++, used for large-scale static analysis." },
+    { "name": "Bottom-up Datalog interpreter", "kind": "interpreter", "role": "Directly evaluates rules via naive or semi-naive fixpoint iteration without a separate native-code compilation step." }
+  ],
+  "compilers": [
+    { "name": "Soufflé", "role": "Compiles Datalog to native C++ for high-performance batch evaluation." }
+  ],
+  "concurrencyModel": "N/A in the core declarative language; engines such as Soufflé parallelise fixpoint computation across CPU cores internally.",
+  "codeExample": {
+    "lang": "prolog",
+    "caption": "Transitive closure of a parent relation (Soufflé-style)",
+    "source": ".decl parent(x: symbol, y: symbol)\n.decl ancestor(x: symbol, y: symbol)\n\nparent(\"tom\", \"bob\").\nparent(\"tom\", \"liz\").\nparent(\"bob\", \"ann\").\n\nancestor(X, Y) :- parent(X, Y).\nancestor(X, Y) :- parent(X, Z), ancestor(Z, Y).\n\n.output ancestor"
+  }
 }

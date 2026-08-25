@@ -2,5 +2,16 @@
   "name": "ALGOL 58",
   "year": 1958,
   "paradigm": "imperative-procedural",
-  "note": "introduced compound statements"
+  "note": "introduced compound statements",
+  "typeSystem": "Static; introduced compound statements (begin...end grouping) along with the basic numeric types (integer, real) that most later imperative languages inherited. Block structure with local declarations and nested scopes came later with ALGOL 60.",
+  "runtime": "ALGOL 58 was primarily a published design (the 'International Algebraic Language') rather than a single canonical implementation; independent research groups built their own compilers against the report's specification.",
+  "runtimes": [
+    { "name": "Various research compilers (e.g. early Zuse and Burroughs implementations)", "kind": "native", "role": "Independent groups implemented native-code compilers to the ALGOL 58 report; there was no single reference implementation." }
+  ],
+  "concurrencyModel": "N/A (no concurrency constructs)",
+  "codeExample": {
+    "lang": "algol58",
+    "caption": "A counted loop in ALGOL 58 notation; output procedure is implementation-specific",
+    "source": "begin\n  integer i;\n  for i := 1 (1) 10\n    print(i)\nend"
+  }
 }

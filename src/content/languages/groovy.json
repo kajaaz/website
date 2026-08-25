@@ -1,5 +1,20 @@
 {
   "name": "Groovy",
   "year": 2003,
-  "paradigm": "multi-paradigm"
+  "paradigm": "multi-paradigm",
+  "note": "Dynamic scripting language for the JVM, close to a Java superset",
+  "typeSystem": "Dynamic by default, like a scripting language for the JVM, with an optional static type checker and static compilation mode (@TypeChecked, @CompileStatic) that gives Java-like performance and earlier error detection when opted into.",
+  "runtime": "Groovy source compiles to JVM bytecode and runs on the standard JVM JIT. Dynamic Groovy uses runtime dispatch, while @CompileStatic enables compile-time type checking and statically resolved dispatch.",
+  "runtimes": [
+    { "name": "JVM (HotSpot)", "kind": "jit", "role": "Groovy compiles to ordinary JVM bytecode, benefiting from HotSpot's JIT like any other JVM language." }
+  ],
+  "compilers": [
+    { "name": "groovyc", "role": "Compiles Groovy source to JVM bytecode, either dynamically dispatched or statically typed depending on annotations." }
+  ],
+  "concurrencyModel": "Inherits the full java.util.concurrent toolkit from the JVM, plus GPars, a library adding actors, dataflow, and CSP-style concurrency abstractions on top.",
+  "codeExample": {
+    "lang": "java",
+    "caption": "Hello, World!",
+    "source": "println \"Hello, World!\""
+  }
 }

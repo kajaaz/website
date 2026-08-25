@@ -2,5 +2,25 @@
   "name": "F#",
   "year": 2005,
   "paradigm": "functional-impure",
-  "note": "ML on .NET"
+  "note": "ML on .NET",
+  "typeSystem": "Static, strong, Hindley-Milner-based type inference in the ML tradition, running on the .NET type system, with algebraic data types, units of measure, and full interoperability with C# and other .NET languages.",
+  "runtime": ".NET CLR (JIT and Native AOT), garbage-collected, sharing its runtime with C#.",
+  "runtimes": [
+    { "name": ".NET runtime (CoreCLR/RyuJIT)", "kind": "jit", "role": "Primary runtime; F# compiles to the same CIL bytecode as C# and shares its JIT." },
+    { "name": "Native AOT", "kind": "native", "role": "Publishes AOT-compatible F#/.NET applications as self-contained native binaries; compatibility depends on the code and its dependencies." },
+    { "name": "Fable", "kind": "transpile", "role": "Community compiler that targets JavaScript/TypeScript for front-end use." }
+  ],
+  "compilers": [
+    { "name": "F# compiler (fsc)", "role": "Reference compiler; F# source to CIL bytecode." },
+    { "name": "Fable", "role": "Compiles F# to JavaScript." }
+  ],
+  "asyncRuntimes": [
+    { "name": ".NET ThreadPool", "role": "Default scheduler for F#'s async workflows, shared with the rest of .NET." }
+  ],
+  "concurrencyModel": "async {} computation expressions, which helped inspire the distinct task-based async/await design in C# and Visual Basic; MailboxProcessor agents for actor-style message passing; and full access to the .NET Task Parallel Library.",
+  "codeExample": {
+    "lang": "ocaml",
+    "caption": "Hello, World! plus a recursive factorial",
+    "source": "let rec fact n =\n    if n = 0 then 1 else n * fact (n - 1)\n\nprintfn \"%d\" (fact 10)"
+  }
 }

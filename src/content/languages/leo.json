@@ -2,5 +2,19 @@
   "name": "Leo",
   "year": 2020,
   "paradigm": "imperative-procedural",
-  "note": "ZK circuits; Rust-inspired"
+  "note": "ZK circuits; Rust-inspired",
+  "typeSystem": "Static, strong, Rust-inspired type system specialised for describing arithmetic circuits: every operation must be expressible as a circuit over a finite field, so the compiler restricts and checks types accordingly (fixed-size integers, records, no unbounded loops or recursion).",
+  "runtime": "Leo compiles to Aleo Instructions for the Aleo VM. leo run evaluates the off-chain circuit locally without generating a proof; leo execute generates an execution proof and transaction, which can then be broadcast for network verification and on-chain finalization.",
+  "runtimes": [
+    { "name": "Aleo VM", "kind": "bytecode-vm", "role": "Executes Aleo Instructions compiled from Leo; execution proofs can be generated locally and are verified by the network when a transaction is broadcast." }
+  ],
+  "compilers": [
+    { "name": "leo build", "role": "Compiles Leo source to Aleo Instructions; proof and transaction generation is performed separately by leo execute." }
+  ],
+  "concurrencyModel": "N/A (circuit-based; a program describes a single deterministic computation to be proved, not a running concurrent process).",
+  "codeExample": {
+    "lang": "rust",
+    "caption": "A minimal Leo program",
+    "source": "program hello.aleo {\n    transition greet() -> u8 {\n        return 1u8;\n    }\n}"
+  }
 }

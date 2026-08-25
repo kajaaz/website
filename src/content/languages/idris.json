@@ -1,6 +1,22 @@
 {
   "name": "Idris",
-  "year": 2007,
+  "year": 2008,
   "paradigm": "dependently-typed",
-  "note": "dependent types + general programming"
+  "note": "dependent types + general programming; introduced publicly as an experimental language in 2008",
+  "typeSystem": "Full dependent types (types can mention values, e.g. a vector indexed by its length) combined with a Haskell-like syntax, aimed at practical general-purpose programming rather than only proof, with totality checking available on demand.",
+  "runtime": "Idris 2 compiles through Chez Scheme by default, producing Scheme code, compiled support files, and an executable launcher; creating a freestanding native executable requires an additional embedding step. Earlier Idris 1 targeted C or JavaScript.",
+  "runtimes": [
+    { "name": "Chez Scheme backend (Idris 2)", "kind": "transpile", "role": "Default backend: generates Chez Scheme source and compiled support files plus a launcher that runs them with Chez Scheme; tools such as chez-exe can additionally embed the runtime." },
+    { "name": "Native (C backend, Idris 1)", "kind": "native", "role": "Idris 1's original backend, compiling through C." },
+    { "name": "JavaScript / Node backend", "kind": "transpile", "role": "Compiles Idris to JavaScript for the browser or Node.js." }
+  ],
+  "compilers": [
+    { "name": "idris2", "role": "The Idris 2 compiler and elaborator, self-hosted in Idris." }
+  ],
+  "concurrencyModel": "Threads, mutexes, and typed channels are provided by libraries, but their implementation is backend-dependent; Idris 2's standard concurrency primitives are currently tied closely to the selected Scheme runtime rather than prescribing a language-wide scheduling model.",
+  "codeExample": {
+    "lang": "haskell",
+    "caption": "A length-indexed vector append, where the result length is tracked in the type",
+    "source": "import Data.Vect\n\nappend : Vect n a -> Vect m a -> Vect (n + m) a\nappend Nil       ys = ys\nappend (x :: xs) ys = x :: append xs ys"
+  }
 }

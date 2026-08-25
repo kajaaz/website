@@ -2,5 +2,21 @@
   "name": "Caml",
   "year": 1985,
   "paradigm": "functional-impure",
-  "note": "INRIA ML dialect; its first complete implementation was released in 1987"
+  "note": "INRIA ML dialect; its first complete implementation was released in 1987",
+  "typeSystem": "Static, strong, Hindley-Milner type inference inherited from ML, with algebraic data types and pattern matching; Caml Light and later Caml Special Light refined this into what would directly become OCaml's core type system.",
+  "runtime": "Early Caml compiled to bytecode run by a portable virtual machine; Caml Special Light (1995) added a native-code compiler, and the project was renamed OCaml the following year.",
+  "runtimes": [
+    { "name": "Caml Light bytecode VM", "kind": "bytecode-vm", "role": "Portable bytecode interpreter for the Caml Light dialect (1990)." },
+    { "name": "Native (Caml Special Light)", "kind": "native", "role": "Native-code compiler introduced in Caml Special Light (1995), the direct precursor to OCaml's ocamlopt." }
+  ],
+  "compilers": [
+    { "name": "camllight", "role": "Bytecode compiler for the Caml Light dialect." },
+    { "name": "Caml Special Light (CSL)", "role": "Added native code generation; renamed OCaml in 1996." }
+  ],
+  "concurrencyModel": "N/A; single-threaded evaluation, as in early ML implementations",
+  "codeExample": {
+    "lang": "ocaml",
+    "caption": "Recursive factorial, in the syntax later carried into OCaml",
+    "source": "let rec fact n =\n  if n = 0 then 1 else n * fact (n - 1);;\n\nfact 10;;"
+  }
 }

@@ -2,5 +2,19 @@
   "name": "Automath",
   "year": 1967,
   "paradigm": "dependently-typed",
-  "note": "de Bruijn; first proof checker"
+  "note": "de Bruijn; first proof checker",
+  "typeSystem": "The first dependently typed system: mathematical statements are encoded as types and proofs as terms inhabiting them (following the Curry-Howard correspondence), checked purely by type checking rather than by dedicated inference rules.",
+  "runtime": "Automath texts were checked by small, standalone type-checking programs (written in languages such as ALGOL 60/BCPL of the era); there was no interactive proof state or tactic language, just batch verification of a fully written-out proof term.",
+  "runtimes": [
+    { "name": "Batch type checker", "kind": "native", "role": "Reads a complete Automath text and either accepts every definition and proof term as well-typed or reports a type error." }
+  ],
+  "compilers": [
+    { "name": "Automath checking programs", "role": "De Bruijn-era implementations that checked complete texts written in Automath dialects such as AUT-68 and AUT-QE." }
+  ],
+  "concurrencyModel": "N/A (batch proof-checking language, no runtime execution model)",
+  "codeExample": {
+    "lang": "automath",
+    "caption": "Authentic AUT-QE-style declaration of a primitive binary relation",
+    "source": "a * relation : [x:nat][y:nat]PROP := ---"
+  }
 }

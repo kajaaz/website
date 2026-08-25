@@ -2,5 +2,20 @@
   "name": "HOL",
   "year": 1988,
   "paradigm": "multi-paradigm",
-  "note": "interactive theorem prover for simply typed higher-order logic; ML metalanguage"
+  "note": "interactive theorem prover for simply typed higher-order logic; ML metalanguage",
+  "typeSystem": "Simply typed, Church-style higher-order logic, implemented as an ML library of types and inference rules so that only a small trusted kernel can ever construct a theorem (the 'LCF approach' pioneered by Robin Milner).",
+  "runtime": "Runs as a library loaded into an ML top-level; proofs are written as ordinary ML programs (tactics) that manipulate an in-memory proof state until the goal is discharged.",
+  "runtimes": [
+    { "name": "PolyML (HOL4)", "kind": "native", "role": "Modern HOL4 systems are hosted in PolyML and compiled to native code." },
+    { "name": "Moscow ML (historical)", "kind": "bytecode-vm", "role": "Bytecode-based Standard ML implementation that historically served as a HOL4 host; its support was removed and Poly/ML is now the sole supported platform." }
+  ],
+  "compilers": [
+    { "name": "Holmake", "role": "Build tool that compiles HOL4 theory scripts and checks their proofs, producing verified theorem databases." }
+  ],
+  "concurrencyModel": "The object logic has no concurrency model. On supported hosts, Holmake can build independent theory targets concurrently; proof tactics otherwise execute within the host Standard ML runtime.",
+  "codeExample": {
+    "lang": "hol",
+    "caption": "HOL4: defining factorial and proving it is always positive",
+    "source": "Definition fact_def:\n  fact n = if n = 0 then 1 else n * fact (n - 1)\nEnd\n\nTheorem fact_pos:\n  !n. 0 < fact n\nProof\n  Induct_on `n` \\\\ rw [fact_def]\nQED"
+  }
 }

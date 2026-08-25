@@ -1,5 +1,20 @@
 {
   "name": "Crystal",
   "year": 2014,
-  "paradigm": "object-oriented"
+  "paradigm": "object-oriented",
+  "note": "Ruby-like syntax, compiled and statically typed",
+  "typeSystem": "Static, strong, fully inferred (Ruby-like syntax with no annotations required in most code), with union types and generics checked entirely at compile time despite looking like a dynamic scripting language.",
+  "runtime": "Compiled ahead-of-time to native code via LLVM, with automatic memory management via the Boehm garbage collector.",
+  "runtimes": [
+    { "name": "Native (LLVM)", "kind": "native", "role": "AOT compiled; memory managed by the Boehm garbage collector." }
+  ],
+  "compilers": [
+    { "name": "crystal", "role": "The reference self-hosted compiler, built on LLVM." }
+  ],
+  "concurrencyModel": "Lightweight cooperative fibers communicate through channels. Programs are concurrent but default to parallelism 1; current releases provide execution contexts that can be resized or added to opt into parallel execution across OS threads.",
+  "codeExample": {
+    "lang": "ruby",
+    "caption": "Hello, World!",
+    "source": "puts \"Hello, World!\""
+  }
 }

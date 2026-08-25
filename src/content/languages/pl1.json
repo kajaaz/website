@@ -1,5 +1,21 @@
 {
   "name": "PL/I",
   "year": 1964,
-  "paradigm": "imperative-procedural"
+  "paradigm": "imperative-procedural",
+  "note": "IBM's attempt to unify scientific (FORTRAN-like) and business (COBOL-like) programming in one language",
+  "typeSystem": "Static, with an unusually large built-in set of numeric and string types (fixed and floating, decimal and binary, varying-length strings) and extensive automatic conversions between them.",
+  "runtime": "Compiled ahead-of-time to native machine code, historically on IBM mainframes; supports explicit dynamic storage allocation via ALLOCATE and FREE statements.",
+  "runtimes": [
+    { "name": "Native (IBM Enterprise PL/I)", "kind": "native", "role": "AOT compiles PL/I to native machine code, historically on IBM System/360 and its successors." }
+  ],
+  "compilers": [
+    { "name": "IBM Enterprise PL/I", "role": "IBM's modern mainframe PL/I compiler." },
+    { "name": "Iron Spring PL/I", "role": "A PL/I compiler targeting Linux and Windows." }
+  ],
+  "concurrencyModel": "IBM's early detailed PL/I specifications and compilers supported multitasking through TASK options, EVENT variables, and WAIT. These facilities were omitted from the base used for early standardisation and remain implementation- and profile-sensitive rather than universally portable PL/I.",
+  "codeExample": {
+    "lang": "pli",
+    "caption": "Hello, World!",
+    "source": "HELLO: PROCEDURE OPTIONS(MAIN);\n   PUT SKIP LIST('Hello, World!');\nEND HELLO;"
+  }
 }

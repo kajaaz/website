@@ -2,5 +2,19 @@
   "name": "Simula 67",
   "year": 1967,
   "paradigm": "object-oriented",
-  "note": "classes, inheritance, and virtual procedures"
+  "note": "classes, inheritance, and virtual procedures",
+  "typeSystem": "Static; introduced the class as a language construct combining data and procedures, together with subclassing (inheritance) and virtual procedures for what would later be called dynamic dispatch - the origin of essentially all later object-oriented type systems.",
+  "runtime": "Compiled to native code, often via a generated intermediate representation; most implementations included automatic garbage collection for class objects, unusually early for a compiled systems language.",
+  "runtimes": [
+    { "name": "Native (GNU cim, and historical UNIVAC/Burroughs compilers)", "kind": "native", "role": "AOT compiles Simula to native code; the modern open-source GNU cim implementation compiles Simula through C." }
+  ],
+  "compilers": [
+    { "name": "GNU cim", "role": "Modern open-source Simula compiler, translating to C." }
+  ],
+  "concurrencyModel": "'Quasi-parallel' coroutines (via detach/resume/call on class objects) let one process explicitly hand control to another - a direct precursor to modern cooperative coroutines and generators.",
+  "codeExample": {
+    "lang": "simula",
+    "caption": "A class with a virtual procedure, overridden in a subclass",
+    "source": "Begin\n  Class Animal;\n  Virtual: Procedure Speak;;\n  Begin\n  End;\n\n  Animal Class Dog;\n  Begin\n    Procedure Speak;\n    Begin\n      OutText(\"Woof!\"); OutImage;\n    End;\n  End;\n\n  Ref (Animal) a;\n  a :- new Dog;\n  a.Speak;\nEnd;"
+  }
 }

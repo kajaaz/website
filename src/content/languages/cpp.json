@@ -3,7 +3,7 @@
   "year": 1983,
   "paradigm": "multi-paradigm",
   "note": "Multi-paradigm systems language that evolved from C with Classes",
-  "typeSystem": "Static, strong, nominal; templates for generics",
+  "typeSystem": "Static, primarily nominal for declared class hierarchies, with template-based structural generic programming, concepts, and extensive implicit conversions and casts.",
   "typeSystemExample": {
     "lang": "cpp",
     "caption": "Generic max via a function template",

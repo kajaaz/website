@@ -2,5 +2,22 @@
   "name": "F*",
   "year": 2011,
   "paradigm": "dependently-typed",
-  "note": "effectful dependently typed"
+  "note": "effectful dependently typed",
+  "typeSystem": "Dependent types combined with a typed-effects system: side effects such as state, exceptions, and divergence are tracked in types via monadic effect indices, and refinement types let ordinary types be annotated with logical predicates checked by an SMT solver.",
+  "runtime": "F* programs are verified against an SMT solver (commonly Z3) and then compiled or extracted to OCaml, F#, C, or WebAssembly for execution; the verified cryptographic library HACL* and parts of Firefox's NSS use the C extraction path.",
+  "runtimes": [
+    { "name": "OCaml extraction", "kind": "transpile", "role": "Compiles verified F* to OCaml, the most common path for general-purpose extracted code." },
+    { "name": "C extraction (via KaRaMeL)", "kind": "transpile", "role": "Extracts a low-level subset of F* to C, used for verified cryptographic code such as HACL*." },
+    { "name": "F# extraction", "kind": "transpile", "role": "Extracts F* to F# for .NET interoperability." },
+    { "name": "WebAssembly extraction", "kind": "transpile", "role": "Compiles supported F* programs to WebAssembly for portable execution." }
+  ],
+  "compilers": [
+    { "name": "fstar.exe", "role": "Type-checks, verifies (via Z3), and extracts F* source to a target language." }
+  ],
+  "concurrencyModel": "F* does not prescribe one scheduler, but its effect system can model and verify concurrency. Pulse, an embedded concurrent-separation-logic language distributed with F*, supports verified shared-state concurrent programs; extracted code then uses its target runtime.",
+  "codeExample": {
+    "lang": "ocaml",
+    "caption": "A refinement-typed factorial: the return type proves positivity",
+    "source": "let rec fact (n:nat) : Tot (r:nat{r > 0}) =\n  if n = 0 then 1 else n * fact (n - 1)"
+  }
 }

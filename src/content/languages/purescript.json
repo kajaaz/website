@@ -2,5 +2,19 @@
   "name": "PureScript",
   "year": 2013,
   "paradigm": "functional-pure",
-  "note": "strict Haskell-like"
+  "note": "strict Haskell-like",
+  "typeSystem": "Static, strong, Hindley-Milner-based with type classes, higher-kinded types, and row polymorphism (extensible records) - effectively a stricter, JavaScript-targeting cousin of Haskell.",
+  "runtime": "Compiles to readable JavaScript, with strict (not lazy) evaluation by default, unlike Haskell.",
+  "runtimes": [
+    { "name": "Compile to JavaScript", "kind": "transpile", "role": "The reference backend; emits clean, human-readable JavaScript modules." }
+  ],
+  "compilers": [
+    { "name": "purs", "role": "The reference PureScript compiler." }
+  ],
+  "concurrencyModel": "Effects are tracked in the type system via the Effect and Aff types (synchronous and asynchronous effect monads); concurrency itself follows the host JavaScript engine's event loop.",
+  "codeExample": {
+    "lang": "haskell",
+    "caption": "Hello, World! plus a recursive factorial",
+    "source": "module Main where\n\nimport Prelude\nimport Effect (Effect)\nimport Effect.Console (logShow)\n\nfact :: Int -> Int\nfact 0 = 1\nfact n = n * fact (n - 1)\n\nmain :: Effect Unit\nmain = logShow (fact 10)"
+  }
 }

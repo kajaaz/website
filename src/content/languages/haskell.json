@@ -11,8 +11,7 @@
     { "name": "WebAssembly (GHC wasm backend)", "kind": "wasm", "role": "Emerging support for compiling Haskell to WASM." }
   ],
   "compilers": [
-    { "name": "GHC", "role": "The Glasgow Haskell Compiler; the de-facto standard." },
-    { "name": "GHC (LLVM backend)", "role": "Alternative native-code generator built on LLVM." }
+    { "name": "GHC", "role": "The Glasgow Haskell Compiler; the de-facto standard, with native and optional LLVM code-generation backends." }
   ],
   "concurrencyModel": "Lightweight green threads (forkIO), STM (Software Transactional Memory), sparks for parallelism",
   "codeExample": {

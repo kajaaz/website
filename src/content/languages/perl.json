@@ -1,5 +1,20 @@
 {
   "name": "Perl",
   "year": 1987,
-  "paradigm": "multi-paradigm"
+  "paradigm": "multi-paradigm",
+  "note": "Text-processing scripting language, sometimes called 'the duct tape of the internet'",
+  "typeSystem": "Dynamic, weakly typed with context-sensitive coercion between strings and numbers, and three distinct sigil-marked variable kinds (scalars $, arrays @, hashes %); references let these compose into arbitrarily nested data structures.",
+  "runtime": "Compiled to an internal op tree by the Perl interpreter each time a program runs, then walked and executed; there is no separate ahead-of-time compilation step for ordinary scripts.",
+  "runtimes": [
+    { "name": "perl (reference interpreter)", "kind": "interpreter", "role": "Parses source into an internal op tree threaded in execution order and executes it directly." }
+  ],
+  "compilers": [
+    { "name": "perl", "role": "The reference implementation and compiler/interpreter for Perl programs." }
+  ],
+  "concurrencyModel": "Native OS threads (the threads module) with explicit data sharing, though most idiomatic Perl concurrency instead uses forked processes or event loops (e.g. AnyEvent, IO::Async).",
+  "codeExample": {
+    "lang": "perl",
+    "caption": "Hello, World!",
+    "source": "use strict;\nuse warnings;\n\nprint \"Hello, World!\\n\";"
+  }
 }

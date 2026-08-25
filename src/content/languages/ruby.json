@@ -21,10 +21,10 @@
     { "name": "JRuby", "role": "JVM implementation." },
     { "name": "TruffleRuby", "role": "GraalVM implementation." }
   ],
-  "concurrencyModel": "CRuby provides OS threads under a Global VM Lock, cooperative Fibers, and isolated Ractors that can run in parallel. Other implementations, including JRuby, can run Ruby threads in parallel without CRuby's GVL.",
+  "concurrencyModel": "CRuby provides OS threads under a Global VM Lock, cooperative Fibers, and isolated Ractors that can run in parallel; the Ractor API remains experimental. Other implementations, including JRuby, can run Ruby threads in parallel without CRuby's GVL.",
   "concurrencyExample": {
     "lang": "ruby",
-    "caption": "4 workers computing i*i in parallel via threads",
+    "caption": "4 concurrent CRuby threads computing i*i",
     "source": "threads = (0..3).map do |i|\n  Thread.new { i * i }\nend\n\nputs threads.map(&:value).join(' ')"
   },
   "codeExample": {

@@ -2,5 +2,19 @@
   "name": "Move",
   "year": 2019,
   "paradigm": "imperative-procedural",
-  "note": "linear resource types"
+  "note": "linear resource types",
+  "typeSystem": "Static and strong, with abilities controlling permitted operations. Structs that lack copy and drop have resource-like linear behavior and cannot be copied or implicitly discarded; store and key separately govern use in global storage.",
+  "runtime": "Compiled to Move bytecode and checked by a bytecode verifier for type and resource safety before execution. Aptos and Sui use distinct Move dialects, frameworks, storage models, and adapted virtual machines.",
+  "runtimes": [
+    { "name": "Move VM and chain-specific variants", "kind": "bytecode-vm", "role": "Execute verified Move bytecode or chain-specific Move dialects; descendants are used by Aptos and Sui, following the original Diem/Libra project." }
+  ],
+  "compilers": [
+    { "name": "move build", "role": "Compiles Move packages and produces bytecode artifacts; bytecode verification occurs before execution, while the Move Prover is invoked separately." }
+  ],
+  "concurrencyModel": "N/A within a single transaction (sequential execution with resource-safety guarantees); some Move-based chains (e.g. Sui, Aptos with Block-STM) execute independent transactions in parallel at the blockchain-client level.",
+  "codeExample": {
+    "lang": "move",
+    "caption": "A minimal module with a greeting function",
+    "source": "module hello::greeting {\n    use std::debug;\n\n    public fun greet() {\n        debug::print(&b\"Hello, World!\".to_string());\n    }\n}"
+  }
 }

@@ -2,5 +2,19 @@
   "name": "Twelf",
   "year": 1998,
   "paradigm": "dependently-typed",
-  "note": "LF framework"
+  "note": "LF framework",
+  "typeSystem": "The Edinburgh Logical Framework (LF): a dependently typed lambda calculus used to encode the syntax, typing rules, and proof systems of other formal languages, so that 'type checking in LF' becomes 'proof checking' for the encoded system.",
+  "runtime": "Twelf type-checks LF signatures and can execute logic-programming-style queries against them via higher-order unification and backward search, similar in spirit to Prolog but over dependently typed terms.",
+  "runtimes": [
+    { "name": "Twelf type/proof checker", "kind": "interpreter", "role": "Checks LF signatures for well-typedness and totality, and answers queries by higher-order logic-programming search." }
+  ],
+  "compilers": [
+    { "name": "Twelf server", "role": "The reference implementation, including its %terminates and %total checkers used to verify metatheory proofs encoded as LF relations." }
+  ],
+  "concurrencyModel": "N/A (logical framework and metatheorem checker)",
+  "codeExample": {
+    "lang": "twelf",
+    "caption": "Encoding natural numbers and addition as an LF signature",
+    "source": "nat : type.\nz : nat.\ns : nat -> nat.\n\nplus : nat -> nat -> nat -> type.\nplus/z : plus z N N.\nplus/s : plus (s N1) N2 (s N3)\n          <- plus N1 N2 N3."
+  }
 }

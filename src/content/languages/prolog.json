@@ -5,8 +5,9 @@
   "typeSystem": "Dynamically typed terms with no static type checking; unification operates on tagged terms such as atoms, numbers, variables, and compound terms.",
   "runtime": "Typically compiled to implementation-specific virtual-machine instructions; some systems also compile to native code",
   "runtimes": [
-    { "name": "Prolog VM (SWI / SICStus)", "kind": "bytecode-vm", "role": "Programs compile to implementation-specific virtual-machine code derived from or related to the Warren Abstract Machine." },
-    { "name": "GNU Prolog (native)", "kind": "native", "role": "Can compile programs to standalone native executables." }
+    { "name": "SWI-Prolog VM", "kind": "bytecode-vm", "role": "Compiles clauses to SWI-Prolog's compact ZIP-derived virtual-machine instruction set, which is designed to retain source-level debugging support." },
+    { "name": "SICStus Prolog VM", "kind": "bytecode-vm", "role": "Compiles Prolog to implementation-specific abstract-machine instructions in the WAM tradition." },
+    { "name": "GNU Prolog (native)", "kind": "native", "role": "Compiles through WAM code and mini-assembly to standalone native executables." }
   ],
   "compilers": [
     { "name": "SWI-Prolog", "role": "Popular implementation with a virtual-machine compiler and rich libraries." },

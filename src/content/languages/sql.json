@@ -6,8 +6,8 @@
   "typeSystem": "Dialect-dependent. Most engines assign declared types to columns and type-check expressions, with implicit conversions and SQL NULL's three-valued logic; SQLite uses dynamic value typing with column affinity.",
   "typeSystemExample": {
     "lang": "sql",
-    "caption": "Typed columns and GREATEST as the closest to generic max",
-    "source": "CREATE TABLE nums (a INTEGER, b INTEGER);\nINSERT INTO nums VALUES (3, 7), (10, 2);\n\nSELECT a, b, GREATEST(a, b) AS max_val\nFROM nums;"
+    "caption": "Typed columns and a portable two-value maximum using CASE",
+    "source": "CREATE TABLE nums (a INTEGER, b INTEGER);\nINSERT INTO nums VALUES (3, 7), (10, 2);\n\nSELECT a, b,\n       CASE WHEN a >= b THEN a ELSE b END AS max_val\nFROM nums;"
   },
   "runtime": "Parsed, planned, optimised, and executed by a database engine",
   "runtimes": [

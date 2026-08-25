@@ -2,5 +2,20 @@
   "name": "Forth",
   "year": 1970,
   "paradigm": "imperative-procedural",
-  "note": "stack-based concatenative"
+  "note": "stack-based concatenative",
+  "typeSystem": "Largely untyped at the data-stack level: stack items have no language-enforced static types, so stack-effect comments and word names document their meaning. Values may occupy one or more cells, and many systems use a separate floating-point stack.",
+  "runtime": "Traditionally an interactive threaded interpreter: each word (Forth's term for a subroutine) is looked up in a dictionary and either executed directly or compiled into new word definitions; many modern systems can also compile words to native code.",
+  "runtimes": [
+    { "name": "Threaded interpreter (classic Forth systems)", "kind": "interpreter", "role": "Looks up each word in a dictionary and executes or compiles it; the classic, highly interactive Forth execution model." },
+    { "name": "Native-code systems (e.g. SwiftForth)", "kind": "native", "role": "Some Forth systems compile definitions directly to native machine code for performance." }
+  ],
+  "compilers": [
+    { "name": "gforth", "role": "GNU's interactive threaded-code Forth system, with native primitives, dynamic superinstructions, and facilities for explicit machine-code definitions." }
+  ],
+  "concurrencyModel": "Historically single-threaded and highly interactive; some embedded Forth systems add cooperative multitasking as a library convention.",
+  "codeExample": {
+    "lang": "forth",
+    "caption": "Define and use a word that squares a number",
+    "source": ": SQUARE ( n -- n^2 ) DUP * ;\n5 SQUARE ."
+  }
 }

@@ -2,5 +2,19 @@
   "name": "Lean",
   "year": 2013,
   "paradigm": "dependently-typed",
-  "note": "dependent types; Lean 4 is also a general PL"
+  "note": "dependent types; Lean 4 is also a general PL",
+  "typeSystem": "Dependent types based on the Calculus of Constructions with inductive types, used both to state mathematical theorems as types and to construct proofs interactively via tactics.",
+  "runtime": "The Lean 3 kernel and elaborator were implemented in C++ for performance, while user tactics and metaprograms were written and executed in Lean itself. External tools, including Python-based mathlib project tooling, managed packages and build workflows rather than tactic execution.",
+  "runtimes": [
+    { "name": "Native (C++ kernel)", "kind": "native", "role": "Lean 3's small, trusted kernel and elaborator, implemented in C++ and compiled to native code." }
+  ],
+  "compilers": [
+    { "name": "lean (Lean 3)", "role": "Type-checks and elaborates Lean 3 theories and tactic proofs; superseded by the from-scratch Lean 4 compiler." }
+  ],
+  "concurrencyModel": "N/A as a user programming model in Lean 3. The editor server could perform background processing, but Lean 3 did not expose the general task-based concurrency model provided by Lean 4.",
+  "codeExample": {
+    "lang": "lean",
+    "caption": "Lean 3: factorial defined by pattern matching and proved positive",
+    "source": "def fact : \u2115 \u2192 \u2115\n| 0     := 1\n| (n+1) := (n+1) * fact n\n\ntheorem fact_pos : \u2200 n, fact n > 0 :=\nbegin\n  intro n,\n  induction n with n ih,\n  { simp [fact] },\n  { exact nat.mul_pos (nat.succ_pos n) ih }\nend"
+  }
 }

@@ -1,5 +1,22 @@
 {
   "name": "Pascal",
   "year": 1970,
-  "paradigm": "imperative-procedural"
+  "paradigm": "imperative-procedural",
+  "note": "Wirth's teaching language emphasising structured programming and strong typing",
+  "typeSystem": "Static, strong, with a rich set of built-in structured types (records, arrays, sets, enumerations, and pointers) designed explicitly to encourage structured programming and catch mistakes at compile time.",
+  "runtime": "Historically compiled to a portable intermediate 'p-code' interpreted by a small virtual machine (the UCSD p-System), or compiled ahead-of-time straight to native code (Turbo Pascal and most modern compilers).",
+  "runtimes": [
+    { "name": "Native (Free Pascal, Turbo Pascal)", "kind": "native", "role": "AOT compiles Pascal to native machine code." },
+    { "name": "UCSD p-System", "kind": "bytecode-vm", "role": "Historic portable bytecode ('p-code') interpreter that let Pascal programs run unmodified across many 1970s-80s microcomputers." }
+  ],
+  "compilers": [
+    { "name": "Free Pascal", "role": "Modern, actively maintained open-source native compiler." },
+    { "name": "Turbo Pascal", "role": "Borland's hugely popular, extremely fast native compiler for MS-DOS and Windows." }
+  ],
+  "concurrencyModel": "Standard Pascal has no built-in concurrency; later dialects and libraries (e.g. Free Pascal's threading units) add OS-thread support on top.",
+  "codeExample": {
+    "lang": "pascal",
+    "caption": "Hello, World!",
+    "source": "program Hello;\nbegin\n  writeln('Hello, World!');\nend."
+  }
 }
