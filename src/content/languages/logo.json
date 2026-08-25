@@ -2,5 +2,17 @@
   "name": "Logo",
   "year": 1967,
   "paradigm": "functional-impure",
-  "note": "Lisp dialect"
+  "note": "Lisp dialect",
+  "typeSystem": "Dynamic; classic Logo's principal data types are words and lists, with numbers represented as words that arithmetic operations recognise. Procedures are named workspace objects rather than generally first-class values. Logo is best known for turtle graphics and educational use.",
+  "runtime": "Traditionally interpreted directly from source, designed to give learners immediate, interactive feedback as they drive an on-screen (or physical, robotic) turtle.",
+  "runtimes": [
+    { "name": "UCB Logo interpreter", "kind": "interpreter", "role": "Reads and executes Logo commands directly, typically updating turtle graphics on screen live as each line runs." }
+  ],
+  "compilers": [],
+  "concurrencyModel": "Dialect-dependent; classic UCBLogo is single-threaded, while some later Logo-family systems add concurrency.",
+  "codeExample": {
+    "lang": "logo",
+    "caption": "Draw a square using turtle graphics",
+    "source": "to square :size\n  repeat 4 [ forward :size right 90 ]\nend\n\nsquare 100"
+  }
 }

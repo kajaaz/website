@@ -1,5 +1,23 @@
 {
   "name": "Nim",
   "year": 2008,
-  "paradigm": "multi-paradigm"
+  "paradigm": "multi-paradigm",
+  "note": "Python-inspired syntax compiled to native code via C",
+  "typeSystem": "Static, strong, with powerful compile-time metaprogramming: generics, templates, and true AST-manipulating macros, wrapped in a Python-inspired significant-indentation syntax.",
+  "runtime": "Compiles to native code by first generating C, C++, or JavaScript, then handing off to an existing backend compiler or toolchain.",
+  "runtimes": [
+    { "name": "Native (via generated C)", "kind": "native", "role": "Default backend: Nim compiles to C, then a C compiler (GCC/Clang/MSVC) produces the native binary." },
+    { "name": "Native (via generated C++)", "kind": "native", "role": "Alternative backend for easier interop with C++ libraries." },
+    { "name": "JavaScript", "kind": "transpile", "role": "Compiles Nim to JavaScript for browser and Node.js targets." }
+  ],
+  "compilers": [
+    { "name": "nim c", "role": "Compiles Nim to C, then invokes a system C compiler to produce a native binary." },
+    { "name": "nim js", "role": "Compiles Nim to JavaScript." }
+  ],
+  "concurrencyModel": "Deterministic memory management (ARC/ORC) with async/await built on a single-threaded event loop by default, plus opt-in OS threads and channels for true parallelism.",
+  "codeExample": {
+    "lang": "nim",
+    "caption": "Hello, World!",
+    "source": "echo \"Hello, World!\""
+  }
 }

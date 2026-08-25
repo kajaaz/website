@@ -2,5 +2,20 @@
   "name": "APL",
   "year": 1966,
   "paradigm": "functional-impure",
-  "note": "array programming"
+  "note": "array programming",
+  "typeSystem": "Dynamic; every value is an array, including rank-0 scalars. Many scalar primitives apply pervasively, while other functions operate on whole arrays or cells according to rank, shape, and conformance rules.",
+  "runtime": "Historically interpreted directly from its distinctive symbolic notation; modern implementations remain primarily interpreters, although Dyalog can compile selected functions to a more efficient internal bytecode.",
+  "runtimes": [
+    { "name": "GNU APL / Dyalog APL (interpreter)", "kind": "interpreter", "role": "Interprets APL's array expressions directly, applying its built-in operators across whole arrays at once." }
+  ],
+  "compilers": [
+    { "name": "Dyalog APL", "role": "Commercial interpreter with an optional compiler that converts selected functions to internal bytecode." },
+    { "name": "GNU APL", "role": "Free-software APL2-compatible interpreter." }
+  ],
+  "concurrencyModel": "Implementation-dependent; Dyalog APL provides explicit parallel array operations and futures/isolates for concurrent tasks.",
+  "codeExample": {
+    "lang": "apl",
+    "caption": "Hello, World!",
+    "source": "'Hello, World!'"
+  }
 }

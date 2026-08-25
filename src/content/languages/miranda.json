@@ -2,5 +2,19 @@
   "name": "Miranda",
   "year": 1985,
   "paradigm": "functional-pure",
-  "note": "lazy, polymorphic language that strongly influenced Haskell"
+  "note": "lazy, polymorphic language that strongly influenced Haskell",
+  "typeSystem": "Static, strong, Hindley-Milner-based polymorphic type inference with algebraic data types and list comprehensions; one of the first languages to pair lazy evaluation with this style of type system, an approach Haskell was designed to standardise.",
+  "runtime": "Compiled to combinators and executed by a graph-reduction machine, giving lazy (call-by-need) evaluation throughout the language.",
+  "runtimes": [
+    { "name": "Graph-reduction machine", "kind": "interpreter", "role": "Lazily reduces a shared graph of combinators, only evaluating expressions when their results are actually needed." }
+  ],
+  "compilers": [
+    { "name": "mira (Research Software Ltd.)", "role": "The original, commercially licensed Miranda compiler and interpreter." }
+  ],
+  "concurrencyModel": "N/A (single-threaded lazy evaluator)",
+  "codeExample": {
+    "lang": "miranda",
+    "caption": "Factorial using guarded equations",
+    "source": "fact n = 1, if n = 0\n       = n * fact (n-1), otherwise\n\nmain = fact 10"
+  }
 }

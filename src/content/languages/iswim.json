@@ -2,5 +2,16 @@
   "name": "ISWIM",
   "year": 1966,
   "paradigm": "functional-impure",
-  "note": "Landin; paper language ancestor of ML"
+  "note": "Landin; paper language ancestor of ML",
+  "typeSystem": "A paper design with no fixed concrete syntax or built-in type system: Peter Landin proposed ISWIM ('If you See What I Mean') as an abstract framework, built on the lambda calculus plus imperative extensions, that any number of concrete surface languages could be instances of.",
+  "runtime": "ISWIM was never implemented as a language of its own; its operational account used Landin's abstract-machine framework. ISWIM's language ideas, rather than a documented direct transfer from the SECD machine itself, influenced later languages including ML.",
+  "runtimes": [
+    { "name": "SECD machine (conceptual)", "kind": "interpreter", "role": "Landin's abstract stack-based machine (Stack, Environment, Control, Dump) used to give ISWIM-style expressions a precise operational semantics." }
+  ],
+  "concurrencyModel": "N/A (paper design; no implementation)",
+  "codeExample": {
+    "lang": "iswim",
+    "caption": "Landin-style 'where' clause defining an auxiliary function",
+    "source": "(square 3) + (square 4)\n  where square x = x * x"
+  }
 }

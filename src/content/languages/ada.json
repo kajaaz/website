@@ -2,5 +2,24 @@
   "name": "Ada",
   "year": 1980,
   "paradigm": "multi-paradigm",
-  "note": "DoD language for large-scale and real-time systems; revised standard published as Ada 83"
+  "note": "DoD language for large-scale and real-time systems; revised standard published as Ada 83",
+  "typeSystem": "Static, very strong typing with strict range and subtype checking, no implicit conversions between distinct types, packages for encapsulation, and (since Ada 95) full object-oriented tagged types - designed from the outset to prevent whole classes of bugs common in safety-critical software.",
+  "runtime": "Compiled ahead-of-time to native machine code; language-defined checks such as range, array-bounds, and null-access checks are normally inserted by the compiler. Pragma Suppress can selectively permit an implementation to omit checks, without requiring a proof and without requiring the implementation to omit them.",
+  "runtimes": [
+    { "name": "Native (GNAT/GCC)", "kind": "native", "role": "GNAT, the GNU Ada compiler built on the GCC backend, is the most widely used implementation." }
+  ],
+  "compilers": [
+    { "name": "GNAT", "role": "GCC-based; the primary open-source and commercially supported Ada compiler." }
+  ],
+  "concurrencyModel": "Concurrency is part of the language itself: tasks and rendezvous were standardised in Ada 83, while Ada 95 added protected objects for coordinated access to shared data.",
+  "concurrencyExample": {
+    "lang": "ada",
+    "caption": "A concurrent task running alongside the main program",
+    "source": "with Ada.Text_IO; use Ada.Text_IO;\n\nprocedure Concurrent_Hello is\n   task Greeter;\n   task body Greeter is\n   begin\n      Put_Line(\"Hello from a task!\");\n   end Greeter;\nbegin\n   Put_Line(\"Hello from the main task!\");\nend Concurrent_Hello;"
+  },
+  "codeExample": {
+    "lang": "ada",
+    "caption": "Hello, World!",
+    "source": "with Ada.Text_IO; use Ada.Text_IO;\n\nprocedure Hello is\nbegin\n   Put_Line(\"Hello, World!\");\nend Hello;"
+  }
 }

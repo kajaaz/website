@@ -1,6 +1,6 @@
 {
   "name": "sh",
-  "year": 1977,
+  "year": 1979,
   "paradigm": "imperative-procedural",
   "note": "The Unix shell as a scripting language for gluing processes",
   "typeSystem": "Untyped: shell parameters hold strings, while commands also produce integer exit statuses and the language has special arithmetic and test contexts.",

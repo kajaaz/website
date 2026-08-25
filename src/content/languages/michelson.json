@@ -2,5 +2,19 @@
   "name": "Michelson",
   "year": 2017,
   "paradigm": "functional-pure",
-  "note": "stack-based with pure semantics"
+  "note": "stack-based with pure semantics",
+  "typeSystem": "Static and strongly typed stack-based language: every instruction has a precise, statically checked effect on the shape and types of the stack, so a Michelson contract cannot even be deployed unless it type-checks completely.",
+  "runtime": "Executed directly by the Tezos blockchain's node software as the low-level target that higher-level languages (e.g. LIGO, SmartPy) compile down to; there is no separate bytecode format beneath it.",
+  "runtimes": [
+    { "name": "Tezos node interpreter", "kind": "interpreter", "role": "Every Tezos node type-checks and interprets Michelson instructions directly when executing a smart contract." }
+  ],
+  "compilers": [
+    { "name": "LIGO / SmartPy (higher-level front ends)", "role": "Higher-level languages that compile down to Michelson, which developers rarely write by hand." }
+  ],
+  "concurrencyModel": "N/A: each contract call executes atomically and sequentially as part of a single Tezos operation.",
+  "codeExample": {
+    "lang": "michelson",
+    "caption": "A contract that always returns a greeting string",
+    "source": "parameter unit;\nstorage string;\ncode { DROP; PUSH string \"Hello, World!\"; NIL operation; PAIR };"
+  }
 }

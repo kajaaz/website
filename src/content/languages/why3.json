@@ -1,6 +1,24 @@
 {
   "name": "Why3",
-  "year": 2011,
+  "year": 2010,
   "paradigm": "functional-impure",
-  "note": "Deductive verification platform with the ML-like WhyML language"
+  "note": "Deductive verification platform with the ML-like WhyML language; first released in 2010, with its foundational prover-platform paper published in 2011",
+  "typeSystem": "Static, ML-style type system for WhyML (Hindley-Milner with polymorphism), layered with a first-order specification logic (pre/postconditions, loop invariants, variants) that generates verification conditions.",
+  "runtime": "Why3 can interpret WhyML directly with the why3 execute command, including optional runtime assertion checking, or extract supported programs to languages such as OCaml or C. Verification conditions are dispatched separately to external automated and interactive provers.",
+  "runtimes": [
+    { "name": "WhyML interpreter", "kind": "interpreter", "role": "The why3 execute command interprets WhyML functions directly and can optionally perform runtime assertion checking." },
+    { "name": "OCaml extraction", "kind": "transpile", "role": "Extracts supported WhyML code to OCaml for compilation and execution." },
+    { "name": "C extraction", "kind": "transpile", "role": "Extracts a restricted executable subset of WhyML to C." }
+  ],
+  "compilers": [
+    { "name": "why3 prove", "role": "Generates verification conditions from WhyML specifications and dispatches them to provers." },
+    { "name": "why3 extract", "role": "Extracts executable OCaml (or other target) code from verified WhyML." },
+    { "name": "Prover backends (Alt-Ergo / Z3 / CVC5)", "role": "External SMT and automated theorem provers dispatched by Why3 to discharge verification conditions; they are backends rather than WhyML compilers." }
+  ],
+  "concurrencyModel": "N/A (specification and verification language); extracted programs inherit the concurrency model of their target language.",
+  "codeExample": {
+    "lang": "ocaml",
+    "caption": "WhyML: a verified factorial with a precondition and termination measure",
+    "source": "module Factorial\n  use int.Int\n\n  let rec function fact (n: int) : int\n    requires { n >= 0 }\n    variant  { n }\n  = if n = 0 then 1 else n * fact (n - 1)\nend"
+  }
 }

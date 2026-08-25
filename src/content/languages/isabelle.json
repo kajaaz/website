@@ -2,5 +2,19 @@
   "name": "Isabelle",
   "year": 1986,
   "paradigm": "multi-paradigm",
-  "note": "generic theorem prover supporting multiple object logics; Isabelle/HOL is its most-used instance"
+  "note": "generic theorem prover supporting multiple object logics; Isabelle/HOL is its most-used instance",
+  "typeSystem": "Isabelle is a generic theorem prover built on the higher-order meta-logic Isabelle/Pure and can host multiple object logics. Its most-used instance, Isabelle/HOL, is classical simply typed higher-order logic; theorem construction follows the LCF discipline through a small trusted kernel.",
+  "runtime": "The Isabelle/ML runtime, built on the Poly/ML implementation of Standard ML, executes the meta-language, the proof kernel, and tactics; Isabelle/jEdit layers an IDE with continuous, asynchronous checking on top.",
+  "runtimes": [
+    { "name": "Poly/ML", "kind": "native", "role": "Standard ML implementation that hosts Isabelle/ML, including the kernel, parser, tactics, and parallel proof infrastructure." }
+  ],
+  "compilers": [
+    { "name": "isabelle build", "role": "Builds and checks Isabelle sessions, producing cached 'heap images' of verified theories." }
+  ],
+  "concurrencyModel": "Independent proof obligations and theories are checked in parallel across CPU cores using Poly/ML's multicore runtime; the underlying logic itself has no concurrency constructs of its own.",
+  "codeExample": {
+    "lang": "isabelle",
+    "caption": "A simple lemma about natural numbers, proved automatically",
+    "source": "theory Hello\n  imports Main\nbegin\n\nlemma my_add_comm: \"(a::nat) + b = b + a\"\n  by (rule add.commute)\n\nvalue \"1 + 2 :: nat\"\n\nend"
+  }
 }

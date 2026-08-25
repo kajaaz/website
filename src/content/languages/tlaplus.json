@@ -2,5 +2,20 @@
   "name": "TLA+",
   "year": 1999,
   "paradigm": "logic-relational",
-  "note": "specification language"
+  "note": "specification language",
+  "typeSystem": "Untyped: TLA+ is built directly on ZF set theory plus temporal logic, so every value (numbers, tuples, functions, sets of states) is just a mathematical set; there is no compiler-checked type system, though the TLAPS proof system and TLC model checker can catch many classes of errors.",
+  "runtime": "TLA+ specifications are not 'run' as programs; the TLC model checker exhaustively (or randomly) explores the reachable states of a specification to check invariants and temporal properties, while TLAPS mechanically checks hand-written proofs.",
+  "runtimes": [
+    { "name": "TLC model checker (JVM)", "kind": "jit", "role": "Explicit-state model checker that enumerates reachable states of a specification to find invariant violations or deadlocks." },
+    { "name": "TLAPS proof manager", "kind": "native", "role": "Decomposes hand-written TLA+ proofs into obligations and dispatches them to trusted or automated backend provers; it is a proof orchestrator, not a TLA+ interpreter." }
+  ],
+  "compilers": [
+    { "name": "SANY", "role": "The standard TLA+ parser and semantic analyzer used by TLC and TLAPS." }
+  ],
+  "concurrencyModel": "TLA+ specifications directly describe concurrent and distributed systems as sets of possible behaviours (sequences of states related by a next-state action); there is no separate 'concurrency model' because interleaving is what the logic itself expresses.",
+  "codeExample": {
+    "lang": "tlaplus",
+    "caption": "A finite-state spec: a Boolean flag that repeatedly toggles",
+    "source": "---- MODULE Toggle ----\nVARIABLE flag\n\nInit == flag = FALSE\nNext == flag' = ~flag\nSpec == Init /\\ [][Next]_flag\n\nTypeInvariant == flag \\in BOOLEAN\n===="
+  }
 }

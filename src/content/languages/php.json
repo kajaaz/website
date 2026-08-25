@@ -12,7 +12,7 @@
   "runtime": "Compiled to Zend opcodes and executed by the Zend Engine, commonly in a per-request server model",
   "runtimes": [
     { "name": "Zend Engine", "kind": "bytecode-vm", "role": "Reference engine; compiles to opcodes executed per request." },
-    { "name": "OPcache + JIT (PHP 8+)", "kind": "jit", "role": "Caches opcodes and JIT-compiles hot paths." }
+    { "name": "OPcache + optional JIT (PHP 8+)", "kind": "jit", "role": "Caches opcodes and, when explicitly enabled, JIT-compiles code; JIT is disabled by default in PHP 8.4+." }
   ],
   "compilers": [
     { "name": "php-src (Zend)", "role": "Reference compiler and runtime." }

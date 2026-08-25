@@ -1,5 +1,21 @@
 {
   "name": "Objective-C",
   "year": 1984,
-  "paradigm": "object-oriented"
+  "paradigm": "object-oriented",
+  "note": "Smalltalk-style message passing layered on top of C",
+  "typeSystem": "A static C type system extended with dynamic, Smalltalk-style message dispatch: the id type erases static class information so any object can receive any message, resolved dynamically at runtime, while ordinary C types remain statically checked.",
+  "runtime": "Compiled ahead-of-time to native code via Clang/LLVM. Modern Apple projects commonly enable compiler-provided Automatic Reference Counting (ARC), but ARC is optional per translation unit and manual retain/release remains a supported model.",
+  "runtimes": [
+    { "name": "Native (Clang/LLVM)", "kind": "native", "role": "AOT compiled; the Objective-C runtime provides dynamic message dispatch and reference-counting operations, while the compiler inserts ownership operations when ARC is enabled." }
+  ],
+  "compilers": [
+    { "name": "Clang", "role": "The modern reference compiler for Objective-C, part of LLVM." },
+    { "name": "GCC", "role": "Earlier compiler used before Clang became the de facto standard on Apple platforms." }
+  ],
+  "concurrencyModel": "Objective-C itself adds no general concurrency model to C. On Apple platforms, Grand Central Dispatch queues and OperationQueue are the idiomatic framework facilities, alongside lower-level POSIX threads.",
+  "codeExample": {
+    "lang": "objective-c",
+    "caption": "Hello, World!",
+    "source": "#import <Foundation/Foundation.h>\n\nint main() {\n    @autoreleasepool {\n        NSLog(@\"Hello, World!\");\n    }\n    return 0;\n}"
+  }
 }

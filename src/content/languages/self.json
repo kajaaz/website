@@ -2,5 +2,19 @@
   "name": "Self",
   "year": 1987,
   "paradigm": "object-oriented",
-  "note": "prototype-based"
+  "note": "prototype-based",
+  "typeSystem": "Dynamic, uniformly object-based with no classes at all: every value is an object, and new objects are created by cloning and modifying existing 'prototype' objects rather than instantiating a class.",
+  "runtime": "Self pioneered polymorphic inline caches and adaptive, feedback-directed just-in-time compilation to make a pure, classless, message-send-everything language run fast. This research strongly influenced later adaptive virtual machines, with especially direct technical and personnel lineage into Java HotSpot and broader influence on engines such as V8.",
+  "runtimes": [
+    { "name": "Self VM (adaptive JIT)", "kind": "jit", "role": "Research virtual machine that pioneered polymorphic inline caches and adaptive recompilation, techniques later adopted by HotSpot Java and V8 JavaScript." }
+  ],
+  "compilers": [
+    { "name": "Self VM compiler", "role": "Just-in-time compiles message sends, using feedback from running code to specialise and re-optimise hot call sites." }
+  ],
+  "concurrencyModel": "The Self system provides processes managed by a preemptive round-robin scheduler. Process objects can be forked, suspended, resumed, or terminated, with semaphores, barriers, locks, and serialising channels available for coordination.",
+  "codeExample": {
+    "lang": "self",
+    "caption": "An object delegating to a prototype and overriding a method",
+    "source": "| animal dog |\nanimal: (| speak = ('Hello!' printLine) |).\ndog: (| parent* = animal. speak = ('Woof!' printLine) |).\ndog speak."
+  }
 }

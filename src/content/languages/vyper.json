@@ -2,5 +2,19 @@
   "name": "Vyper",
   "year": 2017,
   "paradigm": "imperative-procedural",
-  "note": "deliberately restricted; Python-like"
+  "note": "deliberately restricted; Python-like",
+  "typeSystem": "Static and strong, with explicit conversions, bounds-checked arithmetic and arrays, and deliberately restricted features: no class inheritance, function overloading, inline assembly, recursion, or unbounded loops. These restrictions are intended to improve auditability.",
+  "runtime": "Compiled to EVM bytecode, exactly like Solidity, so it runs on the same Ethereum Virtual Machine and is metered by the same gas model.",
+  "runtimes": [
+    { "name": "EVM (Ethereum Virtual Machine)", "kind": "bytecode-vm", "role": "Same stack-based VM used by Solidity; Vyper compiles to a different, more auditable subset of EVM bytecode patterns." }
+  ],
+  "compilers": [
+    { "name": "vyper", "role": "The reference Vyper compiler, emitting EVM bytecode." }
+  ],
+  "concurrencyModel": "EVM execution is synchronous within a transaction, but external calls create nested call frames and can re-enter a caller unless protected. Transaction state changes are atomic on success or revert.",
+  "codeExample": {
+    "lang": "python",
+    "caption": "A minimal contract function",
+    "source": "@external\n@pure\ndef greet() -> String[13]:\n    return \"Hello, World!\""
+  }
 }

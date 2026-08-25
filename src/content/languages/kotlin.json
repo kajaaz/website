@@ -20,14 +20,14 @@
   ],
   "asyncRuntimes": [
     { "name": "Dispatchers.Default", "role": "Shared thread pool sized to CPU cores, for CPU-bound coroutines." },
-    { "name": "Dispatchers.IO", "role": "Expandable thread pool (up to 64 threads) for blocking I/O calls." },
+    { "name": "Dispatchers.IO", "role": "JVM dispatcher for blocking I/O; parallelism defaults to the larger of 64 or the CPU-core count, is configurable, and elastic limitedParallelism views can exceed that limit." },
     { "name": "Dispatchers.Main", "role": "UI-thread dispatcher for Android, Swing, and JavaFX." },
     { "name": "Ktor (Netty / CIO)", "role": "Async web framework; Netty backend for high performance, CIO for pure-Kotlin I/O." }
   ],
   "concurrencyModel": "Coroutines (structured concurrency via kotlinx.coroutines)",
   "concurrencyExample": {
     "lang": "kotlin",
-    "caption": "4 workers computing i*i in parallel via coroutines",
+    "caption": "4 concurrently scheduled coroutines computing i*i",
     "source": "import kotlinx.coroutines.*\n\nfun main() = runBlocking {\n    val results = (0..3).map { i ->\n        async { i * i }\n    }\n    println(results.map { it.await() }.joinToString(\" \"))\n}"
   },
   "codeExample": {

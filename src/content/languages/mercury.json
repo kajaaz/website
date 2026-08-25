@@ -2,5 +2,21 @@
   "name": "Mercury",
   "year": 1995,
   "paradigm": "logic-relational",
-  "note": "pure logic + strong types"
+  "note": "pure logic + strong types",
+  "typeSystem": "Static, strong Hindley-Milner-style types layered on pure logic programming, plus compiler-checked mode declarations (which arguments are inputs vs. outputs) and determinism declarations (how many solutions a predicate can have).",
+  "runtime": "Compiles through C to native machine code by default, with a garbage-collected runtime that supports Prolog-style backtracking only where the mode system says it is actually needed.",
+  "runtimes": [
+    { "name": "Native (C backend, Boehm GC)", "kind": "native", "role": "Default grade: compiles through C to native code, using the Boehm conservative garbage collector." },
+    { "name": "Java grade", "kind": "bytecode-vm", "role": "Compiles to JVM bytecode for interoperation with Java libraries." },
+    { "name": "C# grade", "kind": "jit", "role": "Compiles to .NET IL for interoperation with C#." }
+  ],
+  "compilers": [
+    { "name": "mmc (Melbourne Mercury Compiler)", "role": "Reference compiler; supports multiple backend 'grades' (C, Java, C#) from the same source." }
+  ],
+  "concurrencyModel": "Explicit concurrency is available through Mercury threads and futures (spawn/wait). The language also has a parallel-conjunction operator (&); supporting .par grades may execute its conjuncts in parallel, with the exact implementation and availability depending on the selected backend and grade.",
+  "codeExample": {
+    "lang": "prolog",
+    "caption": "Hello, World!",
+    "source": ":- module hello.\n:- interface.\n:- import_module io.\n:- pred main(io::di, io::uo) is det.\n\n:- implementation.\n\nmain(!IO) :-\n    io.write_string(\"Hello, World!\\n\", !IO)."
+  }
 }

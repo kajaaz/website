@@ -1,5 +1,19 @@
 {
   "name": "ALGOL 68",
   "year": 1968,
-  "paradigm": "imperative-procedural"
+  "paradigm": "imperative-procedural",
+  "note": "orthogonal design; standardised parallel clauses with semaphores",
+  "typeSystem": "Static, with a highly orthogonal design: essentially any type could be combined with any type constructor (arrays, structures, procedures, references, unions), a generality that strongly influenced later language design even though it made the language notoriously difficult to implement.",
+  "runtime": "Implemented by several execution strategies: historical compilers generated native code, some systems translated ALGOL 68 to C, and ALGOL 68 Genie primarily interprets the language with optional dynamic compilation of eligible units.",
+  "runtimes": [
+    { "name": "Native compilers (historical and GCC ga68)", "kind": "native", "role": "Historical implementations compiled to machine code; GCC 16 added the experimental ga68 front end." },
+    { "name": "ALGOL 68 Genie", "kind": "interpreter", "role": "Primarily interprets a syntax tree, with an optional unit compiler that emits, compiles, and dynamically links C for eligible units." },
+    { "name": "Source-to-C implementations", "kind": "transpile", "role": "Implementations such as Algol68toC translate ALGOL 68 to C for portability." }
+  ],
+  "concurrencyModel": "The standard included 'parallel clauses' (par begin...end) with semaphores for synchronisation - one of the earliest mainstream languages to standardise concurrency directly.",
+  "codeExample": {
+    "lang": "algol68",
+    "caption": "Hello, World!",
+    "source": "begin\n  print((\"Hello, World!\", newline))\nend"
+  }
 }

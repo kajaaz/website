@@ -1,6 +1,21 @@
 {
   "name": "Elixir",
-  "year": 2012,
+  "year": 2011,
   "paradigm": "functional-impure",
-  "note": "functional, concurrent language on BEAM; interoperates with Erlang"
+  "note": "development began in 2011; rewritten lineage released in 2012; 1.0 released in 2014",
+  "typeSystem": "Dynamic and strong, built on Erlang's type model, with a gradual set-theoretic type system under active development. Elixir 1.18 added partial inference and checking; Elixir 1.20 extended gradual inference and checking across all language constructs without requiring annotations.",
+  "runtime": "Compiles to BEAM bytecode, the same virtual machine used by Erlang, giving full interoperability with the Erlang/OTP ecosystem.",
+  "runtimes": [
+    { "name": "BEAM VM", "kind": "bytecode-vm", "role": "The same Erlang virtual machine, giving Elixir the same massive-concurrency, fault-tolerant runtime as Erlang." },
+    { "name": "BEAM JIT (OTP 24+)", "kind": "jit", "role": "Translates BEAM instructions to native code as modules are loaded." }
+  ],
+  "compilers": [
+    { "name": "elixirc", "role": "Compiles Elixir source to BEAM bytecode (.beam files)." }
+  ],
+  "concurrencyModel": "Inherited from Erlang/OTP: lightweight processes ordinarily interact through asynchronous message passing and are supervised in fault-tolerant OTP trees. BEAM also provides explicitly shared runtime services such as ETS.",
+  "codeExample": {
+    "lang": "elixir",
+    "caption": "Hello, World! plus a recursive factorial",
+    "source": "defmodule Hello do\n  def fact(0), do: 1\n  def fact(n), do: n * fact(n - 1)\nend\n\nIO.puts(Hello.fact(10))"
+  }
 }

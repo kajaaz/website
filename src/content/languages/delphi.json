@@ -1,5 +1,21 @@
 {
   "name": "Delphi",
   "year": 1995,
-  "paradigm": "object-oriented"
+  "paradigm": "object-oriented",
+  "note": "Borland's Object Pascal dialect for rapid application development",
+  "typeSystem": "Static, strong, nominal (Object Pascal): classes, interfaces, and generics, enforced at compile time much like Pascal, extended for large-scale application and component-based (VCL) development.",
+  "runtime": "Compiled ahead-of-time to native machine code for Windows, macOS, iOS, Android, and Linux. Since Delphi 10.4, general class objects use the classic explicit lifetime model on all targets; strings, dynamic arrays, and interface references retain automatic management or reference-counting behavior.",
+  "runtimes": [
+    { "name": "Native (Delphi compiler)", "kind": "native", "role": "AOT compiles Object Pascal to native machine code across desktop and mobile targets." }
+  ],
+  "compilers": [
+    { "name": "Delphi (dcc32/dcc64)", "role": "Embarcadero's official compiler, the primary Object Pascal/Delphi toolchain." },
+    { "name": "Free Pascal", "role": "Open-source compiler offering a Delphi-compatible mode." }
+  ],
+  "concurrencyModel": "OS threads (TThread) plus higher-level tasks and futures added in later RTL versions.",
+  "codeExample": {
+    "lang": "delphi",
+    "caption": "Hello, World!",
+    "source": "program Hello;\nbegin\n  WriteLn('Hello, World!');\nend."
+  }
 }

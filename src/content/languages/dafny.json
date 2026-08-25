@@ -2,5 +2,20 @@
   "name": "Dafny",
   "year": 2009,
   "paradigm": "multi-paradigm",
-  "note": "imperative, functional, and object-oriented; verification-oriented"
+  "note": "imperative, functional, and object-oriented; verification-oriented",
+  "typeSystem": "Static, strong type system (classes, algebraic datatypes, generics) extended with specifications: preconditions, postconditions, loop invariants, and termination measures that the compiler statically verifies rather than checks at run time.",
+  "runtime": "Dafny code is first verified against an SMT solver at compile time; once verified, it is compiled or transpiled to a mainstream target language for actual execution.",
+  "runtimes": [
+    { "name": "Transpile to C# / Java / JavaScript / Go / Python", "kind": "transpile", "role": "After verification, Dafny compiles down to a mainstream language's runtime for execution." }
+  ],
+  "compilers": [
+    { "name": "dafny verify", "role": "Generates verification conditions from specifications and discharges them via the Z3 SMT solver." },
+    { "name": "dafny build", "role": "Compiles verified Dafny source to C#, Java, JavaScript, Go, or Python." }
+  ],
+  "concurrencyModel": "N/A in the verified core language; compiled output inherits whatever concurrency model its target language provides.",
+  "codeExample": {
+    "lang": "dafny",
+    "caption": "A verified factorial: the postcondition is proved, not just tested",
+    "source": "method Factorial(n: nat) returns (result: nat)\n  ensures result > 0\n{\n  result := 1;\n  var i := 1;\n  while i <= n\n    invariant result > 0\n  {\n    result := result * i;\n    i := i + 1;\n  }\n}"
+  }
 }

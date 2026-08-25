@@ -2,5 +2,19 @@
   "name": "Clean",
   "year": 1987,
   "paradigm": "functional-pure",
-  "note": "uniqueness types for effects"
+  "note": "uniqueness types for effects",
+  "typeSystem": "Static, strong, Hindley-Milner-based inference extended with uniqueness types, which enforce single-threaded use and ensure unique access when destructive updates occur. This lets Clean model I/O and in-place update safely without requiring Haskell-style monads.",
+  "runtime": "Compiled ahead-of-time to native code; the underlying evaluation model is graph rewriting, with lazy evaluation by default.",
+  "runtimes": [
+    { "name": "Native (via ABC machine + native codegen)", "kind": "native", "role": "Compiles through Clean's ABC intermediate graph-rewriting machine down to native code." }
+  ],
+  "compilers": [
+    { "name": "Clean compiler (Radboud University)", "role": "The reference compiler, including the ABC machine backend." }
+  ],
+  "concurrencyModel": "Unique 'world' values model I/O and state sequencing. Parallel and Concurrent Clean provide separate graph-rewriting concurrency facilities; availability is implementation-dependent.",
+  "codeExample": {
+    "lang": "haskell",
+    "caption": "Recursive factorial",
+    "source": "fact :: Int -> Int\nfact 0 = 1\nfact n = n * fact (n - 1)\n\nStart = fact 10"
+  }
 }

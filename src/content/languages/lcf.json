@@ -2,5 +2,19 @@
   "name": "LCF",
   "year": 1972,
   "paradigm": "multi-paradigm",
-  "note": "Stanford theorem prover for Scott's Logic for Computable Functions; Edinburgh LCF later introduced ML"
+  "note": "Stanford theorem prover for Scott's Logic for Computable Functions; Edinburgh LCF later introduced ML",
+  "typeSystem": "Simply typed logic of computable functions (Dana Scott's PCF-style domain theory); the Edinburgh LCF re-implementation added a small, strongly typed metalanguage, ML, purely so that proof-producing tactics could be type-checked before running.",
+  "runtime": "Edinburgh LCF ran its ML metalanguage as an interpreter driving a proof-checking kernel; every LCF theorem had to be produced by composing a fixed, small set of trusted primitive inference rules. Its abstract-theorem architecture directly influenced HOL and Isabelle, while other proof assistants such as Coq likewise rely on a small trusted kernel.",
+  "runtimes": [
+    { "name": "ML interpreter (Edinburgh LCF)", "kind": "interpreter", "role": "Interprets the original ML metalanguage, executing tactics that manipulate the LCF proof kernel." }
+  ],
+  "compilers": [
+    { "name": "Edinburgh LCF implementation", "role": "Proof-checking environment consisting of the trusted kernel and ML tactic interpreter; it was not a compiler, but was a direct ancestor of Standard ML and HOL-family provers." }
+  ],
+  "concurrencyModel": "N/A (interactive theorem prover)",
+  "codeExample": {
+    "lang": "lcf",
+    "caption": "Conceptual tactic outline (schematic pseudocode, not literal historical LCF input)",
+    "source": "FACT_POS_TAC :=\n  INDUCTION\n  THEN REWRITE USING factorial_definition\n  THEN DISCHARGE arithmetic_subgoals\n\nPROVE \"for every n, factorial(n) is positive\"\n  USING FACT_POS_TAC"
+  }
 }

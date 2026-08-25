@@ -2,5 +2,20 @@
   "name": "Nuprl",
   "year": 1984,
   "paradigm": "dependently-typed",
-  "note": "proof development system based on constructive computational type theory"
+  "note": "proof development system based on constructive computational type theory",
+  "typeSystem": "Constructive (intuitionistic) computational type theory in the Martin-Lof tradition: types are defined by how their members compute and propositions are types. Proofs are refinement trees whose rule-specific extraction forms compose into a computational witness or program.",
+  "runtime": "Historically implemented in Lisp, with proofs built interactively as a refinement tree; a verified program is extracted from a completed proof and can then be evaluated.",
+  "runtimes": [
+    { "name": "Lisp-hosted proof engine (classic Nuprl)", "kind": "interpreter", "role": "The original Cornell implementation ran the refinement logic and term evaluator inside a Lisp environment." },
+    { "name": "Extracted program evaluator", "kind": "interpreter", "role": "Evaluates the program term extracted from a completed constructive proof." }
+  ],
+  "compilers": [
+    { "name": "Nuprl refiner", "role": "Interactively refines a goal into subgoals until each is proved by a primitive rule, building a proof tree from which a witness term can be extracted." }
+  ],
+  "concurrencyModel": "N/A (interactive proof development system)",
+  "codeExample": {
+    "lang": "nuprl",
+    "caption": "Conceptual refinement outline (schematic pseudocode, not literal Nuprl input)",
+    "source": "GOAL: for every n in the natural numbers, fact(n) > 0\nREFINE by induction on n\n  BASE GOAL: fact(0) > 0\n  STEP GOAL: from fact(n) > 0, prove fact(n + 1) > 0"
+  }
 }

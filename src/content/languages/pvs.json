@@ -1,5 +1,21 @@
 {
   "name": "PVS",
-  "year": 1992,
-  "paradigm": "dependently-typed"
+  "year": 1993,
+  "paradigm": "dependently-typed",
+  "note": "Prototype Verification System; started in 1990, with internal prototypes in 1992 and its first public release in 1993",
+  "typeSystem": "Higher-order logic with predicate subtypes: a type can be refined by an arbitrary predicate (for example {x: int | x > 0}), and the type checker generates proof obligations (TCCs) whenever an expression must be shown to satisfy such a subtype.",
+  "runtime": "The PVS system is implemented in Common Lisp and runs as an interactive proof checker, historically driven from an Emacs front end. Executable specifications can also be evaluated through the Lisp-generating ground evaluator and PVSio.",
+  "runtimes": [
+    { "name": "Common Lisp host (Allegro CL / SBCL)", "kind": "native", "role": "PVS's parser, type checker, and proof engine run inside a Common Lisp image, compiled to native code." },
+    { "name": "Ground evaluator / PVSio", "kind": "transpile", "role": "Translates executable PVS functional specifications to Common Lisp for evaluation; PVSio adds I/O and imperative-style semantic attachments." }
+  ],
+  "compilers": [
+    { "name": "PVS type checker", "role": "Elaborates specifications and generates type-correctness conditions (TCCs) that must be discharged before a theory is considered checked." }
+  ],
+  "concurrencyModel": "N/A (interactive proof checker)",
+  "codeExample": {
+    "lang": "pvs",
+    "caption": "A measure-checked recursive definition and a lemma about it",
+    "source": "fact(n: nat): RECURSIVE nat =\n  IF n = 0 THEN 1 ELSE n * fact(n - 1) ENDIF\nMEASURE n\n\nfact_pos: LEMMA FORALL (n: nat): fact(n) > 0"
+  }
 }

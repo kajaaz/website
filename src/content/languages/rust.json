@@ -28,13 +28,13 @@
     {
       "name": "Miri",
       "kind": "interpreter",
-      "role": "Interpreter for Rust's mid-level IR that detects undefined behaviour in unsafe code."
+      "role": "Interpreter for Rust's mid-level IR that detects many forms of undefined behaviour, including violations often introduced through unsafe code."
     }
   ],
   "compilers": [
     { "name": "rustc", "role": "The official Rust compiler; uses LLVM by default." },
     { "name": "rustc + Cranelift", "role": "Experimental nightly codegen backend aimed at faster debug builds." },
-    { "name": "gccrs", "role": "A Rust frontend for GCC, in development, widening platform reach." },
+    { "name": "gccrs", "role": "An early-stage alternative Rust frontend for GCC; as of 2026 its project still says it is not usable for compiling real Rust programs." },
     { "name": "mrustc", "role": "Independent compiler used mainly to bootstrap rustc from source." }
   ],
   "asyncRuntimes": [

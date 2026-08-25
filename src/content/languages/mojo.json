@@ -1,5 +1,21 @@
 {
   "name": "Mojo",
   "year": 2023,
-  "paradigm": "multi-paradigm"
+  "paradigm": "multi-paradigm",
+  "note": "Pythonic compiled language aimed at systems and AI/GPU performance, with CPython interoperability",
+  "typeSystem": "Statically typed, with type inference, structs, traits, value semantics, and ownership-aware lifetimes. Dynamic Python values are accessed explicitly through PythonObject when using CPython interoperability; ordinary Mojo code is not dynamically typed Python.",
+  "runtime": "The mojo command JIT-compiles programs for immediate execution, while mojo build produces native executables. Mojo can call Python modules through an unmodified CPython runtime, which remains an external runtime dependency rather than a fallback executor for Mojo code.",
+  "runtimes": [
+    { "name": "Native (MLIR/LLVM)", "kind": "native", "role": "JIT- or ahead-of-time compiles statically typed Mojo to native code; the toolchain also supports accelerator programming." },
+    { "name": "CPython interoperability dependency", "kind": "interpreter", "role": "Loads CPython as a dynamic library when Mojo code imports Python modules; this interpreter executes imported Python code, not Mojo code." }
+  ],
+  "compilers": [
+    { "name": "mojo build", "role": "Modular's compiler, built on the MLIR compiler infrastructure." }
+  ],
+  "concurrencyModel": "Provides explicit parallel constructs for numerical and AI workloads, including SIMD operations and GPU kernels. General-purpose tasking and concurrency facilities continue to evolve with the experimental language.",
+  "codeExample": {
+    "lang": "python",
+    "caption": "Hello, World!",
+    "source": "fn main():\n    print(\"Hello, World!\")"
+  }
 }

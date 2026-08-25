@@ -2,5 +2,20 @@
   "name": "Agda",
   "year": 1999,
   "paradigm": "dependently-typed",
-  "note": "dependent types as a programming language"
+  "note": "dependent types as a programming language",
+  "typeSystem": "Full dependent types based on intuitionistic type theory (in the Martin-Lof tradition), with inductive families, a totality checker, and support for both writing programs and mechanising mathematical proofs via the Curry-Howard correspondence.",
+  "runtime": "Agda programs are elaborated and type-checked interactively (commonly in Emacs), then compiled via a backend; interactive normalization is also available for exploring checked definitions.",
+  "runtimes": [
+    { "name": "MAlonzo (GHC backend)", "kind": "native", "role": "Default backend: compiles Agda to Haskell, then to a native binary via GHC." },
+    { "name": "JavaScript backend", "kind": "transpile", "role": "Compiles Agda to JavaScript for running in a browser or Node.js." }
+  ],
+  "compilers": [
+    { "name": "agda", "role": "The reference type checker and compiler, itself written in Haskell." }
+  ],
+  "concurrencyModel": "Agda's core language has no concurrency primitives. Backend-specific concurrency can be reached through foreign-function interfaces or bindings, so its availability and semantics depend on the selected backend.",
+  "codeExample": {
+    "lang": "haskell",
+    "caption": "A length-indexed vector and a totality-checked append",
+    "source": "module VecAppend where\n\nopen import Agda.Builtin.Nat using (Nat; zero; suc; _+_)\n\ndata Vec (A : Set) : Nat -> Set where\n  []  : Vec A zero\n  _::_ : {n : Nat} -> A -> Vec A n -> Vec A (suc n)\n\nappend : {A : Set} {n m : Nat} -> Vec A n -> Vec A m -> Vec A (n + m)\nappend [] ys = ys\nappend (x :: xs) ys = x :: append xs ys"
+  }
 }

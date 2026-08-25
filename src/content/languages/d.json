@@ -1,5 +1,22 @@
 {
   "name": "D",
   "year": 2001,
-  "paradigm": "multi-paradigm"
+  "paradigm": "multi-paradigm",
+  "note": "C-family systems language aiming to fix C++'s pitfalls",
+  "typeSystem": "Static, strong, C-family syntax with type inference (auto), templates/generics, and transitive const, immutable, and shared qualifiers. These support thread isolation and explicit synchronisation, although strict rejection of individual unsynchronised shared accesses currently requires the preview nosharedaccess option.",
+  "runtime": "Compiled ahead-of-time to native code; garbage-collected by default, but supports manual memory management and @nogc code for systems-level use.",
+  "runtimes": [
+    { "name": "Native (DMD, LDC, GDC)", "kind": "native", "role": "Multiple independent native-code compilers target the same D language specification." }
+  ],
+  "compilers": [
+    { "name": "DMD", "role": "The reference D compiler, from the D Language Foundation." },
+    { "name": "LDC", "role": "LLVM-based D compiler, good for optimised release builds and cross-compilation." },
+    { "name": "GDC", "role": "GCC-based D compiler, benefiting from GCC's back-end optimisations and target support." }
+  ],
+  "concurrencyModel": "Message-passing between threads via std.concurrency (spawn plus typed messages, in the spirit of Erlang), plus lower-level shared-memory threading. Mutable globals are thread-local by default; cross-thread mutable data is marked shared and requires explicit synchronisation, atomics, or stricter preview checking.",
+  "codeExample": {
+    "lang": "d",
+    "caption": "Hello, World!",
+    "source": "import std.stdio;\n\nvoid main() {\n    writeln(\"Hello, World!\");\n}"
+  }
 }

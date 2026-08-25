@@ -2,5 +2,19 @@
   "name": "SASL",
   "year": 1972,
   "paradigm": "functional-pure",
-  "note": "Turner's pure ISWIM-derived language; redesigned for lazy evaluation in 1976"
+  "note": "Turner's pure ISWIM-derived language; redesigned for lazy evaluation in 1976",
+  "typeSystem": "Untyped. In 'St Andrews Static Language', 'static' referred to the absence of commands and mutable defined data structures, not to static typing.",
+  "runtime": "The 1976 lazy SASL implementation used a lazy SECD machine. After moving to Kent in 1977, Turner reimplemented SASL by compiling it to SK combinators evaluated through graph reduction; that approach was published in 1979 and influenced Miranda and, through it, Haskell.",
+  "runtimes": [
+    { "name": "Lazy SECD machine / graph-reduction interpreter", "kind": "interpreter", "role": "The 1976 system used a lazy SECD machine; the later Kent implementation lazily reduced a shared graph of compiled SK combinators." }
+  ],
+  "compilers": [
+    { "name": "SASL compiler (David Turner)", "role": "In the post-1977 Kent implementation, compiled SASL source to SK combinators for the graph-reduction interpreter." }
+  ],
+  "concurrencyModel": "N/A (single-threaded lazy evaluator)",
+  "codeExample": {
+    "lang": "sasl",
+    "caption": "Conditional expression using SASL's -> ; syntax",
+    "source": "def fact n = n = 0 -> 1 ; n * fact (n - 1)\n\nfact 10"
+  }
 }

@@ -2,5 +2,22 @@
   "name": "Scheme",
   "year": 1975,
   "paradigm": "functional-impure",
-  "note": "lexical scoping; first-class continuations"
+  "note": "lexical scoping; first-class continuations",
+  "typeSystem": "Dynamic, strong; a minimalist Lisp dialect built from a small set of core special forms, with lexical scoping and first-class, re-entrant continuations (call/cc) as its most distinctive feature.",
+  "runtime": "Implementations range from simple tree-walking interpreters to optimising native-code compilers; the standard guarantees proper tail calls as a language feature, not merely an optional optimisation.",
+  "runtimes": [
+    { "name": "Chez Scheme", "kind": "native", "role": "High-performance native-code compiler; also embedded as the backend of modern Racket." },
+    { "name": "Chicken Scheme", "kind": "native", "role": "Compiles Scheme to C, then to native code, with extensive library support." },
+    { "name": "Guile", "kind": "jit", "role": "GNU's embeddable Scheme; Guile 3 compiles through bytecode and, on supported targets, transparently JIT-compiles hot code to native code." }
+  ],
+  "compilers": [
+    { "name": "Chez Scheme", "role": "Reference-quality native-code compiler." },
+    { "name": "Chicken (csc)", "role": "Compiles Scheme to C for native compilation." }
+  ],
+  "concurrencyModel": "Implementation-dependent: many Schemes provide green threads or native OS threads as a library feature, and call/cc lets user code build its own coroutines and generators directly.",
+  "codeExample": {
+    "lang": "lisp",
+    "caption": "Hello, World! plus a recursive factorial",
+    "source": "(define (fact n)\n  (if (= n 0)\n      1\n      (* n (fact (- n 1)))))\n\n(display (fact 10))\n(newline)"
+  }
 }

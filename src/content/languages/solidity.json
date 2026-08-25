@@ -2,5 +2,19 @@
   "name": "Solidity",
   "year": 2014,
   "paradigm": "object-oriented",
-  "note": "contract-oriented; inheritance"
+  "note": "contract-oriented; inheritance",
+  "typeSystem": "Static, strong, with contract-oriented types (address, mapping, fixed-size integers of many widths) but no generics and, until custom errors and user-defined value types were added, fairly limited abstraction facilities; values default to zero rather than null.",
+  "runtime": "Compiled to EVM (Ethereum Virtual Machine) bytecode, executed by every node on an EVM-compatible blockchain; gas costs meter every operation and storage access.",
+  "runtimes": [
+    { "name": "EVM (Ethereum Virtual Machine)", "kind": "bytecode-vm", "role": "Stack-based virtual machine run by every EVM-compatible chain node; each opcode consumes metered 'gas'." }
+  ],
+  "compilers": [
+    { "name": "solc", "role": "The reference Solidity compiler, emitting EVM bytecode." }
+  ],
+  "concurrencyModel": "EVM execution is synchronous within a transaction, but external calls create nested call frames and can re-enter a caller before it finishes. Transaction state changes are atomic on success or revert; client-level parallelism may execute independent transactions concurrently.",
+  "codeExample": {
+    "lang": "solidity",
+    "caption": "A minimal contract",
+    "source": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\ncontract Hello {\n    function greet() public pure returns (string memory) {\n        return \"Hello, World!\";\n    }\n}"
+  }
 }

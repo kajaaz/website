@@ -2,5 +2,19 @@
   "name": "Cairo 0",
   "year": 2020,
   "paradigm": "imperative-procedural",
-  "note": "write-once memory; assembly-like"
+  "note": "write-once memory; assembly-like",
+  "typeSystem": "Minimal and low-level: Cairo 0 source has static compiler-level constructs such as felt values, pointers, tuples, and structs, while Cairo VM memory ultimately stores field elements in write-once cells. It is closer to an assembly language for a zero-knowledge-friendly CPU than a general-purpose language.",
+  "runtime": "Cairo 0 programs compile to Cairo assembly executed by the Cairo VM, producing an execution trace that a separate STARK prover turns into a succinct, verifiable proof.",
+  "runtimes": [
+    { "name": "Cairo VM (CairoZero)", "kind": "bytecode-vm", "role": "Executes compiled Cairo 0 programs, producing an execution trace consumed by a STARK prover." }
+  ],
+  "compilers": [
+    { "name": "cairo-compile (Cairo 0)", "role": "Compiles Cairo 0 source to Cairo assembly/bytecode for the Cairo VM." }
+  ],
+  "concurrencyModel": "N/A (single deterministic execution trace, later proved and verified; no concurrency).",
+  "codeExample": {
+    "lang": "cairo",
+    "caption": "Writing a greeting to the program's output",
+    "source": "%builtins output\n\nfunc main(output_ptr : felt*) -> (output_ptr : felt*):\n    assert [output_ptr] = 'Hello, World!'\n    return (output_ptr=output_ptr + 1)\nend"
+  }
 }

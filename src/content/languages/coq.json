@@ -2,14 +2,15 @@
   "name": "Coq",
   "year": 1989,
   "paradigm": "dependently-typed",
+  "note": "first released in 1989; development of its Calculus of Constructions implementation began in 1984",
   "typeSystem": "Dependent types, Calculus of Inductive Constructions",
-  "runtime": "The Coq/Rocq kernel checks proof terms and evaluators reduce terms inside the proof assistant; extracted programs can run through OCaml, Haskell, or Scheme toolchains",
+  "runtime": "The Coq kernel checks proof terms and evaluators reduce terms inside the proof assistant; extracted programs can run through OCaml, Haskell, or Scheme toolchains",
   "runtimes": [
-    { "name": "Coq/Rocq evaluator and proof kernel", "kind": "interpreter", "role": "Evaluators reduce terms for commands such as Compute, while the trusted kernel type-checks proof terms." },
+    { "name": "Coq evaluator and proof kernel", "kind": "interpreter", "role": "Evaluators reduce terms for commands such as Compute, while the trusted kernel type-checks proof terms." },
     { "name": "Extraction (OCaml/Haskell/Scheme)", "kind": "transpile", "role": "Extracts verified code to a host language so it can actually run." }
   ],
   "compilers": [
-    { "name": "coqc", "role": "Compiles and checks Coq/Rocq developments." }
+    { "name": "coqc", "role": "Compiles and checks Coq developments; Rocq 9 retains it as a compatibility command." }
   ],
   "concurrencyModel": "N/A (proof assistant; extracted code inherits target language's model)",
   "codeExample": {

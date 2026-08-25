@@ -2,5 +2,20 @@
   "name": "Racket",
   "year": 1995,
   "paradigm": "multi-paradigm",
-  "note": "Scheme lineage; language-oriented"
+  "note": "began as PLT Scheme in 1995 and was renamed Racket in 2010; language-oriented",
+  "typeSystem": "Dynamic by default (the base #lang racket), with an optional, soundly and statically typed dialect, Typed Racket, that gradually layers static types onto dynamically typed code and modules.",
+  "runtime": "Racket CS compiles programs to native code through an embedded, heavily modified Chez Scheme backend; Racket is also a 'language-oriented programming' platform where #lang can select an entirely different surface syntax while sharing the same macro-expander and runtime.",
+  "runtimes": [
+    { "name": "Racket CS (Chez Scheme backend)", "kind": "native", "role": "Default modern implementation: compiles to native code via an embedded Chez Scheme." },
+    { "name": "Racket BC (legacy bytecode)", "kind": "bytecode-vm", "role": "Older 'before Chez' implementation, with its own bytecode format and JIT." }
+  ],
+  "compilers": [
+    { "name": "raco make / raco exe", "role": "raco make precompiles modules; raco exe packages a program with its runtime dependencies as a standalone executable, but does not by itself imply native machine-code compilation of the program." }
+  ],
+  "concurrencyModel": "Coroutine threads provide shared-state concurrency; Racket CS also offers parallel threads and futures. Places are separate Racket instances that communicate primarily through restricted message passing.",
+  "codeExample": {
+    "lang": "lisp",
+    "caption": "Hello, World! plus a recursive factorial",
+    "source": "#lang racket\n\n(define (fact n)\n  (if (= n 0)\n      1\n      (* n (fact (- n 1)))))\n\n(displayln (fact 10))"
+  }
 }

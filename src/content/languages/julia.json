@@ -2,5 +2,20 @@
   "name": "Julia",
   "year": 2012,
   "paradigm": "multi-paradigm",
-  "note": "multiple dispatch"
+  "note": "multiple dispatch",
+  "typeSystem": "Dynamic by default, with an optional, rich type system (parametric types, abstract type hierarchies) that a sophisticated type-inference and specialisation pass exploits heavily for performance; multiple dispatch selects a method based on the runtime types of all arguments, not just the first.",
+  "runtime": "Julia generally specialises methods for the argument types used and JIT-compiles them to native code via LLVM as needed, subject to compiler specialisation heuristics. Compiled code can be cached in package or system images and reused.",
+  "runtimes": [
+    { "name": "Julia JIT (LLVM)", "kind": "jit", "role": "Generally specialises methods for argument types and JIT-compiles them to native code as needed, subject to specialisation heuristics." },
+    { "name": "PackageCompiler.jl (AOT)", "kind": "native", "role": "Creates custom sysimages or distributable applications to reduce JIT warm-up latency." }
+  ],
+  "compilers": [
+    { "name": "julia (LLVM-based)", "role": "The reference implementation; specialises and JIT-compiles methods to native code as needed." }
+  ],
+  "concurrencyModel": "Green-thread-like tasks (coroutines) for concurrency, plus true multi-threading (Threads.@threads) and distributed multiprocessing (Distributed.jl) for parallelism across cores and machines.",
+  "codeExample": {
+    "lang": "julia",
+    "caption": "Hello, World!",
+    "source": "println(\"Hello, World!\")"
+  }
 }

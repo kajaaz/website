@@ -1,5 +1,21 @@
 {
   "name": "BASIC",
   "year": 1964,
-  "paradigm": "imperative-procedural"
+  "paradigm": "imperative-procedural",
+  "note": "Designed at Dartmouth to make computing accessible to students outside computer science",
+  "typeSystem": "Dialect-dependent and generally loose. Original Dartmouth BASIC used undeclared numeric variables; later dialects added strings and often used suffixes such as $ or % to indicate a type.",
+  "runtime": "Original Dartmouth BASIC used a fast compile-and-go system. Many later microcomputer dialects, including Microsoft BASIC and Applesoft BASIC, used interactive line-oriented interpreters that often shipped in ROM.",
+  "runtimes": [
+    { "name": "Dartmouth compile-and-go system", "kind": "native", "role": "The original 1964 implementation compiled a submitted program and then ran it with quick turnaround on the time-sharing system." },
+    { "name": "Line interpreter (e.g. Microsoft BASIC, Applesoft BASIC)", "kind": "interpreter", "role": "Reads and executes numbered programs interactively; the dominant execution model on many 1970s-80s home computers." }
+  ],
+  "compilers": [
+    { "name": "Dartmouth BASIC compiler", "role": "The original compile-and-go implementation for the Dartmouth Time-Sharing System." }
+  ],
+  "concurrencyModel": "N/A in the original and typical home-computer dialects; programs normally execute sequentially.",
+  "codeExample": {
+    "lang": "basic",
+    "caption": "Hello, World!",
+    "source": "10 PRINT \"Hello, World!\"\n20 END"
+  }
 }

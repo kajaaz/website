@@ -1,5 +1,23 @@
 {
   "name": "Visual Basic",
   "year": 1991,
-  "paradigm": "imperative-procedural"
+  "paradigm": "multi-paradigm",
+  "note": "Event-driven BASIC dialect that brought rapid GUI development to Windows",
+  "typeSystem": "Originally weakly/dynamically flavoured via the Variant type, though explicit Dim statements could declare static types; classic VB6 sits between old-school BASIC's dynamic style and .NET's fully static type system introduced later in VB.NET.",
+  "runtime": "Classic Visual Basic used p-code in early releases, while VB5 and VB6 could produce either interpreted p-code or native x86; both modes depended on a shared VB runtime DLL. VB.NET compiles to CIL for the .NET runtime.",
+  "runtimes": [
+    { "name": "Native + VB runtime DLL (VB5/6)", "kind": "native", "role": "VB5 and VB6 can compile to native x86 while still depending on a shared runtime library for startup, forms, controls, and core functions." },
+    { "name": "P-code + VB runtime", "kind": "bytecode-vm", "role": "Classic releases use or optionally emit compact p-code interpreted by the Visual Basic runtime; VB5 and VB6 offer both p-code and native output." },
+    { "name": ".NET CLR (VB.NET)", "kind": "jit", "role": "Modern Visual Basic .NET compiles to CIL bytecode, JIT-compiled by the CLR, sharing its runtime with C#." }
+  ],
+  "compilers": [
+    { "name": "VB6 compiler", "role": "Microsoft's classic Visual Basic 6 compiler, targeting either p-code or native Windows applications." },
+    { "name": "vbc (VB.NET)", "role": "Modern .NET compiler for Visual Basic .NET." }
+  ],
+  "concurrencyModel": "Ordinary classic VB applications are predominantly event-loop based, but VB6 ActiveX components support COM apartment threading, including thread-per-object or configured pools for out-of-process servers. VB.NET uses the full .NET threading and Task-based async/await model.",
+  "codeExample": {
+    "lang": "vbnet",
+    "caption": "Hello, World!",
+    "source": "Module Program\n    Sub Main()\n        Console.WriteLine(\"Hello, World!\")\n    End Sub\nEnd Module"
+  }
 }

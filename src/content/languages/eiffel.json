@@ -2,5 +2,19 @@
   "name": "Eiffel",
   "year": 1986,
   "paradigm": "object-oriented",
-  "note": "design by contract"
+  "note": "design by contract",
+  "typeSystem": "Static and strong. Design by Contract is integrated into the language through preconditions, postconditions, and class invariants; these are executable assertions and interface specifications rather than types or ordinary method-signature components.",
+  "runtime": "Compiled ahead-of-time with automatic garbage collection. EiffelStudio's finalized and frozen builds generate C and invoke a C compiler to produce native code.",
+  "runtimes": [
+    { "name": "Native (via C, EiffelStudio)", "kind": "native", "role": "EiffelStudio compiles Eiffel through generated C down to native machine code." }
+  ],
+  "compilers": [
+    { "name": "EiffelStudio", "role": "The reference IDE and compiler, from Eiffel Software." }
+  ],
+  "concurrencyModel": "SCOOP (Simple Concurrent Object-Oriented Programming) uses the separate type annotation to model objects handled by other processors. In specific calling and locking contexts, preconditions containing separate calls act as wait conditions; other contract clauses retain their correctness-checking role.",
+  "codeExample": {
+    "lang": "eiffel",
+    "caption": "Hello, World!",
+    "source": "class\n    HELLO\ncreate\n    make\nfeature\n    make\n        do\n            print(\"Hello, World!%N\")\n        end\nend"
+  }
 }

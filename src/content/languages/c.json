@@ -5,8 +5,8 @@
   "typeSystem": "Static and manifest, with many implicit arithmetic conversions and explicit pointer casts. C provides limited memory safety, and casts do not override rules such as alignment, object lifetime, and effective type.",
   "typeSystemExample": {
     "lang": "c",
-    "caption": "Generic max: no generics, so a macro is the closest equivalent",
-    "source": "#include <stdio.h>\n\n#define max(a, b) ((a) > (b) ? (a) : (b))\n\nint main(void) {\n    printf(\"%d\\n\", max(3, 7));\n    printf(\"%f\\n\", max(1.5, 2.8));\n    return 0;\n}"
+    "caption": "Type-directed max dispatch with C11 _Generic",
+    "source": "#include <stdio.h>\n\nstatic int max_int(int a, int b) { return a > b ? a : b; }\nstatic double max_double(double a, double b) { return a > b ? a : b; }\n\n#define max(a, b) _Generic(((a) + (b)), \\\n    int: max_int, \\\n    double: max_double \\\n)((a), (b))\n\nint main(void) {\n    printf(\"%d\\n\", max(3, 7));\n    printf(\"%f\\n\", max(1.5, 2.8));\n    return 0;\n}"
   },
   "runtime": "Compiled ahead-of-time to native machine code; no managed runtime or garbage collector.",
   "runtimes": [

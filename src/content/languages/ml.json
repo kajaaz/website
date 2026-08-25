@@ -2,5 +2,16 @@
   "name": "ML",
   "year": 1973,
   "paradigm": "functional-impure",
-  "note": "Edinburgh LCF metalanguage with polymorphic type inference, assignment, and exceptions"
+  "note": "Edinburgh LCF metalanguage with polymorphic type inference, assignment, and exceptions",
+  "typeSystem": "Static, strong types with polymorphic inference. Robin Milner developed ML's type discipline and inference algorithm for the language, building on earlier work by Roger Hindley; the resulting tradition is commonly called Hindley-Milner typing.",
+  "runtime": "Originally interpreted as the tactic metalanguage embedded inside the Edinburgh LCF theorem prover, used to write and type-check proof-producing tactics before it grew into a general-purpose language family.",
+  "runtimes": [
+    { "name": "LCF ML interpreter", "kind": "interpreter", "role": "The original implementation, embedded in the Edinburgh LCF proof system to write and type-check proof tactics." }
+  ],
+  "concurrencyModel": "N/A (single-threaded interpreter embedded in a proof assistant)",
+  "codeExample": {
+    "lang": "ocaml",
+    "caption": "Recursive factorial in the original Edinburgh ML style",
+    "source": "letrec fact n = if n = 0 then 1 else n * fact (n - 1);;\nfact 10;;"
+  }
 }

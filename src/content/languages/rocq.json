@@ -2,5 +2,20 @@
   "name": "Rocq",
   "year": 2025,
   "paradigm": "dependently-typed",
-  "note": "Coq renamed"
+  "note": "Coq renamed",
+  "typeSystem": "Dependent types, Calculus of Inductive Constructions; identical in substance to Coq's type system, carried over under the new project name.",
+  "runtime": "The Rocq kernel checks proof terms and evaluators reduce terms inside the proof assistant, exactly as in Coq; extracted programs can run through OCaml, Haskell, or Scheme toolchains.",
+  "runtimes": [
+    { "name": "Rocq/Coq evaluator and proof kernel", "kind": "interpreter", "role": "Evaluators reduce terms for commands such as Compute, while the trusted kernel type-checks proof terms." },
+    { "name": "Extraction (OCaml/Haskell/Scheme)", "kind": "transpile", "role": "Extracts verified code to a host language so it can actually run." }
+  ],
+  "compilers": [
+    { "name": "rocq compile", "role": "The renamed successor to coqc; compiles and checks Rocq (formerly Coq) developments." }
+  ],
+  "concurrencyModel": "N/A (proof assistant; extracted code inherits target language's model)",
+  "codeExample": {
+    "lang": "coq",
+    "caption": "Same core syntax as Coq, now under the Rocq name",
+    "source": "Fixpoint factorial (n : nat) : nat :=\n  match n with\n  | O => 1\n  | S p => n * factorial p\n  end.\n\nCompute factorial 10."
+  }
 }

@@ -2,5 +2,25 @@
   "name": "Oz",
   "year": 1991,
   "paradigm": "multi-paradigm",
-  "note": "multi-paradigm constraint language"
+  "note": "Concurrent constraint language whose design effort began in 1991, unifying logic, functional, object-oriented, and stateful programming; Oz 1 was first released publicly in 1995",
+  "typeSystem": "Dynamic: a variable's type and value are initially unknown, and its type is determined when the single-assignment variable is bound to an Oz value. The value universe includes records, procedures, cells, objects, computation spaces, and finite-domain values.",
+  "runtime": "Mozart compiles Oz to bytecode for the Mozart virtual machine. Mozart 1 provides the classic constraint and distributed-programming system; Mozart 2 introduced a redesigned 64-bit VM, but its initial release did not yet implement those two subsystems.",
+  "runtimes": [
+    { "name": "Mozart virtual machine (ozengine)", "kind": "bytecode-vm", "role": "Executes compiled Oz bytecode and pickled application functors; Mozart supplies the standard constraint, concurrency, and distribution facilities." },
+    { "name": "Mozart 2 VM", "kind": "bytecode-vm", "role": "Redesigned 64-bit successor virtual machine with an extension interface; its initial release omitted the constraint and distributed-programming subsystems present in Mozart 1." }
+  ],
+  "compilers": [
+    { "name": "ozc", "role": "Mozart's batch compiler; compiles Oz source to virtual-machine bytecode or pickled/executable functors." }
+  ],
+  "concurrencyModel": "Ultralightweight, preemptively scheduled threads coordinate through dataflow synchronization on single-assignment logic variables. Mutable cells and locks support stateful concurrency, while Mozart 1 also provides network-transparent distributed programming.",
+  "concurrencyExample": {
+    "lang": "text",
+    "caption": "A consumer waits until a concurrent thread binds X",
+    "source": "declare X\nthread\n   X = 42\nend\n{Show X}"
+  },
+  "codeExample": {
+    "lang": "text",
+    "caption": "Hello, World!",
+    "source": "{Show 'Hello World'}"
+  }
 }
