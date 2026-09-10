@@ -1144,8 +1144,8 @@ const comparisonTable = [
       To close Part 1: all execution models are variations on the same pipeline. The key question is <em>when</em> compilation happens and <em>how many layers</em> sit between your source code and the CPU.
     </p>
 
-    <figure class="rounded-xl border border-brand-border bg-white p-4 sm:p-6">
-      <svg viewBox="0 0 800 260" class="h-auto w-full" role="img" aria-label="Source code to execution pipeline showing AOT, JIT, interpreter and Wasm paths">
+    <figure class="overflow-x-auto rounded-xl border border-brand-border bg-white p-4 sm:p-6">
+      <svg viewBox="0 0 800 260" class="h-auto w-full min-w-[560px] sm:min-w-0" role="img" aria-label="Source code to execution pipeline showing AOT, JIT, interpreter and Wasm paths">
         <defs>
           <marker id="rt-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" fill="#71717A" />
@@ -1371,8 +1371,8 @@ const comparisonTable = [
     </div>
 
     <!-- Code-to-states mapping figure -->
-    <figure class="mb-4 rounded-xl border border-brand-border bg-white p-4 sm:p-6">
-      <svg viewBox="0 0 820 260" class="h-auto w-full" role="img" aria-label="Mapping the handle() source to the states of its future: the function entry maps to Start, each .await line maps to a state (Reading, Storing), and the final expression maps to Done carrying Ready(n)">
+    <figure class="mb-4 overflow-x-auto rounded-xl border border-brand-border bg-white p-4 sm:p-6">
+      <svg viewBox="0 0 820 260" class="h-auto w-full min-w-[560px] sm:min-w-0" role="img" aria-label="Mapping the handle() source to the states of its future: the function entry maps to Start, each .await line maps to a state (Reading, Storing), and the final expression maps to Done carrying Ready(n)">
         <defs>
           <marker id="map-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" fill="#71717A" />
@@ -1427,8 +1427,8 @@ const comparisonTable = [
     </figure>
 
     <!-- State machine figure (the future + its executor) -->
-    <figure class="mb-4 rounded-xl border border-brand-border bg-white p-4 sm:p-6">
-      <svg viewBox="0 0 820 300" class="h-auto w-full" role="img" aria-label="The whole enum is the future; an executor repeatedly calls poll on it. Inside, the current variant marks where execution is paused: Start, two await states that keep returning Pending until ready, then Done with Ready(n).">
+    <figure class="mb-4 overflow-x-auto rounded-xl border border-brand-border bg-white p-4 sm:p-6">
+      <svg viewBox="0 0 820 300" class="h-auto w-full min-w-[560px] sm:min-w-0" role="img" aria-label="The whole enum is the future; an executor repeatedly calls poll on it. Inside, the current variant marks where execution is paused: Start, two await states that keep returning Pending until ready, then Done with Ready(n).">
         <defs>
           <marker id="sm-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" fill="#71717A" />
@@ -1495,8 +1495,8 @@ const comparisonTable = [
     <div class="mb-8 overflow-x-auto rounded-lg text-[12px] [&>pre]:!rounded-lg [&>pre]:!p-4" set:html={stateMachineHtml} />
 
     <!-- Poll-over-time figure -->
-    <figure class="mb-8 rounded-xl border border-brand-border bg-white p-4 sm:p-6">
-      <svg viewBox="0 0 820 300" class="h-auto w-full" role="img" aria-label="Two futures A and B tracked over time. Each future's lifecycle is a lane: created, then running while polled, then Pending and parked with a waker, then running again when woken, then Ready. Below, a single thread lane shows it polls only one future at a time.">
+    <figure class="mb-8 overflow-x-auto rounded-xl border border-brand-border bg-white p-4 sm:p-6">
+      <svg viewBox="0 0 820 300" class="h-auto w-full min-w-[560px] sm:min-w-0" role="img" aria-label="Two futures A and B tracked over time. Each future's lifecycle is a lane: created, then running while polled, then Pending and parked with a waker, then running again when woken, then Ready. Below, a single thread lane shows it polls only one future at a time.">
         <g font-family="Inter, sans-serif">
           <text x="14" y="20" font-size="11" font-weight="700" fill="#18181B">One thread, over time</text>
           <text x="806" y="20" font-size="10" fill="#71717A" text-anchor="end">time →</text>
@@ -1658,8 +1658,8 @@ const comparisonTable = [
     </p>
 
     <!-- Poll loop figure -->
-    <figure class="rounded-xl border border-brand-border bg-white p-4 sm:p-6">
-      <svg viewBox="0 0 820 330" class="h-auto w-full" role="img" aria-label="Poll loop over an async interface: the executor polls a future; on Pending the future gives the reactor its socket file descriptor and a waker; the reactor registers interest with the kernel via epoll_ctl and blocks in epoll_wait for all descriptors at once; when the socket becomes readable epoll_wait returns it, the reactor calls the waker to re-queue the task, and the executor polls the future again until it returns Ready">
+    <figure class="overflow-x-auto rounded-xl border border-brand-border bg-white p-4 sm:p-6">
+      <svg viewBox="0 0 820 330" class="h-auto w-full min-w-[560px] sm:min-w-0" role="img" aria-label="Poll loop over an async interface: the executor polls a future; on Pending the future gives the reactor its socket file descriptor and a waker; the reactor registers interest with the kernel via epoll_ctl and blocks in epoll_wait for all descriptors at once; when the socket becomes readable epoll_wait returns it, the reactor calls the waker to re-queue the task, and the executor polls the future again until it returns Ready">
         <defs>
           <marker id="poll-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" fill="#71717A" />
@@ -1810,8 +1810,8 @@ const comparisonTable = [
         <li><strong class="text-brand-text">1. Drain the ready tasks.</strong> Poll each task a waker has flagged as ready, running it up to its next <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">.await</code>. This phase is real CPU work and only touches tasks that can make progress.</li>
         <li><strong class="text-brand-text">2. When the queue is empty, block.</strong> The executor makes <em>one</em> call, <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">epoll_wait()</code> (or it parks the thread), and the kernel puts the thread to sleep at <strong class="text-brand-text">~0% CPU</strong> until a file descriptor is ready or the nearest timer expires. No spinning: the thread is genuinely idle.</li>
       </ol>
-      <figure class="mb-4">
-        <svg viewBox="0 0 700 178" class="h-auto w-full" role="img" aria-label="A busy-wait pins a core at 100 percent asking ready repeatedly; a real runtime parks the thread asleep in epoll_wait at near zero percent CPU and is woken exactly once when the resource is ready">
+      <figure class="mb-4 overflow-x-auto">
+        <svg viewBox="0 0 700 178" class="h-auto w-full min-w-[560px] sm:min-w-0" role="img" aria-label="A busy-wait pins a core at 100 percent asking ready repeatedly; a real runtime parks the thread asleep in epoll_wait at near zero percent CPU and is woken exactly once when the resource is ready">
           <g font-family="Inter, sans-serif">
             <text x="6" y="18" font-size="12" font-weight="700" fill="#b91c1c">Busy-wait (spin loop)</text>
             <text x="6" y="32" font-size="9" fill="#71717A">core pinned at 100%; work never starts sooner</text>
@@ -2037,8 +2037,8 @@ const comparisonTable = [
     </div>
 
     <!-- Scheduler figure -->
-    <figure class="mb-8 rounded-xl border border-brand-border bg-white p-4 sm:p-6">
-      <svg viewBox="0 0 820 384" class="h-auto w-full" role="img" aria-label="Tokio multi-thread scheduler: a global injection queue feeds worker threads; each worker is one OS thread that pops a task from its local run queue and calls poll on it, then loops for the next task; when poll returns Pending the task is parked and its Waker registered with the shared reactor, when it returns Ready the task is done; workers steal tasks from each other when idle, and the reactor, which runs one epoll_wait over all file descriptors, requeues a task onto a worker as soon as its resource is ready">
+    <figure class="mb-8 overflow-x-auto rounded-xl border border-brand-border bg-white p-4 sm:p-6">
+      <svg viewBox="0 0 820 384" class="h-auto w-full min-w-[560px] sm:min-w-0" role="img" aria-label="Tokio multi-thread scheduler: a global injection queue feeds worker threads; each worker is one OS thread that pops a task from its local run queue and calls poll on it, then loops for the next task; when poll returns Pending the task is parked and its Waker registered with the shared reactor, when it returns Ready the task is done; workers steal tasks from each other when idle, and the reactor, which runs one epoll_wait over all file descriptors, requeues a task onto a worker as soon as its resource is ready">
         <defs>
           <marker id="sched-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" fill="#71717A" />
