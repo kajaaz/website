@@ -21,8 +21,10 @@
   const propertyRows = [
     "Abstraction",
     "Lazy or eager",
+    "Resume handle",
     "Runtime built in",
     "Scheduling / I-O",
+    "Busy-wait?",
     "Syntax",
   ];
 
@@ -89,6 +91,36 @@
 </script>
 
 <svelte:window onclick={handleWindowClick} />
+
+<!-- Mini timeline shown in the "Lazy or eager" row: created -> (idle) -> runs. -->
+{#snippet lazyEager(value: string, accent: string)}
+  {@const isLazy = value.toLowerCase().startsWith("lazy")}
+  <span class="flex flex-col items-center gap-1">
+    {#if isLazy}
+      <svg width="126" height="36" viewBox="0 0 126 36" role="img" aria-label="Lazy: inert until driven, then runs">
+        <circle cx="8" cy="18" r="3.5" fill="#9CA3AF" />
+        <text x="8" y="33" font-size="7.5" fill="#9CA3AF" text-anchor="middle">created</text>
+        <line x1="13" y1="18" x2="56" y2="18" stroke="#D1D5DB" stroke-width="2" stroke-dasharray="3 3" />
+        <text x="35" y="10" font-size="7.5" fill="#9CA3AF" text-anchor="middle">idle</text>
+        <line x1="56" y1="11" x2="56" y2="25" stroke={accent} stroke-width="1.5" />
+        <text x="68" y="10" font-size="7.5" fill={accent} text-anchor="middle">poll</text>
+        <line x1="56" y1="18" x2="98" y2="18" stroke="#10B981" stroke-width="2" />
+        <polygon points="98,12 98,24 110,18" fill="#10B981" />
+        <text x="104" y="33" font-size="7.5" fill="#059669" text-anchor="middle">runs</text>
+      </svg>
+    {:else}
+      <svg width="126" height="36" viewBox="0 0 126 36" role="img" aria-label="Eager: runs the moment it is created">
+        <circle cx="8" cy="18" r="3.5" fill="#9CA3AF" />
+        <text x="8" y="33" font-size="7.5" fill="#9CA3AF" text-anchor="middle">created</text>
+        <line x1="13" y1="18" x2="86" y2="18" stroke="#10B981" stroke-width="2" />
+        <text x="49" y="10" font-size="7.5" fill="#059669" text-anchor="middle">runs now</text>
+        <polygon points="86,12 86,24 98,18" fill="#10B981" />
+        <text x="92" y="33" font-size="7.5" fill="#059669" text-anchor="middle">running</text>
+      </svg>
+    {/if}
+    <span class="text-[11px] leading-tight text-gray-700">{value}</span>
+  </span>
+{/snippet}
 
 <!-- Language selector slots -->
 <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
@@ -195,7 +227,13 @@
           <tr class="border-b border-gray-100">
             <td class="py-2.5 pr-4 text-xs font-semibold text-gray-500">{prop}</td>
             {#each activeLangs as lg}
-              <td class="px-4 py-2.5 text-center text-xs text-gray-700">{lg.properties[prop] ?? "·"}</td>
+              <td class="px-4 py-2.5 text-center text-xs text-gray-700">
+                {#if prop === "Lazy or eager"}
+                  {@render lazyEager(lg.properties[prop] ?? "", lg.accent)}
+                {:else}
+                  {lg.properties[prop] ?? "·"}
+                {/if}
+              </td>
             {/each}
           </tr>
         {/each}

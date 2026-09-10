@@ -30,5 +30,70 @@ const { title, description = "Karolina Gorna – Cybersecurity researcher, PhD c
       <slot />
     </main>
     <Footer />
+    <script>
+      // Give every section heading a stable id and a GitHub-style "#" anchor
+      // that copies the section URL. Runs at build-free page load; headings
+      // inside interactive islands or cards are skipped.
+      function slugify(s: string): string {
+        return s
+          .toLowerCase()
+          .trim()
+          .replace(/[^\w\s-]/g, "")
+          .replace(/[\s_]+/g, "-")
+          .replace(/-+/g, "-")
+          .replace(/^-|-$/g, "");
+      }
+
+      function initHeadingAnchors() {
+        const main = document.querySelector("main");
+        if (!main) return;
+        const heads = main.querySelectorAll<HTMLElement>("h2, h3");
+        heads.forEach((h) => {
+          if (h.closest("astro-island") || h.closest("article")) return;
+          if (h.querySelector(".heading-anchor")) return;
+          const label = (h.getAttribute("data-text") || h.textContent || "").trim();
+          if (!label) return;
+
+          let id = h.id || slugify(label);
+          if (!id) return;
+          let unique = id;
+          let n = 2;
+          while (!h.id && document.getElementById(unique)) {
+            unique = id + "-" + n++;
+          }
+          h.id = unique;
+
+          const a = document.createElement("a");
+          a.className = "heading-anchor";
+          a.href = "#" + unique;
+          a.setAttribute("aria-label", "Copy link to this section: " + label);
+          a.textContent = "#";
+          a.addEventListener("click", () => {
+            const url = location.origin + location.pathname + "#" + unique;
+            if (navigator.clipboard) {
+              navigator.clipboard.writeText(url).catch(() => {});
+              a.classList.add("is-copied");
+              window.setTimeout(() => a.classList.remove("is-copied"), 1300);
+            }
+            // default anchor navigation still updates the hash and scrolls
+          });
+          h.appendChild(a);
+        });
+
+        // Ids are added after load, so honour an incoming #hash now.
+        if (location.hash.length > 1) {
+          const target = document.getElementById(
+            decodeURIComponent(location.hash.slice(1)),
+          );
+          if (target) target.scrollIntoView();
+        }
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initHeadingAnchors);
+      } else {
+        initHeadingAnchors();
+      }
+    </script>
   </body>
 </html>

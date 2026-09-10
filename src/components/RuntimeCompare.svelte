@@ -23,7 +23,7 @@
   const propertyRows = [
     "Scheduler",
     "I/O backend",
-    "Task model",
+    "Spawn bounds",
     "Wakeup / signal",
     "Fan-out",
     "Parallelism",

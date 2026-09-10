@@ -148,6 +148,57 @@ body {
   .cursor-blink { animation: none !important; }
 }
 
+/* ── Section anchor links (GitHub-style "#" that appears on hover) ───
+   Added at runtime to every section heading by a small script in the
+   layout. Clicking copies the section URL and jumps to it. */
+:where(main h2, main h3)[id] {
+  scroll-margin-top: 5.5rem;
+}
+.heading-anchor {
+  position: relative;
+  margin-left: 0.45ch;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--color-accent-blue);
+  text-decoration: none;
+  opacity: 0;
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+h2:hover > .heading-anchor,
+h3:hover > .heading-anchor,
+.heading-anchor:focus-visible {
+  opacity: 0.65;
+}
+.heading-anchor:hover {
+  opacity: 1;
+  color: var(--color-accent-emerald);
+}
+.heading-anchor::after {
+  content: "link copied";
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  padding: 0.12rem 0.4rem;
+  border-radius: 5px;
+  background: var(--color-brand-text);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 0.68rem;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+.heading-anchor.is-copied::after { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .heading-anchor { transition: none; }
+}
+
 /* CRT scanline overlay for terminal panels. */
 .scanlines { position: relative; }
 .scanlines::after {
