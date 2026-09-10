@@ -3,6 +3,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import { highlightCode } from "../lib/highlight";
 import RuntimeCompare from "../components/RuntimeCompare.svelte";
 import FutureCompare from "../components/FutureCompare.svelte";
+import RustFuturesQuiz from "../components/RustFuturesQuiz.svelte";
 
 const runtimeSnippets = [
   {
@@ -327,13 +328,13 @@ const runtimeComparison = [
     },
   },
   {
-    property: "Task model",
+    property: "Spawn bounds",
     values: {
-      "Python asyncio": "Coroutines (async def), single-threaded",
-      "Rust / Tokio": "Futures (state machines), Send + 'static for spawn",
-      "Rust / smol": "Futures, same trait bounds as Tokio",
-      "Rust / glommio": "Futures, !Send (single-core, Rc is fine)",
-      "Go (goroutines)": "Goroutines (implicit green threads)",
+      "Python asyncio": "None: all tasks share one thread",
+      "Rust / Tokio": "Send + 'static (tasks cross threads)",
+      "Rust / smol": "Send + 'static (LocalExecutor lifts it)",
+      "Rust / glommio": "!Send OK: Rc / RefCell fine (pinned to core)",
+      "Go (goroutines)": "None: any func, runtime handles it",
     },
   },
   {
@@ -559,6 +560,8 @@ const asyncLangModels = [
     laziness: "Lazy: nothing runs until polled",
     builtin: "No: bring your own executor (Tokio, smol)",
     io: "Executor polls; reactor on epoll / kqueue / io_uring",
+    resumeHandle: "Waker: wake() re-queues the task",
+    busyWait: "No: parks in epoll_wait",
     syntax: "async fn / .await",
     code: `use tokio::join;
 
@@ -591,6 +594,8 @@ async fn main() {
     laziness: "Eager: a Promise starts immediately",
     builtin: "Yes: event loop baked into the engine / host",
     io: "Macrotask + microtask queues; libuv / host poller",
+    resumeHandle: "microtask / job callback",
+    busyWait: "No: host poller sleeps",
     syntax: "async fn / await",
     code: `// calling double() starts the Promise immediately (eager)
 async function double(x) {
@@ -618,6 +623,8 @@ console.log(a + b); // 60`,
     laziness: "Lazy: runs when awaited or scheduled",
     builtin: "Stdlib loop, swappable (uvloop)",
     io: "selector / epoll; GIL caps parallelism",
+    resumeHandle: "done-callback + call_soon",
+    busyWait: "No: blocks in selector.select",
     syntax: "async def / await",
     code: `import asyncio
 
@@ -647,6 +654,8 @@ asyncio.run(main())`,
     laziness: "Eager: a hot Task is already running",
     builtin: "Yes: runtime schedules continuations",
     io: "Thread pool / sync context; IOCP for I/O",
+    resumeHandle: "continuation posted to pool / context",
+    busyWait: "No: IOCP / pool waits",
     syntax: "async / await",
     code: `// Double() returns a hot Task: already running (eager)
 async Task<int> Double(int x) => x * 2;
@@ -672,6 +681,8 @@ Console.WriteLine(r[0] + r[1]); // 60`,
     laziness: "Eager: starts on go f()",
     builtin: "Yes: scheduler is part of the runtime",
     io: "netpoller does non-blocking I/O, M:N under the hood",
+    resumeHandle: "runtime parks / unparks the goroutine (gopark / goready)",
+    busyWait: "No: netpoller blocks in epoll",
     syntax: "go f() (blocking-looking code)",
     code: `// no async/await: a goroutine + channel stand in for a future
 func double(x int, out chan<- int) {
@@ -695,6 +706,74 @@ func main() {
     return <-ch
 }`,
   },
+  {
+    lang: "Kotlin",
+    hl: "kotlin",
+    accent: "#7F52FF",
+    note: "A suspend fn compiles to a Continuation-passing state machine; kotlinx.coroutines drives it.",
+    abstraction: "coroutine (suspend fn)",
+    laziness: "Lazy: a suspend fn is inert until a coroutine drives it",
+    builtin: "Library: kotlinx.coroutines (JVM / Native)",
+    io: "Dispatchers (Default / IO) over JVM thread pools",
+    resumeHandle: "Continuation: resumeWith() continues it",
+    busyWait: "No: dispatcher threads park when idle",
+    syntax: "suspend fun / .await()",
+    code: `import kotlinx.coroutines.*
+
+// suspend fn: inert until a coroutine drives it (lazy)
+suspend fun double(x: Int): Int = x * 2
+
+fun main() = runBlocking {
+    // async starts each concurrently; await collects
+    val a = async { double(10) }
+    val b = async { double(20) }
+    println(a.await() + b.await()) // 60
+}`,
+    code2: `suspend fun example(): Int = coroutineScope {
+    val x = async {
+        return@async 5 // resolves THIS Deferred, not example()
+    }
+
+    // x is a Deferred; await drives it and yields 5
+    x.await()
+}`,
+  },
+  {
+    lang: "C++",
+    hl: "cpp",
+    accent: "#00599C",
+    note: "A function using co_await / co_return becomes a coroutine; a library-provided Task drives it.",
+    abstraction: "coroutine (co_await / Task<T>)",
+    laziness: "Lazy: suspends at the first co_await until resumed",
+    builtin: "No: bring a library (cppcoro, stdexec, Asio)",
+    io: "Executor-defined: io_context, run_loop, schedulers",
+    resumeHandle: "std::coroutine_handle<>: .resume() continues it",
+    busyWait: "No: the executor blocks on its I/O source",
+    syntax: "co_await / co_return",
+    code: `#include <cppcoro/task.hpp>
+#include <cppcoro/when_all.hpp>
+#include <cppcoro/sync_wait.hpp>
+#include <cstdio>
+
+// a coroutine: lazy, suspends until awaited
+cppcoro::task<int> twice(int x) { co_return x * 2; }
+
+cppcoro::task<int> sum() {
+    // when_all drives both concurrently
+    auto [a, b] = co_await cppcoro::when_all(twice(10), twice(20));
+    co_return a + b;
+}
+
+int main() { std::printf("%d\\n", cppcoro::sync_wait(sum())); } // 60`,
+    code2: `cppcoro::task<int> example() {
+    // inner task: lazy, runs nothing until awaited
+    auto x = []() -> cppcoro::task<int> {
+        co_return 5; // resolves THIS task, not example()
+    }();
+
+    co_return co_await x; // awaiting drives it and yields 5
+}`,
+  },
 ];
 
 // Pre-highlight the per-language snippets and shape them for FutureCompare
@@ -706,8 +785,10 @@ const futureLangEntries = await Promise.all(
     properties: {
       "Abstraction": e.abstraction,
       "Lazy or eager": e.laziness,
+      "Resume handle": e.resumeHandle,
       "Runtime built in": e.builtin,
       "Scheduling / I-O": e.io,
+      "Busy-wait?": e.busyWait,
       "Syntax": e.syntax,
     },
     html: await highlightCode(e.hl, e.code),
@@ -821,6 +902,16 @@ const asyncEcosystems = [
     ],
   },
   {
+    lang: "C++ (C++20 coroutines)",
+    accent: "#00599C",
+    model: "co_await / co_return turn a function into a lazy coroutine. The language ships no scheduler, so a library provides the executor and I/O source.",
+    runtimes: [
+      { name: "Asio / io_context", role: "The de-facto async I/O library; run() drives an epoll / IOCP loop that resumes coroutines." },
+      { name: "stdexec (senders/receivers)", role: "The proposed std::execution model: composable schedulers and thread pools." },
+      { name: "cppcoro / libunifex", role: "Coroutine task types, when_all, async generators; libunifex adds sender-based scheduling." },
+    ],
+  },
+  {
     lang: "Erlang / Elixir",
     accent: "#A855F7",
     model: "Actor model on the BEAM VM: each process is an isolated lightweight unit with its own heap, communicating solely via message passing.",
@@ -828,6 +919,37 @@ const asyncEcosystems = [
       { name: "BEAM VM", role: "Preemptive scheduler with per-process reduction budgets. Millions of processes, no shared state." },
       { name: "OTP", role: "Framework of supervisors, gen_servers and behaviours. Fault tolerance by design." },
     ],
+  },
+];
+
+const schedulingShapes = [
+  {
+    id: "eventloop",
+    name: "One thread, one queue",
+    accent: "#2563EB",
+    blurb: "A single thread runs a cooperative loop: take the next ready task, run it up to its next await, repeat. No data races and almost no overhead, but one blocking task stalls all the others and it only uses one core.",
+    users: "JS engines · Python asyncio · Tokio current-thread · embassy",
+  },
+  {
+    id: "workstealing",
+    name: "Work-stealing pool (M:N)",
+    accent: "#D97706",
+    blurb: "A few worker threads (about one per core) each own a run queue. An idle worker steals half of a busy sibling's tasks, so a task can resume on a different thread than it started, which is exactly why tasks must be Send.",
+    users: "Tokio multi-thread · .NET ThreadPool · smol",
+  },
+  {
+    id: "threadpercore",
+    name: "Thread-per-core (share-nothing)",
+    accent: "#16653a",
+    blurb: "One thread pinned per core, and a task never leaves the core it started on. No locks, no stealing and no Send bound, usually paired with io_uring for predictable tail latency.",
+    users: "glommio · compio · Seastar",
+  },
+  {
+    id: "preemptive",
+    name: "Preemptive green threads",
+    accent: "#00ADD8",
+    blurb: "No async keyword at all: the runtime multiplexes lightweight threads across cores and can pause one mid-run at a safepoint, so a single long computation cannot starve everything else.",
+    users: "Go goroutines · Erlang / Elixir BEAM · JVM virtual threads",
   },
 ];
 
@@ -1629,24 +1751,97 @@ const comparisonTable = [
       The concept goes back to the 1970s (Baker and Hewitt named "futures", Friedman and Wise "promises") and almost every mainstream language ships one today: JavaScript's <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">Promise</code>, Python's coroutine, C#'s <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">Task</code>, Java's <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">CompletableFuture</code>. What changes from language to language is two things: whether the async value is <strong class="text-brand-text">lazy</strong> (does nothing until driven) or <strong class="text-brand-text">eager</strong> (already running), and whether the runtime is <strong class="text-brand-text">built into the language</strong> or something you choose. Rust is the unusual one on both counts.
     </p>
 
-    <div class="mb-6 grid gap-4 md:grid-cols-2">
-      <div class="rounded-xl border border-brand-border bg-white p-4" style="border-left:3px solid #D97706">
-        <p class="mb-2 text-sm font-semibold" style="color:#D97706">Rust: lazy futures, runtime you choose</p>
-        <p class="text-sm text-brand-body">
-          A <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Future</code> is a poll-based state machine that sits inert until an executor polls it. The language ships no runtime, so you add Tokio or smol. The upside is zero-cost, allocation-free state machines and full control; the cost is function colouring and picking a runtime.
-        </p>
-      </div>
-      <div class="rounded-xl border border-brand-border bg-white p-4" style="border-left:3px solid #F59E0B">
-        <p class="mb-2 text-sm font-semibold" style="color:#B45309">JavaScript: eager promises, runtime built in</p>
-        <p class="text-sm text-brand-body">
-          The three generations you have seen, <strong class="text-brand-text">callbacks</strong>, then <strong class="text-brand-text">Promises</strong>, then <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">async</code>/<code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">await</code>, are mostly ergonomic layers over one unchanged model: a single-threaded <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Execution_model" class="text-accent-blue underline decoration-dotted underline-offset-2" target="_blank" rel="noopener">event loop</a> with a task queue and a microtask queue. A Promise is eager: it starts the moment it is created, and <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">await</code> just schedules the continuation onto the microtask queue.
-        </p>
-      </div>
-    </div>
-    <p class="mb-8 text-sm text-brand-muted">
-      Python's <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">asyncio</code> looks like Rust (a coroutine is lazy, driven by a loop) but ships the loop in the stdlib. C#'s <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Task</code> looks like JavaScript (eager, runtime built in). Go is the outlier: there is no <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">async</code> keyword at all. A goroutine writes straight-line blocking-looking code and the runtime's scheduler plus netpoller turn the blocking calls into non-blocking I/O behind your back.
+    <p class="mb-4 text-brand-body">
+      Only <strong class="text-brand-text">two independent questions</strong> separate one language's async value from another's, so every language lands in one of four boxes:
     </p>
 
+    <figure class="mb-6">
+      <div class="rounded-xl border border-brand-border bg-white p-4 sm:p-5">
+        <div class="grid gap-2 text-center text-xs" style="grid-template-columns: 4.5rem 1fr 1fr">
+          <div></div>
+          <div class="pb-1 font-semibold text-brand-text">Runtime built into the language</div>
+          <div class="pb-1 font-semibold text-brand-text">Runtime you add yourself</div>
+
+          <div class="flex items-center justify-end pr-2 text-right font-semibold text-accent-emerald">Lazy<br />value</div>
+          <div class="rounded-lg border border-emerald-100 bg-emerald-50/60 p-2.5">
+            <div class="flex flex-wrap justify-center gap-1.5">
+              <span class="rounded border border-brand-border bg-white px-2 py-0.5 text-[11px] font-semibold text-brand-text">Python asyncio</span>
+              <span class="rounded border border-brand-border bg-white px-2 py-0.5 text-[11px] font-semibold text-brand-text">Kotlin</span>
+            </div>
+            <p class="mt-1.5 text-[11px] leading-snug text-brand-muted">sits inert until the built-in loop drives it</p>
+          </div>
+          <div class="rounded-lg border border-emerald-100 bg-emerald-50/60 p-2.5">
+            <div class="flex flex-wrap justify-center gap-1.5">
+              <span class="rounded border border-brand-border bg-white px-2 py-0.5 text-[11px] font-semibold text-brand-text">Rust</span>
+              <span class="rounded border border-brand-border bg-white px-2 py-0.5 text-[11px] font-semibold text-brand-text">C++20</span>
+            </div>
+            <p class="mt-1.5 text-[11px] leading-snug text-brand-muted">sits inert until the executor you picked polls it</p>
+          </div>
+
+          <div class="flex items-center justify-end pr-2 text-right font-semibold" style="color:#B45309">Eager<br />value</div>
+          <div class="rounded-lg border border-amber-100 bg-amber-50/60 p-2.5">
+            <div class="flex flex-wrap justify-center gap-1.5">
+              <span class="rounded border border-brand-border bg-white px-2 py-0.5 text-[11px] font-semibold text-brand-text">JavaScript</span>
+              <span class="rounded border border-brand-border bg-white px-2 py-0.5 text-[11px] font-semibold text-brand-text">C#</span>
+              <span class="rounded border border-brand-border bg-white px-2 py-0.5 text-[11px] font-semibold text-brand-text">Go</span>
+            </div>
+            <p class="mt-1.5 text-[11px] leading-snug text-brand-muted">starts running the instant it is created</p>
+          </div>
+          <div class="flex items-center justify-center rounded-lg border border-gray-100 bg-gray-50/60 p-2.5">
+            <span class="text-[11px] italic text-brand-muted">uncommon</span>
+          </div>
+        </div>
+      </div>
+      <figcaption class="mt-3 text-sm text-brand-muted">
+        <strong class="text-brand-text">Vertically:</strong> does the value start on its own (eager) or wait to be driven (lazy)? <strong class="text-brand-text">Horizontally:</strong> does the language ship the loop, or do you bolt one on? These are orthogonal, which is why "how is a Rust future different from a Python one?" is a bit of a trick question: they share the <em>same lazy row</em>. As values they behave identically; they differ only on the horizontal axis, Python bundles <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">asyncio</code> while Rust makes you pick Tokio or smol.
+      </figcaption>
+    </figure>
+
+    <p class="mb-8 text-brand-body">
+      That is the whole "zoom out": once two async values are both lazy, they run identically underneath. Each is created inert, each hands out a one-shot <strong class="text-brand-text">resume handle</strong> (Rust's <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Waker</code>, Python's done-callback, Kotlin's <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Continuation</code>, C++20's <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">coroutine_handle</code>) that means "call me to resume this", and each is driven by a loop that <strong class="text-brand-text">sleeps</strong> on the OS async interface rather than busy-waiting. The eager designs differ in one respect only: the value starts the moment it is created. The table below turns every one of these traits into a column, and the <strong class="text-brand-text">Lazy or eager</strong> row draws it as a small timeline so you can see the difference at a glance.
+    </p>
+
+    <div class="mb-8 rounded-xl border border-brand-border bg-white p-5" style="border-left:3px solid #16653a">
+      <p class="mb-2 text-sm font-semibold" style="color:#16653a">But if there is a loop, isn't it just spinning? (why every "Busy-wait?" row says No)</p>
+      <p class="mb-3 text-sm text-brand-body">
+        The word "loop" misleads. A <strong class="text-brand-text">busy loop</strong> would be <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">loop &#123; if ready() &#123; break &#125; &#125;</code>: one core pinned at 100%, asking "ready yet?" millions of times a second and never letting the work start any sooner. An executor never does that. Its loop has two phases, and the second one <strong class="text-brand-text">sleeps</strong>:
+      </p>
+      <ol class="mb-4 space-y-1.5 text-sm text-brand-body">
+        <li><strong class="text-brand-text">1. Drain the ready tasks.</strong> Poll each task a waker has flagged as ready, running it up to its next <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">.await</code>. This phase is real CPU work and only touches tasks that can make progress.</li>
+        <li><strong class="text-brand-text">2. When the queue is empty, block.</strong> The executor makes <em>one</em> call, <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">epoll_wait()</code> (or it parks the thread), and the kernel puts the thread to sleep at <strong class="text-brand-text">~0% CPU</strong> until a file descriptor is ready or the nearest timer expires. No spinning: the thread is genuinely idle.</li>
+      </ol>
+      <figure class="mb-4">
+        <svg viewBox="0 0 700 178" class="h-auto w-full" role="img" aria-label="A busy-wait pins a core at 100 percent asking ready repeatedly; a real runtime parks the thread asleep in epoll_wait at near zero percent CPU and is woken exactly once when the resource is ready">
+          <g font-family="Inter, sans-serif">
+            <text x="6" y="18" font-size="12" font-weight="700" fill="#b91c1c">Busy-wait (spin loop)</text>
+            <text x="6" y="32" font-size="9" fill="#71717A">core pinned at 100%; work never starts sooner</text>
+            <rect x="150" y="42" width="544" height="26" rx="5" fill="#ef4444" fill-opacity="0.5" stroke="#ef4444" stroke-width="1"/>
+            <text x="422" y="59" font-size="10" fill="#7f1d1d" text-anchor="middle">ready? ready? ready? ready? ready? ready? ready? ready? ready?</text>
+            <text x="150" y="84" font-size="9" font-weight="600" fill="#b91c1c">CPU 100% the entire wait, all wasted</text>
+
+            <line x1="6" y1="98" x2="694" y2="98" stroke="#E4E4E7" stroke-width="1"/>
+
+            <text x="6" y="120" font-size="12" font-weight="700" fill="#16653a">Park + waker (what runtimes actually do)</text>
+            <text x="6" y="134" font-size="9" fill="#71717A">thread sleeps in epoll_wait until the OS wakes it</text>
+            <rect x="150" y="144" width="544" height="26" rx="5" fill="#dcfce7" stroke="#16a34a" stroke-width="1"/>
+            <rect x="150" y="144" width="392" height="26" rx="5" fill="#16a34a" fill-opacity="0.10"/>
+            <text x="346" y="161" font-size="10" fill="#166534" text-anchor="middle">asleep in epoll_wait · ~0% CPU</text>
+            <line x1="544" y1="140" x2="544" y2="170" stroke="#be185d" stroke-width="2"/>
+            <text x="544" y="136" font-size="9" font-weight="700" fill="#be185d" text-anchor="middle">wake()</text>
+            <rect x="548" y="144" width="146" height="26" rx="5" fill="#16a34a" fill-opacity="0.5"/>
+            <text x="621" y="161" font-size="10" fill="#14532d" text-anchor="middle">poll once → Ready</text>
+          </g>
+        </svg>
+      </figure>
+      <p class="text-sm text-brand-body">
+        The <strong class="text-brand-text">waker</strong> is what removes the need to poll while waiting: a task hands the reactor a "call me when my resource is ready" callback and steps aside, so nothing touches it until the reactor fires that callback and re-queues it. A <strong class="text-brand-text">timer</strong> works the same way: <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">sleep(2s)</code> does not spin, it registers a deadline in a timer wheel, and the executor passes the <em>nearest</em> deadline as the timeout to <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">epoll_wait</code>, so the thread wakes exactly once, when the timer is due. That is why the table below can answer <strong class="text-brand-text">Busy-wait? No</strong> for every language: the mechanism is always park-and-be-woken, never spin.
+      </p>
+    </div>
+
+    <h3 id="compare-futures" class="mb-2 mt-8 scroll-mt-20 text-lg font-semibold text-brand-text">Comparison table: futures across languages</h3>
+    <p class="mb-4 rounded-lg border border-brand-border bg-gray-50/70 px-4 py-3 text-sm text-brand-body">
+      This is the <strong class="text-brand-text">per-language</strong> table: what the async <em>value</em> is in each language and how it behaves, lazy or eager, its resume handle, whether a runtime is built in, and the syntax. It stops at the language boundary. For how a concrete runtime actually <em>schedules</em> those futures (Tokio vs smol vs glommio vs an event loop), jump to <a href="#compare-runtimes" class="text-accent-blue underline underline-offset-2 transition-colors hover:text-accent-emerald">Comparison table: concurrency runtimes</a>.
+    </p>
     <p class="mb-4 text-brand-body">
       Pick languages to compare their model and syntax side by side. The first snippet runs the <strong class="text-brand-text">same task</strong> everywhere: an async <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">double(x)</code> returning <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">x * 2</code>, called on 10 and 20 concurrently and summed to 60. The second shows the <strong class="text-brand-text">async-block structure</strong> from above (a <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">return</code> inside an inner async value) in each language, so you can see how the same idea is spelled and whether it is lazy or eager.
     </p>
@@ -1681,6 +1876,134 @@ const comparisonTable = [
         </article>
       ))}
     </div>
+
+    <h3 class="mb-2 mt-10 text-lg font-semibold text-brand-text">How the same async block gets scheduled</h3>
+    <p class="mb-5 text-brand-body">
+      The cards above list <em>which</em> runtimes exist per language; this shows <em>how</em> they actually run your tasks. Take one identical async task and hand it to different runtimes: almost every one falls into one of four scheduling shapes. That shape, not the syntax, is what decides whether a task can hop threads, whether it can be interrupted, and whether it must be <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">Send</code>.
+    </p>
+
+    <div class="grid gap-4 sm:grid-cols-2">
+      {schedulingShapes.map((s) => (
+        <article class="flex flex-col rounded-xl border border-brand-border bg-white p-4" style={`border-top:3px solid ${s.accent}`}>
+          <h4 class="mb-2 text-sm font-semibold text-brand-text">{s.name}</h4>
+          <div class="mb-3 rounded-lg bg-gray-50 p-3">
+            {s.id === "eventloop" && (
+              <svg viewBox="0 0 240 100" class="mx-auto w-full max-w-[260px]" aria-hidden="true">
+                <text x="6" y="12" font-size="8" fill="#6B7280">one ready queue</text>
+                <rect x="6" y="16" width="24" height="20" rx="3" fill="#2563EB" fill-opacity="0.2"/>
+                <rect x="34" y="16" width="24" height="20" rx="3" fill="#2563EB" fill-opacity="0.2"/>
+                <rect x="62" y="16" width="24" height="20" rx="3" fill="#2563EB" fill-opacity="0.2"/>
+                <line x1="90" y1="26" x2="152" y2="26" stroke="#2563EB" stroke-width="1.3"/>
+                <polygon points="152,22 160,26 152,30" fill="#2563EB"/>
+                <rect x="164" y="16" width="58" height="20" rx="3" fill="#2563EB" fill-opacity="0.4"/>
+                <text x="193" y="30" font-size="8" fill="#1e3a8a" text-anchor="middle">run one</text>
+                <line x1="193" y1="36" x2="193" y2="60" stroke="#2563EB" stroke-width="1.3"/>
+                <polygon points="189,60 197,60 193,68" fill="#2563EB"/>
+                <rect x="6" y="70" width="216" height="24" rx="5" fill="#2563EB" fill-opacity="0.08" stroke="#2563EB" stroke-width="1"/>
+                <text x="114" y="86" font-size="9" fill="#1e40af" text-anchor="middle">single thread · core 0</text>
+              </svg>
+            )}
+            {s.id === "workstealing" && (
+              <svg viewBox="0 0 240 100" class="mx-auto w-full max-w-[260px]" aria-hidden="true">
+                <rect x="138" y="14" width="20" height="18" rx="3" fill="#D97706" fill-opacity="0.28"/>
+                <rect x="162" y="14" width="20" height="18" rx="3" fill="#D97706" fill-opacity="0.28"/>
+                <rect x="186" y="14" width="20" height="18" rx="3" fill="#D97706" fill-opacity="0.28"/>
+                <rect x="210" y="14" width="20" height="18" rx="3" fill="#D97706" fill-opacity="0.28"/>
+                <rect x="6" y="42" width="104" height="24" rx="5" fill="#D97706" fill-opacity="0.08" stroke="#D97706" stroke-width="1"/>
+                <text x="58" y="58" font-size="8.5" fill="#7c4a03" text-anchor="middle">worker 1 (idle)</text>
+                <rect x="130" y="42" width="104" height="24" rx="5" fill="#D97706" fill-opacity="0.08" stroke="#D97706" stroke-width="1"/>
+                <text x="182" y="58" font-size="8.5" fill="#7c4a03" text-anchor="middle">worker 2 (busy)</text>
+                <line x1="180" y1="76" x2="72" y2="76" stroke="#be185d" stroke-width="1.4" stroke-dasharray="4 3"/>
+                <polygon points="72,72 72,80 64,76" fill="#be185d"/>
+                <text x="120" y="94" font-size="8.5" fill="#be185d" text-anchor="middle">idle worker steals ~half</text>
+              </svg>
+            )}
+            {s.id === "threadpercore" && (
+              <svg viewBox="0 0 240 100" class="mx-auto w-full max-w-[260px]" aria-hidden="true">
+                <rect x="40" y="18" width="36" height="18" rx="3" fill="#16653a" fill-opacity="0.25"/>
+                <text x="58" y="31" font-size="8" fill="#14532d" text-anchor="middle">task</text>
+                <line x1="58" y1="36" x2="58" y2="46" stroke="#16653a" stroke-width="1.2"/>
+                <rect x="164" y="18" width="36" height="18" rx="3" fill="#16653a" fill-opacity="0.25"/>
+                <text x="182" y="31" font-size="8" fill="#14532d" text-anchor="middle">task</text>
+                <line x1="182" y1="36" x2="182" y2="46" stroke="#16653a" stroke-width="1.2"/>
+                <rect x="6" y="48" width="104" height="24" rx="5" fill="#16653a" fill-opacity="0.08" stroke="#16653a" stroke-width="1"/>
+                <text x="58" y="64" font-size="8.5" fill="#14532d" text-anchor="middle">core 0</text>
+                <rect x="130" y="48" width="104" height="24" rx="5" fill="#16653a" fill-opacity="0.08" stroke="#16653a" stroke-width="1"/>
+                <text x="182" y="64" font-size="8.5" fill="#14532d" text-anchor="middle">core 1</text>
+                <line x1="120" y1="12" x2="120" y2="84" stroke="#9CA3AF" stroke-width="1" stroke-dasharray="3 3"/>
+                <text x="120" y="96" font-size="8" fill="#6B7280" text-anchor="middle">no crossing between cores</text>
+              </svg>
+            )}
+            {s.id === "preemptive" && (
+              <svg viewBox="0 0 240 100" class="mx-auto w-full max-w-[260px]" aria-hidden="true">
+                <text x="6" y="12" font-size="8" fill="#6B7280">one thread's timeline &#8594;</text>
+                <rect x="6" y="40" width="228" height="24" rx="5" fill="#00ADD8" fill-opacity="0.06" stroke="#00ADD8" stroke-width="1"/>
+                <rect x="10" y="44" width="52" height="16" rx="2" fill="#00ADD8" fill-opacity="0.42"/>
+                <text x="36" y="56" font-size="8" fill="#075985" text-anchor="middle">task A</text>
+                <rect x="66" y="44" width="52" height="16" rx="2" fill="#00ADD8" fill-opacity="0.22"/>
+                <text x="92" y="56" font-size="8" fill="#075985" text-anchor="middle">task B</text>
+                <rect x="122" y="44" width="52" height="16" rx="2" fill="#00ADD8" fill-opacity="0.42"/>
+                <text x="148" y="56" font-size="8" fill="#075985" text-anchor="middle">task A</text>
+                <rect x="178" y="44" width="52" height="16" rx="2" fill="#00ADD8" fill-opacity="0.22"/>
+                <text x="204" y="56" font-size="8" fill="#075985" text-anchor="middle">task C</text>
+                <line x1="64" y1="36" x2="64" y2="68" stroke="#be185d" stroke-width="1.6"/>
+                <line x1="176" y1="36" x2="176" y2="68" stroke="#be185d" stroke-width="1.6"/>
+                <text x="120" y="84" font-size="8.5" fill="#be185d" text-anchor="middle">runtime preempts mid-run</text>
+              </svg>
+            )}
+          </div>
+          <p class="mb-2 text-xs leading-relaxed text-brand-body">{s.blurb}</p>
+          <p class="mt-auto text-[11px] font-medium" style={`color:${s.accent}`}>{s.users}</p>
+        </article>
+      ))}
+    </div>
+
+    <figure class="mt-6 overflow-x-auto rounded-xl border border-brand-border bg-white">
+      <table class="min-w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-200 bg-gray-50/80">
+            <th class="px-3 py-2.5 text-left font-semibold text-brand-text">Scheduling shape</th>
+            <th class="px-3 py-2.5 text-left font-semibold text-brand-text">Task can move threads?</th>
+            <th class="px-3 py-2.5 text-left font-semibold text-brand-text">Preemptive?</th>
+            <th class="px-3 py-2.5 text-left font-semibold text-brand-text">Send bound?</th>
+            <th class="px-3 py-2.5 text-left font-semibold text-brand-text">Example runtimes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="border-b border-gray-100">
+            <td class="whitespace-nowrap px-3 py-2.5 align-top font-medium text-brand-text">One thread, one queue</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">No: only one thread exists</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">No: cooperative, yields at <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">await</code></td>
+            <td class="px-3 py-2.5 align-top text-brand-body">Not needed</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">JS engines, Python asyncio, Tokio current-thread</td>
+          </tr>
+          <tr class="border-b border-gray-100 bg-gray-50/40">
+            <td class="whitespace-nowrap px-3 py-2.5 align-top font-medium text-brand-text">Work-stealing pool (M:N)</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">Yes: stolen by an idle worker</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">No: cooperative</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">Yes: tasks cross threads</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">Tokio multi-thread, .NET ThreadPool, smol</td>
+          </tr>
+          <tr class="border-b border-gray-100">
+            <td class="whitespace-nowrap px-3 py-2.5 align-top font-medium text-brand-text">Thread-per-core</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">No: pinned to its core</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">No: cooperative</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">No: <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Rc</code> / <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">RefCell</code> are fine</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">glommio, compio, Seastar</td>
+          </tr>
+          <tr>
+            <td class="whitespace-nowrap px-3 py-2.5 align-top font-medium text-brand-text">Preemptive green threads</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">Yes: scheduler moves them</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">Yes: paused at safepoints</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">n/a: no <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">async</code> keyword</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">Go, Erlang / Elixir BEAM, JVM virtual threads</td>
+          </tr>
+        </tbody>
+      </table>
+      <figcaption class="border-t border-gray-100 px-4 py-3 text-xs text-brand-muted">
+        The first three shapes are <strong class="text-brand-text">cooperative</strong>: a task only yields when it hits an <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">await</code>, so a tight CPU loop with no await can hog its thread. The last is <strong class="text-brand-text">preemptive</strong>: the runtime can pause a task even mid-computation, which is why Go and Erlang stay responsive under CPU-heavy load without any <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">await</code> points. The <a href="#inside-tokio" class="text-accent-blue underline underline-offset-2 transition-colors hover:text-accent-emerald">Tokio section</a> below zooms into the work-stealing shape in detail.
+      </figcaption>
+    </figure>
   </section>
 
   <!-- ====== INSIDE A RUNTIME: TOKIO ====== -->
@@ -1826,6 +2149,70 @@ const comparisonTable = [
         A blocking call on a worker thread would stall every task queued behind it, so Tokio keeps a <strong class="text-brand-text">separate, much larger blocking pool</strong> for <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">spawn_blocking</code> and for file I/O (which has no portable async interface). The async workers stay free to keep polling. This is also why the pool is an optimisation, not the essence of async: the same futures run correctly on the single-threaded current-thread scheduler, just without cross-core parallelism.
       </p>
     </div>
+
+    <h3 class="mb-3 mt-10 text-lg font-semibold text-brand-text">How other Rust runtimes schedule differently</h3>
+    <p class="mb-4 text-brand-body">
+      Tokio is one point in a design space. Runtimes differ along a few axes: how <strong class="text-brand-text">threads map to cores</strong>, whether a task can <strong class="text-brand-text">migrate</strong> between threads (work stealing), whether tasks must be <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">Send</code>, and which <strong class="text-brand-text">async interface</strong> drives the reactor. That last choice is really "how are async resources scheduled": readiness (epoll / kqueue), completion (io_uring), or raw hardware interrupts.
+    </p>
+    <figure class="mb-6 overflow-x-auto rounded-xl border border-brand-border bg-white">
+      <table class="min-w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-200 bg-gray-50/80">
+            <th class="px-3 py-2.5 text-left font-semibold text-brand-text">Runtime</th>
+            <th class="px-3 py-2.5 text-left font-semibold text-brand-text">Threads</th>
+            <th class="px-3 py-2.5 text-left font-semibold text-brand-text">Steals?</th>
+            <th class="px-3 py-2.5 text-left font-semibold text-brand-text">Send?</th>
+            <th class="px-3 py-2.5 text-left font-semibold text-brand-text">I/O driver</th>
+            <th class="px-3 py-2.5 text-left font-semibold text-brand-text">How it schedules</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="border-b border-gray-100">
+            <td class="whitespace-nowrap px-3 py-2.5 align-top font-medium text-brand-text">Tokio · multi-thread</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">M:N, ~1 worker/core</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">Yes</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">Yes</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">mio (epoll/kqueue/IOCP)</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">per-core run queue + global injection + LIFO slot; an idle worker steals ~half a sibling's tasks</td>
+          </tr>
+          <tr class="border-b border-gray-100 bg-gray-50/40">
+            <td class="whitespace-nowrap px-3 py-2.5 align-top font-medium text-brand-text">Tokio · current-thread</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">1 thread</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">No</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">No (with LocalSet)</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">mio (epoll/kqueue/IOCP)</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">one cooperative queue, no parallelism; proof the pool is optional</td>
+          </tr>
+          <tr class="border-b border-gray-100">
+            <td class="whitespace-nowrap px-3 py-2.5 align-top font-medium text-brand-text">smol / async-executor</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">M:N, threads you spawn</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">Yes</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">Yes (LocalExecutor: no)</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">async-io (epoll/kqueue)</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">small global queue + per-worker queues; you pick the thread count</td>
+          </tr>
+          <tr class="border-b border-gray-100">
+            <td class="whitespace-nowrap px-3 py-2.5 align-top font-medium text-brand-text">glommio</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">thread-per-core, share-nothing</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">No (task pinned to its core)</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">No (Rc / RefCell ok)</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">io_uring (Linux)</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">latency-aware task queues per core; no cross-core locks or stealing</td>
+          </tr>
+          <tr>
+            <td class="whitespace-nowrap px-3 py-2.5 align-top font-medium text-brand-text">embassy (embedded)</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">1 per executor, no_std</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">No</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">No</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">hardware IRQ + timers (no epoll)</td>
+            <td class="px-3 py-2.5 align-top text-brand-body">statically allocated tasks; idle means the CPU sleeps (WFI); interrupt-priority executors</td>
+          </tr>
+        </tbody>
+      </table>
+      <figcaption class="border-t border-gray-100 px-4 py-3 text-xs text-brand-muted">
+        Two big families. <strong class="text-brand-text">Work-stealing M:N</strong> (Tokio, smol) shares tasks across a thread pool, so tasks must be <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Send</code>; great for general servers. <strong class="text-brand-text">Thread-per-core</strong> (glommio, compio) pins each task to one core and shares nothing, so there are no locks and no <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Send</code> bound, usually paired with <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">io_uring</code>; great for storage-heavy or tail-latency work. <strong class="text-brand-text">Embedded</strong> (embassy) drops the OS entirely: the "reactor" is the interrupt controller.
+      </figcaption>
+    </figure>
   </section>
 
   <!-- ====== SAME PATTERN, DIFFERENT RUNTIMES ====== -->
@@ -1834,6 +2221,11 @@ const comparisonTable = [
     <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Same Pattern, Different Runtimes">Same Pattern, Different Runtimes</h2>
     <p class="mb-6 text-brand-body">
       You have seen one runtime from the inside; now compare several from the outside. Pick up to four and put them head to head: first the same <strong class="text-brand-text">spawn &amp; collect</strong> task as above (4 workers computing <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">i * i</code>) to see the bare syntax, then a real-world <strong class="text-brand-text">outbox-relay worker</strong>: a listener watches for new work (e.g. database LISTEN/NOTIFY), signals a wakeup, and N relay workers pick it up and process it concurrently. Each snippet has a short note on what makes that runtime distinctive.
+    </p>
+
+    <h3 id="compare-runtimes" class="mb-2 mt-8 scroll-mt-20 text-lg font-semibold text-brand-text">Comparison table: concurrency runtimes</h3>
+    <p class="mb-6 rounded-lg border border-brand-border bg-gray-50/70 px-4 py-3 text-sm text-brand-body">
+      This is the <strong class="text-brand-text">per-runtime</strong> table: given those futures, how does each concrete runtime <em>schedule</em> the work and which primitives does it hand you (scheduler, I/O backend, spawn bounds, wakeup, fan-out, parallelism)? It deliberately skips "what a future is", that is the language-level story in <a href="#compare-futures" class="text-accent-blue underline underline-offset-2 transition-colors hover:text-accent-emerald">Comparison table: futures across languages</a>. Think of it as the same async value, viewed one layer lower.
     </p>
 
     <RuntimeCompare
@@ -1845,6 +2237,17 @@ const comparisonTable = [
     <p class="mt-4 text-xs text-brand-muted">
       These snippets are illustrative: each async runtime is an external crate, so it needs the matching dependency in <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Cargo.toml</code> (<code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">tokio</code>, <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">smol</code>, <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">glommio</code>). Only the <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">std::thread</code> version is self-contained; <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">glommio</code> additionally requires Linux <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">io_uring</code>, so it will not run in the standard Rust playground.
     </p>
+  </section>
+
+  <!-- ====== QUIZ ====== -->
+  <section class="mb-14">
+    <p class="mono-eyebrow mb-2">// answer them all to reach Poll::Ready</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Quiz: Rust futures">Quiz: Rust futures</h2>
+    <p class="mb-6 text-brand-body">
+      A self-check on everything above. The questions run from medium to hard across the async model, the state machine, executors, <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">Pin</code> / <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">Unpin</code>, the <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">Waker</code> contract, and how Rust differs from Go, JavaScript, Python, C# and Kotlin. Nothing is saved, so run it as often as you like. Answer with a click, or with the keyboard (<code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">1-4</code> / <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">A-D</code> to answer, arrows to move).
+    </p>
+
+    <RustFuturesQuiz client:visible />
   </section>
 
 </BaseLayout>
