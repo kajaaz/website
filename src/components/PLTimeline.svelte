@@ -251,6 +251,9 @@
       {/each}
     </div>
   </div>
+  <p class="mb-6 text-sm text-gray-500">
+    <span class="font-semibold text-brand-text">Bold</span> names are still significantly used today (roughly 5%+ of developers in the <a href="https://survey.stackoverflow.co/2025/technology" target="_blank" rel="noopener noreferrer" class="text-accent-blue underline underline-offset-2 transition-colors hover:text-accent-emerald">2025 Stack Overflow Developer Survey</a>).
+  </p>
 {/if}
 
 {#if isMobile}

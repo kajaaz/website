@@ -15,7 +15,7 @@ export const BAND_META: Record<
   { label: string; color: string; height: number }
 > = {
   "dependently-typed": {
-    label: "Dependently typed",
+    label: "Formal / Dependently typed",
     color: "#8B5CF6",
     height: 48,
   },
@@ -45,7 +45,7 @@ export const BAND_META: Record<
     height: 82,
   },
   "imperative-procedural": {
-    label: "Procedural",
+    label: "Imperative",
     color: "#9F1239",
     height: 65,
   },
