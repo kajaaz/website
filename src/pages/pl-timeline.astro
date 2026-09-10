@@ -100,7 +100,7 @@ for (const t of TRAITS) {
 }
 
 const legend: Record<string, string> = {
-  "imperative-procedural": "You tell the machine what to do, step by step. State is mutated directly. Code is organised into procedures (functions), not objects. Think C, Fortran, Zig.",
+  "imperative-procedural": "You tell the machine what to do, step by step, and state is mutated directly. Code is organised into procedures (functions) rather than objects. This is the classic imperative style. Think C, Fortran, Zig.",
   "object-oriented": "Data and the operations on it live together inside objects. Objects communicate via method calls, and behaviour is shared through inheritance or interfaces. Think Java, Smalltalk.",
   "multi-paradigm": "The language supports several styles at once: you can write procedural, object-oriented, or functional code in the same program and pick whichever fits best. Think Python, Rust, Kotlin.",
   "functional-impure": "Programs are built by composing and passing functions. Side effects like I/O or mutation are allowed anywhere, so you get functional style without strict purity. Think Lisp, OCaml, Elixir.",
@@ -142,18 +142,28 @@ const legendOrder = [
     </p>
   </div>
 
-  <p class="mb-6 text-sm text-brand-muted">
+  <PLTimeline
+    client:visible
+    languages={computed}
+    bands={bands}
+    config={config}
+    traitMeta={traitMeta}
+    langTraitMap={langTraitMap}
+  />
+
+  <p class="mt-12 mb-6 text-sm text-brand-muted">
     Bands run from <strong class="font-semibold text-brand-body">imperative</strong>{" "}
     at the bottom to <strong class="font-semibold text-brand-body">declarative</strong>{" "}
-    at the top. Note these are two different axes: "imperative vs. declarative"
-    is about <em>how</em> you instruct the machine, while{" "}
-    <strong class="font-semibold text-brand-body">procedural</strong>,{" "}
-    <strong class="font-semibold text-brand-body">object-oriented</strong>{" "}
+    at the top. Keep two axes in mind. "Imperative vs. declarative" is about{" "}
+    <em>how</em> you instruct the machine: step-by-step commands that mutate
+    state, versus describing the result you want. The bottom band,{" "}
+    <strong class="font-semibold text-brand-body">Imperative</strong>, is the
+    classic step-by-step style organised into procedures (C, Fortran, Zig).{" "}
+    <strong class="font-semibold text-brand-body">Object-oriented</strong>{" "}
+    is still imperative underneath but bundles state and behaviour into objects,
     and <strong class="font-semibold text-brand-body">functional</strong>{" "}
-    are about how you <em>structure</em> code. So imperative splits into
-    procedural and object-oriented, while functional sits on the declarative
-    side. Each language sits in the family it was born into (a few are
-    multi-paradigm today).
+    sits on the declarative side. Each language sits in the family it was born
+    into (a few are multi-paradigm today).
   </p>
 
   <!-- Paradigm / colour legend with SVG diagrams -->
@@ -284,26 +294,31 @@ const legendOrder = [
     })}
   </div>
 
-  <p class="mb-8 text-sm text-brand-muted">
-    <strong class="font-semibold text-brand-body">Bold</strong> names are still
-    significantly used today (roughly 5%+ of developers in the
-    <a
-      href="https://survey.stackoverflow.co/2025/technology"
-      target="_blank"
-      rel="noopener noreferrer"
-      class="text-accent-blue underline underline-offset-2 transition-colors hover:text-accent-emerald"
-      >2025 Stack Overflow Developer Survey</a
-    >).
-  </p>
-
-  <PLTimeline
-    client:visible
-    languages={computed}
-    bands={bands}
-    config={config}
-    traitMeta={traitMeta}
-    langTraitMap={langTraitMap}
-  />
+  <!-- Beyond paradigm: an execution-model aside -->
+  <div class="mb-8 rounded-lg border border-brand-border bg-white p-4 sm:p-5">
+    <p class="mono-eyebrow mb-2">// another axis: how the code is run</p>
+    <p class="mb-3 text-sm font-semibold text-brand-text">Scripting vs dynamic languages</p>
+    <p class="mb-3 text-sm leading-relaxed text-brand-body">
+      Paradigm is not the only way to slice this map. Two families that often get lumped together are actually different things:
+    </p>
+    <div class="grid gap-3 sm:grid-cols-2">
+      <div class="rounded-md border border-brand-border bg-gray-50/60 p-3">
+        <p class="mb-1 text-sm font-semibold" style="color:#78716C">Scripting (glue / automation)</p>
+        <p class="text-xs leading-relaxed text-brand-muted">
+          Built to drive other programs and automate tasks: run commands, move files, wire pipelines. A classic shell is read and executed command by command, with no compiler building a program ahead of time. Think Bash / <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">sh</code>, AWK.
+        </p>
+      </div>
+      <div class="rounded-md border border-brand-border bg-gray-50/60 p-3">
+        <p class="mb-1 text-sm font-semibold" style="color:#EA580C">Dynamic languages</p>
+        <p class="text-xs leading-relaxed text-brand-body">
+          General-purpose languages whose types are resolved at runtime. The tell-tale sign: the <strong class="text-brand-text">compiler is a library of the runtime</strong>. Running the program means the runtime loads the source, compiles it to bytecode or machine code on the fly, and executes it in the same process, so there is no separate build step. Think JavaScript, Python, Ruby.
+        </p>
+      </div>
+    </div>
+    <p class="mt-3 text-xs leading-relaxed text-brand-muted">
+      The line is fuzzy: an embeddable language like <strong class="text-brand-body">Lua</strong> is a fully dynamic language (it has a real bytecode compiler bundled in its runtime) that also happens to be a favourite for scripting. Use the <strong class="text-brand-body">Scripting</strong> and <strong class="text-brand-body">Interpreted (compiler in the runtime)</strong> toggles in <a href="#shared-traits" class="text-accent-blue underline underline-offset-2 transition-colors hover:text-accent-emerald">Shared traits</a> to light these two groups up on the timeline.
+    </p>
+  </div>
 
   <!-- ====== COMPARE ====== -->
   <section class="mt-16">
