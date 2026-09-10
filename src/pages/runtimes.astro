@@ -1479,9 +1479,57 @@ const comparisonTable = [
         Polling only helps if the thing you wait on can answer "not ready yet, I'll signal you". A <strong class="text-brand-text">blocking</strong> syscall like <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">read</code> / <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">write</code> gives no such handle: it just parks the calling thread until data arrives. To wait on many blocking calls at once your only option is <strong class="text-brand-text">many threads</strong>, and the kernel schedules them. That is concurrency, but not necessarily parallelism: those threads may all share one core and simply take turns.
       </p>
       <p class="text-sm text-brand-body">
-        An <strong class="text-brand-text">async interface</strong> like <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">epoll</code> / <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">kqueue</code> / <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">io_uring</code> flips this around: one thread registers thousands of file descriptors and asks the kernel which are ready. That readiness signal is exactly what the executor's <em>reactor</em> uses to fire the waker and re-poll a task. Without an async interface underneath, "async" buys you nothing over threads.
+        An <strong class="text-brand-text">async interface</strong> flips this around, and there are two families. <strong class="text-brand-text">Readiness-based</strong> ones (<code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">epoll</code>, <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">kqueue</code>) let one thread register thousands of descriptors and ask the kernel which are ready, then you run the non-blocking <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">read</code> yourself. <strong class="text-brand-text">Completion-based</strong> ones (<code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">io_uring</code>, IOCP) go further: you submit the whole operation and the kernel hands back the finished result. Either way, that signal is what the executor's <em>reactor</em> uses to fire the waker and re-poll a task. So <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">epoll</code> is not "the" async interface, just the most common one on Linux; without <em>some</em> async interface underneath, "async" buys you nothing over threads.
       </p>
     </div>
+
+    <figure class="mb-8 overflow-x-auto rounded-xl border border-brand-border bg-white">
+      <table class="min-w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-200 bg-gray-50/80">
+            <th class="px-4 py-3 text-left font-semibold text-brand-text">Interface</th>
+            <th class="px-4 py-3 text-left font-semibold text-brand-text">Platform</th>
+            <th class="px-4 py-3 text-left font-semibold text-brand-text">Model</th>
+            <th class="px-4 py-3 text-left font-semibold text-brand-text">How you reach it in Rust</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="border-b border-gray-100">
+            <td class="whitespace-nowrap px-4 py-2.5 font-mono text-[13px] font-medium text-brand-text">epoll</td>
+            <td class="whitespace-nowrap px-4 py-2.5 text-brand-body">Linux</td>
+            <td class="whitespace-nowrap px-4 py-2.5"><span class="inline-block rounded px-2 py-0.5 text-xs font-medium" style="background:rgba(22,101,58,0.10);color:#16653a">Readiness</span></td>
+            <td class="px-4 py-2.5 text-brand-body"><code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">mio</code>, auto-selected by Tokio's <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">enable_io()</code> (so, by <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">#[tokio::main]</code>)</td>
+          </tr>
+          <tr class="border-b border-gray-100 bg-gray-50/40">
+            <td class="whitespace-nowrap px-4 py-2.5 font-mono text-[13px] font-medium text-brand-text">kqueue</td>
+            <td class="whitespace-nowrap px-4 py-2.5 text-brand-body">macOS / BSD</td>
+            <td class="whitespace-nowrap px-4 py-2.5"><span class="inline-block rounded px-2 py-0.5 text-xs font-medium" style="background:rgba(22,101,58,0.10);color:#16653a">Readiness</span></td>
+            <td class="px-4 py-2.5 text-brand-body"><code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">mio</code>, Tokio's default on those platforms (same <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">enable_io()</code>)</td>
+          </tr>
+          <tr class="border-b border-gray-100">
+            <td class="whitespace-nowrap px-4 py-2.5 font-mono text-[13px] font-medium text-brand-text">select / poll</td>
+            <td class="whitespace-nowrap px-4 py-2.5 text-brand-body">POSIX (legacy)</td>
+            <td class="whitespace-nowrap px-4 py-2.5"><span class="inline-block rounded px-2 py-0.5 text-xs font-medium" style="background:rgba(22,101,58,0.10);color:#16653a">Readiness</span></td>
+            <td class="px-4 py-2.5 text-brand-body"><code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">libc</code> directly; largely superseded by <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">epoll</code> / <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">kqueue</code></td>
+          </tr>
+          <tr class="border-b border-gray-100 bg-gray-50/40">
+            <td class="whitespace-nowrap px-4 py-2.5 font-mono text-[13px] font-medium text-brand-text">IOCP</td>
+            <td class="whitespace-nowrap px-4 py-2.5 text-brand-body">Windows</td>
+            <td class="whitespace-nowrap px-4 py-2.5"><span class="inline-block rounded px-2 py-0.5 text-xs font-medium" style="background:rgba(67,56,202,0.10);color:#4338CA">Completion</span></td>
+            <td class="px-4 py-2.5 text-brand-body"><code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">mio</code>, Tokio's default on Windows (again via <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">enable_io()</code>)</td>
+          </tr>
+          <tr>
+            <td class="whitespace-nowrap px-4 py-2.5 font-mono text-[13px] font-medium text-brand-text">io_uring</td>
+            <td class="whitespace-nowrap px-4 py-2.5 text-brand-body">Linux (modern)</td>
+            <td class="whitespace-nowrap px-4 py-2.5"><span class="inline-block rounded px-2 py-0.5 text-xs font-medium" style="background:rgba(67,56,202,0.10);color:#4338CA">Completion</span></td>
+            <td class="px-4 py-2.5 text-brand-body">Opt-in, a different runtime: <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">tokio-uring</code>, <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">glommio</code>, or <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">compio</code></td>
+          </tr>
+        </tbody>
+      </table>
+      <figcaption class="border-t border-gray-100 px-4 py-3 text-xs text-brand-muted">
+        <strong class="text-brand-text">Readiness</strong>: the kernel says "fd 7 is ready", then you run the non-blocking <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">read</code> yourself. <strong class="text-brand-text">Completion</strong>: you submit the operation and the kernel hands back the finished result. On stock Tokio you never pick one, <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">enable_io()</code> selects the platform default (epoll / kqueue / IOCP) through <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">mio</code>; <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">io_uring</code> means choosing a different runtime.
+      </figcaption>
+    </figure>
 
     <p class="mb-4 text-brand-body">
       Here is that interface in action. Follow one future that is waiting to read from a TCP socket, and watch how the <em>reactor</em> uses <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">epoll</code> to keep the thread free instead of blocking it inside a <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">read</code>:
