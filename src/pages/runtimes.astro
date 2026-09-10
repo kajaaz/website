@@ -522,6 +522,31 @@ async fn example() -> i32 {
 const returnSyncHtml = await highlightCode("rust", returnSyncSource);
 const returnAsyncHtml = await highlightCode("rust", returnAsyncSource);
 
+// Where the epoll instance is created: #[tokio::main] expands to this.
+const ioDriverSource = `#[tokio::main]
+async fn main() {
+    // ...your async code...
+}
+
+// expands to roughly:
+fn main() {
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .enable_io()    // start the I/O driver -> creates ONE epoll instance
+        .enable_time()  // timer driver, for sleeps / timeouts
+        .build()
+        .unwrap();
+
+    rt.block_on(async {
+        // every task on this runtime shares that single epoll instance
+    });
+}
+
+// enable_io() eventually calls, exactly once:
+//   mio::Poll::new()  ->  epoll_create1(EPOLL_CLOEXEC)   // on Linux
+// The reactor owns that Poll. When all run queues are empty, a worker
+// parks on it via epoll_wait; the readiness it returns fires the Wakers.`;
+const ioDriverHtml = await highlightCode("rust", ioDriverSource);
+
 // How "async" is realised across languages. Each `code` runs the SAME task:
 // an async double(x) => x * 2, called on 10 and 20 concurrently, summed to 60.
 const asyncLangModels = [
@@ -818,7 +843,16 @@ const comparisonTable = [
 
 <BaseLayout title="Runtimes">
   <p class="mono-eyebrow mb-1"><span class="text-accent-blue">$</span> ldd --version # how does your code actually run?</p>
-  <h1 class="glitch is-intro mb-8 text-3xl font-bold tracking-tight text-brand-text" data-text="Runtimes">Runtimes</h1>
+  <h1 class="glitch is-intro mb-6 text-3xl font-bold tracking-tight text-brand-text" data-text="Runtimes">Runtimes</h1>
+
+  <p class="mb-10 text-brand-body">
+    Two questions, one page. First, <strong class="text-brand-text">how does a single program run</strong>, from source code down to the CPU? Then, <strong class="text-brand-text">how does it do many things at once</strong>, with threads, async, futures and the runtimes that schedule them? Read straight through or jump around: each section builds on the one before it.
+  </p>
+
+  <div class="mb-8 flex items-center gap-3">
+    <span class="text-xs font-bold uppercase tracking-widest text-accent-emerald">Part 1 · How your code runs</span>
+    <span class="h-px flex-1 bg-gray-200"></span>
+  </div>
 
   <!-- ====== INTRO ====== -->
   <section class="mb-14">
@@ -980,6 +1014,88 @@ const comparisonTable = [
     </div>
   </section>
 
+  <!-- ====== PIPELINE DIAGRAM (closes Part 1) ====== -->
+  <section class="mb-14">
+    <p class="mono-eyebrow mb-2">// from source to execution</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="The Big Picture">The Big Picture</h2>
+    <p class="mb-6 text-brand-body">
+      To close Part 1: all execution models are variations on the same pipeline. The key question is <em>when</em> compilation happens and <em>how many layers</em> sit between your source code and the CPU.
+    </p>
+
+    <figure class="rounded-xl border border-brand-border bg-white p-4 sm:p-6">
+      <svg viewBox="0 0 800 260" class="h-auto w-full" role="img" aria-label="Source code to execution pipeline showing AOT, JIT, interpreter and Wasm paths">
+        <defs>
+          <marker id="rt-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#71717A" />
+          </marker>
+        </defs>
+        <g font-family="Inter, sans-serif" text-anchor="middle">
+          <!-- Source -->
+          <rect x="20" y="100" width="120" height="56" rx="9" fill="rgba(37,99,235,0.08)" stroke="#2563EB" stroke-width="1.5"/>
+          <text x="80" y="124" font-size="13" font-weight="700" fill="#18181B">Source code</text>
+          <text x="80" y="142" font-size="10" fill="#71717A">.rs / .c / .py / .js</text>
+
+          <!-- AOT path -->
+          <rect x="220" y="20" width="130" height="48" rx="9" fill="rgba(22,101,58,0.10)" stroke="#16653a" stroke-width="1.5"/>
+          <text x="285" y="42" font-size="12" font-weight="700" fill="#16653a">AOT compiler</text>
+          <text x="285" y="56" font-size="10" fill="#16653a">gcc, rustc, go</text>
+          <line x1="140" y1="118" x2="218" y2="50" stroke="#71717A" stroke-width="1.3" marker-end="url(#rt-arrow)"/>
+
+          <rect x="420" y="20" width="120" height="48" rx="9" fill="rgba(22,101,58,0.10)" stroke="#16653a" stroke-width="1.5"/>
+          <text x="480" y="42" font-size="12" font-weight="700" fill="#16653a">Machine code</text>
+          <text x="480" y="56" font-size="10" fill="#16653a">ELF / Mach-O / PE</text>
+          <line x1="350" y1="44" x2="418" y2="44" stroke="#71717A" stroke-width="1.3" marker-end="url(#rt-arrow)"/>
+
+          <!-- JIT path -->
+          <rect x="220" y="100" width="130" height="48" rx="9" fill="rgba(67,56,202,0.10)" stroke="#4338CA" stroke-width="1.5"/>
+          <text x="285" y="122" font-size="12" font-weight="700" fill="#4338CA">Bytecode + JIT</text>
+          <text x="285" y="136" font-size="10" fill="#4338CA">JVM, V8, CLR</text>
+          <line x1="140" y1="128" x2="218" y2="124" stroke="#71717A" stroke-width="1.3" marker-end="url(#rt-arrow)"/>
+
+          <rect x="420" y="100" width="120" height="48" rx="9" fill="rgba(67,56,202,0.10)" stroke="#4338CA" stroke-width="1.5"/>
+          <text x="480" y="122" font-size="12" font-weight="700" fill="#4338CA">Optimised code</text>
+          <text x="480" y="136" font-size="10" fill="#4338CA">at runtime</text>
+          <line x1="350" y1="124" x2="418" y2="124" stroke="#71717A" stroke-width="1.3" marker-end="url(#rt-arrow)"/>
+
+          <!-- Interpreter path -->
+          <rect x="220" y="180" width="130" height="48" rx="9" fill="rgba(190,24,93,0.10)" stroke="#be185d" stroke-width="1.5"/>
+          <text x="285" y="202" font-size="12" font-weight="700" fill="#be185d">Interpreter</text>
+          <text x="285" y="216" font-size="10" fill="#be185d">CPython, MRI, Bash</text>
+          <line x1="140" y1="138" x2="218" y2="198" stroke="#71717A" stroke-width="1.3" marker-end="url(#rt-arrow)"/>
+
+          <rect x="420" y="180" width="120" height="48" rx="9" fill="rgba(190,24,93,0.10)" stroke="#be185d" stroke-width="1.5"/>
+          <text x="480" y="202" font-size="12" font-weight="700" fill="#be185d">Executed live</text>
+          <text x="480" y="216" font-size="10" fill="#be185d">statement by stmt</text>
+          <line x1="350" y1="204" x2="418" y2="204" stroke="#71717A" stroke-width="1.3" marker-end="url(#rt-arrow)"/>
+
+          <!-- CPU -->
+          <rect x="620" y="80" width="140" height="76" rx="12" fill="rgba(16,185,129,0.12)" stroke="#10B981" stroke-width="2"/>
+          <text x="690" y="108" font-size="15" font-weight="800" fill="#047857">CPU</text>
+          <text x="690" y="126" font-size="10" fill="#059669">hardware execution</text>
+          <text x="690" y="142" font-size="9" fill="#6B7280">x86 / ARM / RISC-V</text>
+
+          <line x1="540" y1="44" x2="618" y2="100" stroke="#71717A" stroke-width="1.3" marker-end="url(#rt-arrow)"/>
+          <line x1="540" y1="124" x2="618" y2="118" stroke="#71717A" stroke-width="1.3" marker-end="url(#rt-arrow)"/>
+          <line x1="540" y1="204" x2="618" y2="140" stroke="#71717A" stroke-width="1.3" marker-end="url(#rt-arrow)"/>
+        </g>
+      </svg>
+      <figcaption class="mt-3 text-sm text-brand-muted">
+        AOT-compiled languages (Rust, C, Go) take the top path: everything is resolved before execution. JIT languages (Java, JS) defer optimisation to runtime. Interpreters (Python, Bash) skip compilation entirely.
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- ====== PART 2 DIVIDER ====== -->
+  <div class="mb-8 mt-4">
+    <div class="mb-3 flex items-center gap-3">
+      <span class="text-xs font-bold uppercase tracking-widest text-accent-emerald">Part 2 · Doing many things at once</span>
+      <span class="h-px flex-1 bg-gray-200"></span>
+    </div>
+    <p class="text-brand-body">
+      So far, one program running start to finish. But servers and apps must juggle thousands of things at once, and most of the time each one is just <em>waiting</em>, on a socket, a disk, or a timer. The rest of this page is about how a runtime manages all that waiting: threads, async, futures, and the schedulers that drive them.
+    </p>
+  </div>
+
   <!-- ====== SYNC VS ASYNC (RUST) ====== -->
   <section class="mb-14">
     <p class="mono-eyebrow mb-2">// std::thread vs async fn</p>
@@ -1132,9 +1248,65 @@ const comparisonTable = [
       </p>
     </div>
 
-    <!-- State machine figure -->
+    <!-- Code-to-states mapping figure -->
     <figure class="mb-4 rounded-xl border border-brand-border bg-white p-4 sm:p-6">
-      <svg viewBox="0 0 820 250" class="h-auto w-full" role="img" aria-label="An async fn compiles to a state machine: Start, then two await states that each keep returning Pending until their resource is ready, then Done with Ready(n)">
+      <svg viewBox="0 0 820 260" class="h-auto w-full" role="img" aria-label="Mapping the handle() source to the states of its future: the function entry maps to Start, each .await line maps to a state (Reading, Storing), and the final expression maps to Done carrying Ready(n)">
+        <defs>
+          <marker id="map-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#71717A" />
+          </marker>
+          <marker id="map-arrow-pink" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#be185d" />
+          </marker>
+        </defs>
+        <g font-family="Inter, sans-serif">
+          <text x="24" y="28" font-size="11" font-weight="700" fill="#18181B">Your async fn</text>
+          <text x="560" y="28" font-size="11" font-weight="700" fill="#18181B">States of the future</text>
+
+          <!-- code card -->
+          <rect x="24" y="40" width="392" height="190" rx="10" fill="#FAFAFA" stroke="#E4E4E7" stroke-width="1"/>
+          <rect x="32" y="90" width="376" height="18" rx="3" fill="rgba(190,24,93,0.08)"/>
+          <rect x="32" y="120" width="376" height="18" rx="3" fill="rgba(190,24,93,0.08)"/>
+          <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12.5" fill="#27272A">
+            <text x="36" y="74">async fn handle(sock) -> usize &#123;</text>
+            <text x="36" y="104">    let n = read(sock).await;</text>
+            <text x="36" y="134">    store(&amp;buf[..n]).await;</text>
+            <text x="36" y="164">    n</text>
+            <text x="36" y="194">&#125;</text>
+          </g>
+          <text x="406" y="104" font-size="8.5" font-weight="600" fill="#be185d" text-anchor="end">pause #1</text>
+          <text x="406" y="134" font-size="8.5" font-weight="600" fill="#be185d" text-anchor="end">pause #2</text>
+
+          <!-- state chips -->
+          <g text-anchor="middle">
+            <rect x="560" y="48" width="236" height="40" rx="8" fill="rgba(217,119,6,0.08)" stroke="#D97706" stroke-width="1.4"/>
+            <text x="678" y="72" font-size="11" font-weight="700" fill="#18181B">Start</text>
+
+            <rect x="560" y="100" width="236" height="40" rx="8" fill="rgba(217,119,6,0.08)" stroke="#D97706" stroke-width="1.4"/>
+            <text x="678" y="124" font-size="11" font-weight="700" fill="#18181B">.await #1 · Reading</text>
+
+            <rect x="560" y="152" width="236" height="40" rx="8" fill="rgba(217,119,6,0.08)" stroke="#D97706" stroke-width="1.4"/>
+            <text x="678" y="176" font-size="11" font-weight="700" fill="#18181B">.await #2 · Storing</text>
+
+            <rect x="560" y="204" width="236" height="40" rx="8" fill="rgba(22,101,58,0.12)" stroke="#16653a" stroke-width="1.4"/>
+            <text x="678" y="228" font-size="11" font-weight="700" fill="#16653a">Done · Ready(n)</text>
+          </g>
+
+          <!-- mapping arrows -->
+          <line x1="418" y1="68" x2="558" y2="68" stroke="#71717A" stroke-width="1.3" marker-end="url(#map-arrow)"/>
+          <line x1="418" y1="99" x2="558" y2="120" stroke="#be185d" stroke-width="1.3" marker-end="url(#map-arrow-pink)"/>
+          <line x1="418" y1="129" x2="558" y2="172" stroke="#be185d" stroke-width="1.3" marker-end="url(#map-arrow-pink)"/>
+          <line x1="418" y1="159" x2="558" y2="224" stroke="#71717A" stroke-width="1.3" marker-end="url(#map-arrow)"/>
+        </g>
+      </svg>
+      <figcaption class="mt-3 text-sm text-brand-muted">
+        How the code becomes states. The function entry is <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Start</code>; each <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">.await</code> line (pink) becomes a state the future can pause in, <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Reading</code> then <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Storing</code>; the final expression is <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Done</code>, carrying <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Ready(n)</code>.
+      </figcaption>
+    </figure>
+
+    <!-- State machine figure (the future + its executor) -->
+    <figure class="mb-4 rounded-xl border border-brand-border bg-white p-4 sm:p-6">
+      <svg viewBox="0 0 820 300" class="h-auto w-full" role="img" aria-label="The whole enum is the future; an executor repeatedly calls poll on it. Inside, the current variant marks where execution is paused: Start, two await states that keep returning Pending until ready, then Done with Ready(n).">
         <defs>
           <marker id="sm-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" fill="#71717A" />
@@ -1143,40 +1315,57 @@ const comparisonTable = [
             <path d="M0,0 L10,5 L0,10 z" fill="#be185d" />
           </marker>
         </defs>
-        <g font-family="Inter, sans-serif" text-anchor="middle">
-          <rect x="16" y="104" width="150" height="66" rx="10" fill="rgba(217,119,6,0.08)" stroke="#D97706" stroke-width="1.5"/>
-          <text x="91" y="132" font-size="13" font-weight="700" fill="#18181B">Start</text>
-          <text x="91" y="150" font-size="10" fill="#71717A">not polled yet</text>
+        <g font-family="Inter, sans-serif">
+          <!-- Executor -->
+          <rect x="24" y="20" width="200" height="54" rx="10" fill="rgba(217,119,6,0.10)" stroke="#D97706" stroke-width="1.5"/>
+          <text x="124" y="43" font-size="13" font-weight="700" fill="#18181B" text-anchor="middle">Executor</text>
+          <text x="124" y="61" font-size="10" fill="#71717A" text-anchor="middle">calls future.poll(cx) repeatedly</text>
 
-          <rect x="236" y="104" width="160" height="66" rx="10" fill="rgba(217,119,6,0.08)" stroke="#D97706" stroke-width="1.5"/>
-          <text x="316" y="132" font-size="12" font-weight="700" fill="#18181B">.await #1</text>
-          <text x="316" y="150" font-size="10" fill="#71717A">reading socket</text>
+          <!-- poll / return arrows between executor and the future -->
+          <line x1="104" y1="74" x2="104" y2="110" stroke="#71717A" stroke-width="1.3" marker-end="url(#sm-arrow)"/>
+          <text x="98" y="96" font-size="10" fill="#52525B" text-anchor="end">poll()</text>
+          <line x1="150" y1="110" x2="150" y2="74" stroke="#71717A" stroke-width="1.3" marker-end="url(#sm-arrow)"/>
+          <text x="156" y="96" font-size="10" fill="#52525B" text-anchor="start">Pending / Ready(n)</text>
 
-          <rect x="466" y="104" width="160" height="66" rx="10" fill="rgba(217,119,6,0.08)" stroke="#D97706" stroke-width="1.5"/>
-          <text x="546" y="132" font-size="12" font-weight="700" fill="#18181B">.await #2</text>
-          <text x="546" y="150" font-size="10" fill="#71717A">storing data</text>
+          <!-- Future container -->
+          <rect x="24" y="112" width="780" height="172" rx="12" fill="none" stroke="#D97706" stroke-width="1.4" stroke-dasharray="6 4"/>
+          <text x="38" y="132" font-size="10.5" font-weight="600" fill="#B45309">The future = enum Handle (a few hundred bytes). Its current variant marks where it is paused.</text>
 
-          <rect x="700" y="104" width="104" height="66" rx="10" fill="rgba(22,101,58,0.10)" stroke="#16653a" stroke-width="1.5"/>
-          <text x="752" y="132" font-size="13" font-weight="700" fill="#16653a">Done</text>
-          <text x="752" y="150" font-size="10" fill="#16653a">Ready(n)</text>
+          <g text-anchor="middle">
+            <rect x="44" y="196" width="146" height="62" rx="10" fill="rgba(217,119,6,0.08)" stroke="#D97706" stroke-width="1.5"/>
+            <text x="117" y="222" font-size="13" font-weight="700" fill="#18181B">Start</text>
+            <text x="117" y="240" font-size="10" fill="#71717A">not polled yet</text>
 
-          <!-- transitions -->
-          <line x1="166" y1="137" x2="234" y2="137" stroke="#71717A" stroke-width="1.3" marker-end="url(#sm-arrow)"/>
-          <text x="200" y="128" font-size="9" fill="#52525B">poll</text>
-          <line x1="396" y1="137" x2="464" y2="137" stroke="#71717A" stroke-width="1.3" marker-end="url(#sm-arrow)"/>
-          <text x="430" y="128" font-size="9" fill="#52525B">read ready</text>
-          <line x1="626" y1="137" x2="698" y2="137" stroke="#71717A" stroke-width="1.3" marker-end="url(#sm-arrow)"/>
-          <text x="662" y="128" font-size="9" fill="#52525B">store ready</text>
+            <rect x="250" y="196" width="156" height="62" rx="10" fill="rgba(217,119,6,0.08)" stroke="#D97706" stroke-width="1.5"/>
+            <text x="328" y="222" font-size="12" font-weight="700" fill="#18181B">.await #1</text>
+            <text x="328" y="240" font-size="10" fill="#71717A">reading socket</text>
 
-          <!-- pending self-loops -->
-          <path d="M292 104 C 292 60, 340 60, 340 104" fill="none" stroke="#be185d" stroke-width="1.3" marker-end="url(#sm-arrow-pink)"/>
-          <text x="316" y="52" font-size="10" font-weight="600" fill="#be185d">poll → Pending</text>
-          <path d="M522 104 C 522 60, 570 60, 570 104" fill="none" stroke="#be185d" stroke-width="1.3" marker-end="url(#sm-arrow-pink)"/>
-          <text x="546" y="52" font-size="10" font-weight="600" fill="#be185d">poll → Pending</text>
+            <rect x="452" y="196" width="156" height="62" rx="10" fill="rgba(217,119,6,0.08)" stroke="#D97706" stroke-width="1.5"/>
+            <text x="530" y="222" font-size="12" font-weight="700" fill="#18181B">.await #2</text>
+            <text x="530" y="240" font-size="10" fill="#71717A">storing data</text>
+
+            <rect x="660" y="196" width="128" height="62" rx="10" fill="rgba(22,101,58,0.10)" stroke="#16653a" stroke-width="1.5"/>
+            <text x="724" y="222" font-size="13" font-weight="700" fill="#16653a">Done</text>
+            <text x="724" y="240" font-size="10" fill="#16653a">Ready(n)</text>
+
+            <!-- transitions -->
+            <line x1="190" y1="227" x2="248" y2="227" stroke="#71717A" stroke-width="1.3" marker-end="url(#sm-arrow)"/>
+            <text x="219" y="219" font-size="9" fill="#52525B">poll</text>
+            <line x1="406" y1="227" x2="450" y2="227" stroke="#71717A" stroke-width="1.3" marker-end="url(#sm-arrow)"/>
+            <text x="428" y="219" font-size="9" fill="#52525B">read ready</text>
+            <line x1="608" y1="227" x2="658" y2="227" stroke="#71717A" stroke-width="1.3" marker-end="url(#sm-arrow)"/>
+            <text x="633" y="219" font-size="9" fill="#52525B">store ready</text>
+
+            <!-- pending self-loops -->
+            <path d="M304 196 C 304 164, 352 164, 352 196" fill="none" stroke="#be185d" stroke-width="1.3" marker-end="url(#sm-arrow-pink)"/>
+            <text x="328" y="158" font-size="10" font-weight="600" fill="#be185d">poll → Pending</text>
+            <path d="M506 196 C 506 164, 554 164, 554 196" fill="none" stroke="#be185d" stroke-width="1.3" marker-end="url(#sm-arrow-pink)"/>
+            <text x="530" y="158" font-size="10" font-weight="600" fill="#be185d">poll → Pending</text>
+          </g>
         </g>
       </svg>
       <figcaption class="mt-3 text-sm text-brand-muted">
-        The same <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">handle()</code> function seen as a state machine. Each <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">.await</code> is a state the future can rest in: while the resource is not ready, <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">poll</code> keeps returning <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Pending</code> (the pink loops); when it becomes ready the machine advances one state, until it reaches <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Done</code>.
+        Now with the future itself in view. The whole <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">enum Handle</code> is the future: one value the <strong class="text-brand-text">executor</strong> drives by calling <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">poll()</code>. Its current variant is the state, and each <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">.await</code> is a state it can rest in: while the resource is not ready, <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">poll</code> returns <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Pending</code> (the pink loops); when it becomes ready the machine advances one state, until <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Done</code> returns <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Ready(n)</code>.
       </figcaption>
     </figure>
 
@@ -1185,48 +1374,91 @@ const comparisonTable = [
 
     <!-- Poll-over-time figure -->
     <figure class="mb-8 rounded-xl border border-brand-border bg-white p-4 sm:p-6">
-      <svg viewBox="0 0 820 205" class="h-auto w-full" role="img" aria-label="One thread over time interleaves two tasks: poll A returns Pending, poll B returns Pending, and when each resource is ready the task is polled again and returns Ready">
-        <defs>
-          <marker id="tl-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M0,0 L10,5 L0,10 z" fill="#71717A" />
-          </marker>
-        </defs>
+      <svg viewBox="0 0 820 300" class="h-auto w-full" role="img" aria-label="Two futures A and B tracked over time. Each future's lifecycle is a lane: created, then running while polled, then Pending and parked with a waker, then running again when woken, then Ready. Below, a single thread lane shows it polls only one future at a time.">
         <g font-family="Inter, sans-serif">
-          <text x="16" y="22" font-size="11" font-weight="700" fill="#18181B">One thread, over time</text>
-          <text x="800" y="22" font-size="10" fill="#71717A" text-anchor="end">time →</text>
+          <text x="14" y="20" font-size="11" font-weight="700" fill="#18181B">One thread, over time</text>
+          <text x="806" y="20" font-size="10" fill="#71717A" text-anchor="end">time →</text>
 
-          <!-- parked spans -->
-          <line x1="176" y1="66" x2="470" y2="66" stroke="#D97706" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#tl-arrow)"/>
-          <text x="323" y="59" font-size="10" font-weight="600" fill="#B45309" text-anchor="middle">A parked · waker registered</text>
-          <line x1="341" y1="92" x2="635" y2="92" stroke="#2563EB" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#tl-arrow)"/>
-          <text x="488" y="106" font-size="10" font-weight="600" fill="#2563EB" text-anchor="middle">B parked · waker registered</text>
+          <!-- row labels -->
+          <text x="14" y="73" font-size="11" font-weight="700" fill="#18181B">Future A</text>
+          <text x="14" y="129" font-size="11" font-weight="700" fill="#2563EB">Future B</text>
+          <text x="14" y="201" font-size="11" font-weight="700" fill="#18181B">Thread</text>
 
-          <!-- lane baseline -->
-          <line x1="16" y1="178" x2="804" y2="178" stroke="#E4E4E7" stroke-width="2"/>
+          <!-- wake markers -->
+          <text x="472" y="45" font-size="10" font-weight="600" fill="#B45309" text-anchor="middle">A's I/O ready → wake()</text>
+          <text x="592" y="103" font-size="10" font-weight="600" fill="#2563EB" text-anchor="middle">B's I/O ready → wake()</text>
 
           <g text-anchor="middle">
-            <rect x="20" y="126" width="150" height="46" rx="8" fill="rgba(217,119,6,0.10)" stroke="#D97706" stroke-width="1.4"/>
-            <text x="95" y="146" font-size="12" font-weight="700" fill="#18181B">poll(A)</text>
-            <text x="95" y="162" font-size="10" fill="#be185d">Pending</text>
+            <!-- ===== Future A lane (y 54..84) ===== -->
+            <rect x="92" y="54" width="60" height="30" rx="6" fill="#F4F4F5" stroke="#D4D4D8" stroke-width="1"/>
+            <text x="122" y="73" font-size="9" fill="#A1A1AA">created</text>
+            <rect x="152" y="54" width="100" height="30" rx="6" fill="#D97706"/>
+            <text x="202" y="73" font-size="10" font-weight="600" fill="#ffffff">running</text>
+            <rect x="252" y="54" width="220" height="30" rx="6" fill="rgba(217,119,6,0.08)" stroke="#D97706" stroke-width="1.2" stroke-dasharray="5 4"/>
+            <text x="362" y="73" font-size="10" font-weight="600" fill="#B45309">Pending · parked, waker set</text>
+            <rect x="472" y="54" width="100" height="30" rx="6" fill="#D97706"/>
+            <text x="522" y="73" font-size="10" font-weight="600" fill="#ffffff">running</text>
+            <rect x="572" y="54" width="228" height="30" rx="6" fill="rgba(22,101,58,0.15)" stroke="#16653a" stroke-width="1.2"/>
+            <text x="686" y="73" font-size="10" font-weight="600" fill="#16653a">Ready(T) ✓ done</text>
 
-            <rect x="185" y="126" width="150" height="46" rx="8" fill="rgba(37,99,235,0.10)" stroke="#2563EB" stroke-width="1.4"/>
-            <text x="260" y="146" font-size="12" font-weight="700" fill="#18181B">poll(B)</text>
-            <text x="260" y="162" font-size="10" fill="#be185d">Pending</text>
+            <!-- ===== Future B lane (y 110..140) ===== -->
+            <rect x="92" y="110" width="180" height="30" rx="6" fill="#F4F4F5" stroke="#D4D4D8" stroke-width="1"/>
+            <text x="182" y="129" font-size="9" fill="#A1A1AA">created, waiting its turn</text>
+            <rect x="272" y="110" width="100" height="30" rx="6" fill="#2563EB"/>
+            <text x="322" y="129" font-size="10" font-weight="600" fill="#ffffff">running</text>
+            <rect x="372" y="110" width="220" height="30" rx="6" fill="rgba(37,99,235,0.08)" stroke="#2563EB" stroke-width="1.2" stroke-dasharray="5 4"/>
+            <text x="482" y="129" font-size="10" font-weight="600" fill="#2563EB">Pending · parked, waker set</text>
+            <rect x="592" y="110" width="100" height="30" rx="6" fill="#2563EB"/>
+            <text x="642" y="129" font-size="10" font-weight="600" fill="#ffffff">running</text>
+            <rect x="692" y="110" width="108" height="30" rx="6" fill="rgba(22,101,58,0.15)" stroke="#16653a" stroke-width="1.2"/>
+            <text x="746" y="129" font-size="10" font-weight="600" fill="#16653a">Ready ✓</text>
 
-            <rect x="470" y="126" width="150" height="46" rx="8" fill="rgba(217,119,6,0.10)" stroke="#D97706" stroke-width="1.4"/>
-            <text x="545" y="146" font-size="12" font-weight="700" fill="#18181B">poll(A)</text>
-            <text x="545" y="162" font-size="10" fill="#16653a">Ready ✓</text>
+            <!-- ===== Thread lane (y 176..218) ===== -->
+            <rect x="152" y="176" width="100" height="42" rx="7" fill="rgba(217,119,6,0.14)" stroke="#D97706" stroke-width="1.3"/>
+            <text x="202" y="195" font-size="11" font-weight="700" fill="#18181B">poll(A)</text>
+            <text x="202" y="210" font-size="9" fill="#be185d">→ Pending</text>
 
-            <rect x="635" y="126" width="150" height="46" rx="8" fill="rgba(37,99,235,0.10)" stroke="#2563EB" stroke-width="1.4"/>
-            <text x="710" y="146" font-size="12" font-weight="700" fill="#18181B">poll(B)</text>
-            <text x="710" y="162" font-size="10" fill="#16653a">Ready ✓</text>
+            <rect x="272" y="176" width="100" height="42" rx="7" fill="rgba(37,99,235,0.14)" stroke="#2563EB" stroke-width="1.3"/>
+            <text x="322" y="195" font-size="11" font-weight="700" fill="#18181B">poll(B)</text>
+            <text x="322" y="210" font-size="9" fill="#be185d">→ Pending</text>
 
-            <text x="402" y="152" font-size="10" fill="#A1A1AA">meanwhile: free</text>
+            <rect x="382" y="176" width="80" height="42" rx="7" fill="#FAFAFA" stroke="#E4E4E7" stroke-width="1.2" stroke-dasharray="4 4"/>
+            <text x="422" y="195" font-size="10" fill="#A1A1AA">idle</text>
+            <text x="422" y="209" font-size="8" fill="#A1A1AA">free for other work</text>
+
+            <rect x="472" y="176" width="100" height="42" rx="7" fill="rgba(217,119,6,0.14)" stroke="#D97706" stroke-width="1.3"/>
+            <text x="522" y="195" font-size="11" font-weight="700" fill="#18181B">poll(A)</text>
+            <text x="522" y="210" font-size="9" fill="#16653a">→ Ready ✓</text>
+
+            <rect x="592" y="176" width="100" height="42" rx="7" fill="rgba(37,99,235,0.14)" stroke="#2563EB" stroke-width="1.3"/>
+            <text x="642" y="195" font-size="11" font-weight="700" fill="#18181B">poll(B)</text>
+            <text x="642" y="210" font-size="9" fill="#16653a">→ Ready ✓</text>
           </g>
+
+          <!-- connectors: the thread is polling that future right now -->
+          <g stroke="#C7C7CC" stroke-width="1" stroke-dasharray="2 3">
+            <line x1="202" y1="84" x2="202" y2="176"/>
+            <line x1="322" y1="140" x2="322" y2="176"/>
+            <line x1="522" y1="84" x2="522" y2="176"/>
+            <line x1="642" y1="140" x2="642" y2="176"/>
+          </g>
+
+          <!-- legend -->
+          <g font-size="9.5" fill="#52525B">
+            <rect x="14" y="242" width="12" height="12" rx="2" fill="#D97706"/>
+            <text x="32" y="252">running (being polled)</text>
+            <rect x="176" y="242" width="12" height="12" rx="2" fill="rgba(217,119,6,0.08)" stroke="#D97706" stroke-width="1.2" stroke-dasharray="3 2"/>
+            <text x="194" y="252">Pending (parked, waker set)</text>
+            <rect x="378" y="242" width="12" height="12" rx="2" fill="rgba(22,101,58,0.15)" stroke="#16653a" stroke-width="1.2"/>
+            <text x="396" y="252">Ready (done)</text>
+            <rect x="500" y="242" width="12" height="12" rx="2" fill="#F4F4F5" stroke="#D4D4D8"/>
+            <text x="518" y="252">created / queued</text>
+          </g>
+          <text x="14" y="278" font-size="10" fill="#71717A">Only one future runs at a time; the dotted line shows which future the thread is polling right now.</text>
         </g>
       </svg>
       <figcaption class="mt-3 text-sm text-brand-muted">
-        One thread running two tasks. <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">poll(A)</code> returns <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Pending</code>, so instead of blocking, the thread immediately polls B. While both are parked it is free for other work; when each resource becomes ready its waker fires and the task is polled once more, now returning <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Ready</code>. This interleaving on a single thread is what "async" buys you.
+        The same run, now following the two futures themselves. Each future moves through a lifecycle: <strong class="text-brand-text">created</strong>, <strong class="text-brand-text">running</strong> while the thread polls it, <strong class="text-brand-text">Pending</strong> and parked with a waker while its I/O is not ready, then <strong class="text-brand-text">running</strong> again once woken, then <strong class="text-brand-text">Ready</strong>. The thread lane below shows it only ever drives one future at a time: when <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">poll(A)</code> returns <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Pending</code> it parks A and polls B, staying busy instead of blocking.
       </figcaption>
     </figure>
 
@@ -1251,51 +1483,97 @@ const comparisonTable = [
       </p>
     </div>
 
+    <p class="mb-4 text-brand-body">
+      Here is that interface in action. Follow one future that is waiting to read from a TCP socket, and watch how the <em>reactor</em> uses <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">epoll</code> to keep the thread free instead of blocking it inside a <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">read</code>:
+    </p>
+
     <!-- Poll loop figure -->
     <figure class="rounded-xl border border-brand-border bg-white p-4 sm:p-6">
-      <svg viewBox="0 0 820 220" class="h-auto w-full" role="img" aria-label="Poll loop: the executor polls a future, which returns Pending and registers a waker with the reactor; the reactor wakes it when epoll reports readiness, and the executor polls again until Ready">
+      <svg viewBox="0 0 820 330" class="h-auto w-full" role="img" aria-label="Poll loop over an async interface: the executor polls a future; on Pending the future gives the reactor its socket file descriptor and a waker; the reactor registers interest with the kernel via epoll_ctl and blocks in epoll_wait for all descriptors at once; when the socket becomes readable epoll_wait returns it, the reactor calls the waker to re-queue the task, and the executor polls the future again until it returns Ready">
         <defs>
           <marker id="poll-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" fill="#71717A" />
           </marker>
         </defs>
         <g font-family="Inter, sans-serif" text-anchor="middle">
+          <!-- wake loop, top arc -->
+          <path d="M719,52 C719,18 103,18 103,52" fill="none" stroke="#71717A" stroke-width="1.3" marker-end="url(#poll-arrow)"/>
+          <text x="411" y="14" font-size="10.5" fill="#52525B">⑥ waker.wake() → re-queue the task, then poll() again</text>
+
           <!-- Executor -->
-          <rect x="24" y="80" width="150" height="60" rx="10" fill="rgba(217,119,6,0.10)" stroke="#D97706" stroke-width="1.5"/>
-          <text x="99" y="107" font-size="13" font-weight="700" fill="#18181B">Executor</text>
-          <text x="99" y="125" font-size="10" fill="#71717A">schedules + polls</text>
+          <rect x="28" y="54" width="150" height="62" rx="10" fill="rgba(217,119,6,0.10)" stroke="#D97706" stroke-width="1.5"/>
+          <text x="103" y="82" font-size="13" font-weight="700" fill="#18181B">Executor</text>
+          <text x="103" y="100" font-size="10" fill="#71717A">schedules + polls tasks</text>
 
           <!-- Future -->
-          <rect x="330" y="80" width="160" height="60" rx="10" fill="rgba(37,99,235,0.08)" stroke="#2563EB" stroke-width="1.5"/>
-          <text x="410" y="107" font-size="13" font-weight="700" fill="#18181B">Future.poll()</text>
-          <text x="410" y="125" font-size="10" fill="#71717A">Pending or Ready(T)</text>
+          <rect x="322" y="54" width="176" height="62" rx="10" fill="rgba(37,99,235,0.08)" stroke="#2563EB" stroke-width="1.5"/>
+          <text x="410" y="82" font-size="13" font-weight="700" fill="#18181B">Future.poll()</text>
+          <text x="410" y="100" font-size="10" fill="#71717A">returns Pending / Ready(T)</text>
 
           <!-- Reactor -->
-          <rect x="646" y="80" width="150" height="60" rx="10" fill="rgba(22,101,58,0.10)" stroke="#16653a" stroke-width="1.5"/>
-          <text x="721" y="107" font-size="13" font-weight="700" fill="#16653a">Reactor</text>
-          <text x="721" y="125" font-size="10" fill="#16653a">epoll / io_uring</text>
+          <rect x="642" y="54" width="154" height="62" rx="10" fill="rgba(22,101,58,0.10)" stroke="#16653a" stroke-width="1.5"/>
+          <text x="719" y="82" font-size="13" font-weight="700" fill="#16653a">Reactor</text>
+          <text x="719" y="100" font-size="10" fill="#16653a">map: fd → Waker</text>
 
-          <!-- Executor -> Future : poll -->
-          <line x1="174" y1="100" x2="328" y2="100" stroke="#71717A" stroke-width="1.3" marker-end="url(#poll-arrow)"/>
-          <text x="251" y="92" font-size="10" fill="#52525B">poll()</text>
+          <!-- (1) poll -->
+          <line x1="178" y1="78" x2="320" y2="78" stroke="#71717A" stroke-width="1.3" marker-end="url(#poll-arrow)"/>
+          <text x="249" y="70" font-size="10" fill="#52525B">① poll()</text>
 
-          <!-- Future -> Executor : Ready -->
-          <line x1="328" y1="122" x2="176" y2="122" stroke="#71717A" stroke-width="1.3" marker-end="url(#poll-arrow)"/>
-          <text x="251" y="137" font-size="10" fill="#52525B">Ready(T) -> done</text>
+          <!-- Ready return -->
+          <line x1="320" y1="98" x2="180" y2="98" stroke="#B0B0B7" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#poll-arrow)"/>
+          <text x="250" y="112" font-size="9.5" fill="#8A8A93">eventually Ready(T)</text>
 
-          <!-- Future -> Reactor : register waker -->
-          <line x1="490" y1="100" x2="644" y2="100" stroke="#71717A" stroke-width="1.3" marker-end="url(#poll-arrow)"/>
-          <text x="567" y="92" font-size="10" fill="#52525B">Pending: register Waker</text>
+          <!-- (2) Pending -> Reactor -->
+          <line x1="498" y1="78" x2="640" y2="78" stroke="#71717A" stroke-width="1.3" marker-end="url(#poll-arrow)"/>
+          <text x="569" y="70" font-size="10" fill="#52525B">② Pending</text>
 
-          <!-- Reactor -> Executor : wake (big loop back under) -->
-          <path d="M690 140 L690 185 L99 185 L99 142" fill="none" stroke="#71717A" stroke-width="1.3" marker-end="url(#poll-arrow)"/>
-          <text x="410" y="200" font-size="10" fill="#52525B">readiness -> wake() -> poll again</text>
+          <!-- Kernel epoll: the async interface -->
+          <rect x="300" y="196" width="250" height="104" rx="10" fill="rgba(67,56,202,0.07)" stroke="#4338CA" stroke-width="1.6"/>
+          <text x="425" y="220" font-size="12.5" font-weight="700" fill="#4338CA">Kernel · epoll</text>
+          <text x="425" y="236" font-size="9.5" fill="#6D28D9">the async interface</text>
+          <rect x="314" y="246" width="222" height="22" rx="5" fill="#ffffff" stroke="#C7C7CC" stroke-width="1"/>
+          <text x="425" y="261" font-size="9.5" fill="#3730A3">epoll_ctl(fd, EPOLLIN) · watch fd</text>
+          <rect x="314" y="272" width="222" height="22" rx="5" fill="#ffffff" stroke="#C7C7CC" stroke-width="1"/>
+          <text x="425" y="287" font-size="9.5" fill="#3730A3">epoll_wait() · block, return ready fds</text>
+
+          <!-- Socket -->
+          <rect x="636" y="212" width="160" height="74" rx="10" fill="rgba(190,24,93,0.07)" stroke="#be185d" stroke-width="1.4"/>
+          <text x="716" y="236" font-size="12" font-weight="700" fill="#be185d">TCP socket · fd 7</text>
+          <text x="716" y="254" font-size="9.5" fill="#9d174d">peer sends bytes</text>
+          <text x="716" y="270" font-size="9.5" fill="#9d174d">→ becomes readable</text>
+
+          <!-- (3) epoll_ctl : reactor -> kernel -->
+          <line x1="668" y1="116" x2="452" y2="196" stroke="#71717A" stroke-width="1.3" marker-end="url(#poll-arrow)"/>
+          <text x="520" y="150" font-size="9.5" fill="#52525B">③ register interest</text>
+
+          <!-- (5) epoll_wait returns : kernel -> reactor -->
+          <line x1="512" y1="196" x2="742" y2="116" stroke="#71717A" stroke-width="1.3" marker-end="url(#poll-arrow)"/>
+          <text x="650" y="150" font-size="9.5" fill="#52525B">⑤ ready: [fd 7]</text>
+
+          <!-- (4) socket -> kernel readiness -->
+          <line x1="636" y1="249" x2="552" y2="249" stroke="#71717A" stroke-width="1.3" marker-end="url(#poll-arrow)"/>
+          <text x="594" y="242" font-size="9.5" fill="#52525B">④</text>
         </g>
       </svg>
       <figcaption class="mt-3 text-sm text-brand-muted">
-        The poll loop. The executor polls a future; on <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Pending</code> the future leaves a waker with the reactor and steps aside. When <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">epoll</code> reports the FD is ready, the reactor wakes the task and the executor polls it again, until it returns <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Ready</code>.
+        The poll loop, over a real async interface. One future is waiting to read from socket <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">fd 7</code>; the numbered steps show how the reactor drives <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">epoll</code> so that no thread ever sits blocked inside a <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">read</code>.
       </figcaption>
+      <ol class="mt-4 space-y-1.5 text-sm text-brand-body">
+        <li><strong class="text-brand-text">① poll().</strong> The executor calls <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">poll</code> on the task's future to drive it forward.</li>
+        <li><strong class="text-brand-text">② Pending.</strong> No bytes yet, so the future returns <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">Pending</code>. On the way out it hands the reactor its file descriptor (<code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">fd 7</code>) and a <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">Waker</code>, then steps aside so the thread is free.</li>
+        <li><strong class="text-brand-text">③ Register interest.</strong> This is where the async interface is <em>used</em>: the reactor calls <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">epoll_ctl(ADD, fd 7, EPOLLIN)</code>, telling the kernel "signal me when fd 7 is readable". One reactor registers thousands of descriptors this way.</li>
+        <li><strong class="text-brand-text">④ Readiness.</strong> Bytes arrive from the peer, so the kernel flags <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">fd 7</code> as readable.</li>
+        <li><strong class="text-brand-text">⑤ epoll_wait returns.</strong> The reactor's single <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">epoll_wait()</code> call, which was blocked waiting on <em>all</em> registered fds at once, wakes up and returns the ready list containing <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">fd 7</code>.</li>
+        <li><strong class="text-brand-text">⑥ Wake and re-poll.</strong> The reactor looks up the <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">Waker</code> registered for <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">fd 7</code> and calls <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">wake()</code>, which re-queues the task. The executor polls it again, and this time <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">poll</code> reads the bytes and returns <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">Ready(T)</code>.</li>
+      </ol>
+      <p class="mt-3 text-xs text-brand-muted">
+        With a blocking <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">read()</code> there is no step ③ or ⑤: the thread simply sleeps <em>inside</em> the syscall until data arrives, so serving N connections needs N threads. The async interface is exactly what lets a single thread wait on all of them and only touch the ones that are ready.
+      </p>
     </figure>
+
+    <p class="mb-6 mt-8 text-brand-body">
+      One question the diagram leaves open: <strong class="text-brand-text">who creates that epoll instance, and when?</strong> You never call <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">epoll_create</code> yourself. It is created once, when the <strong class="text-brand-text">runtime</strong> starts up, by its I/O driver (the reactor). In Rust that is exactly what <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">enable_io()</code>, implied by <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">#[tokio::main]</code>, switches on; the one instance is then shared by every task, and individual descriptors are registered into it lazily the first time each resource is polled. This is not a Rust quirk: Node's libuv, Python's <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">asyncio</code> selector and Go's netpoller each create theirs the same way, at event-loop start-up. The <a href="#inside-tokio" class="text-accent-blue underline underline-offset-2 transition-colors hover:text-accent-emerald">Tokio section</a> below shows the exact call; first, how the same idea looks in other languages.
+    </p>
 
     <!-- Futures across languages -->
     <h3 class="mb-3 mt-12 text-lg font-semibold text-brand-text">Futures are not a Rust idea</h3>
@@ -1333,7 +1611,7 @@ const comparisonTable = [
     <p class="mono-eyebrow mb-2">// tokio::spawn(async move &#123; ... &#125;)</p>
     <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Async & Concurrency Runtimes">Async &amp; Concurrency Runtimes</h2>
     <p class="mb-6 text-brand-body">
-      Beyond the base execution model, many languages need a <strong class="text-brand-text">concurrency runtime</strong> to schedule async tasks, manage I/O multiplexing, and distribute work across cores. Some languages bake it in (Go, Erlang); others let you choose (Rust, Python). The differences matter when you're building servers, embedded systems, or anything that waits on I/O.
+      A future does nothing on its own, and every language just met has the same problem. Something has to poll those tasks: a <strong class="text-brand-text">concurrency runtime</strong> that schedules async work, manages I/O multiplexing, and distributes it across cores. Some languages bake one in (Go, Erlang); others let you choose (Rust, Python). The differences matter when you're building servers, embedded systems, or anything that waits on I/O.
     </p>
 
     <div class="grid gap-4 md:grid-cols-2">
@@ -1358,12 +1636,19 @@ const comparisonTable = [
   </section>
 
   <!-- ====== INSIDE A RUNTIME: TOKIO ====== -->
-  <section class="mb-14">
+  <section id="inside-tokio" class="mb-14 scroll-mt-20">
     <p class="mono-eyebrow mb-2">// who calls poll(), and on which thread?</p>
     <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Inside a runtime: Tokio's scheduler">Inside a runtime <span class="text-brand-muted">: Tokio's scheduler</span></h2>
     <p class="mb-6 text-brand-body">
       A runtime is the thing that actually polls your futures. Tokio ships two: the <strong class="text-brand-text">current-thread</strong> scheduler, which runs everything on a single thread (proof that the thread pool is optional), and the default <strong class="text-brand-text">multi-thread</strong> scheduler, which starts one worker thread per core. The interesting question is how the multi-thread version keeps every core busy without a central lock everyone fights over.
     </p>
+
+    <div class="mb-6 rounded-xl border border-brand-border bg-white p-5" style="border-left:3px solid #4338CA">
+      <p class="mb-2 text-sm font-semibold" style="color:#4338CA">First, what is a "thread pool"?</p>
+      <p class="text-sm text-brand-body">
+        A thread pool is a small, fixed set of OS threads created <strong class="text-brand-text">once</strong> at start-up, usually one per CPU core, that sit idle waiting for work. Rather than spawn a brand-new thread per task (expensive, and unbounded if tasks keep arriving), you drop tasks into a queue and the pool's threads pull them off, run them, and come back for the next one. So the same handful of threads are <em>reused</em> for millions of tasks. Crucially, the pool exists only to spread ready tasks across cores for real <strong class="text-brand-text">parallelism</strong>; it is an optimisation, not part of what makes async work. Those exact same futures run correctly on the single-threaded current-thread scheduler, just capped at one core. That is why talking about a thread pool when contrasting sync and async is a little misleading: async is about <em>polling</em> and cooperative scheduling, and it works on one thread; the pool is a separate, optional choice about how many cores to use.
+      </p>
+    </div>
 
     <div class="mb-8 grid gap-4 md:grid-cols-3">
       <div class="rounded-xl border border-brand-border bg-white p-4" style="border-left:3px solid #D97706">
@@ -1382,52 +1667,110 @@ const comparisonTable = [
 
     <!-- Scheduler figure -->
     <figure class="mb-8 rounded-xl border border-brand-border bg-white p-4 sm:p-6">
-      <svg viewBox="0 0 820 300" class="h-auto w-full" role="img" aria-label="Tokio multi-thread scheduler: a global injection queue feeds worker threads that each have a local run queue and a LIFO slot, workers steal tasks from each other, and a shared reactor on epoll wakes tasks back onto the queues">
+      <svg viewBox="0 0 820 384" class="h-auto w-full" role="img" aria-label="Tokio multi-thread scheduler: a global injection queue feeds worker threads; each worker is one OS thread that pops a task from its local run queue and calls poll on it, then loops for the next task; when poll returns Pending the task is parked and its Waker registered with the shared reactor, when it returns Ready the task is done; workers steal tasks from each other when idle, and the reactor, which runs one epoll_wait over all file descriptors, requeues a task onto a worker as soon as its resource is ready">
         <defs>
           <marker id="sched-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" fill="#71717A" />
           </marker>
+          <marker id="sched-arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#16653a" />
+          </marker>
+          <marker id="sched-arrow-pink" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#be185d" />
+          </marker>
         </defs>
         <g font-family="Inter, sans-serif" text-anchor="middle">
           <!-- Global injection queue -->
-          <rect x="250" y="16" width="320" height="42" rx="9" fill="rgba(37,99,235,0.08)" stroke="#2563EB" stroke-width="1.5"/>
-          <text x="410" y="34" font-size="12" font-weight="700" fill="#18181B">Global injection queue</text>
-          <text x="410" y="49" font-size="10" fill="#71717A">remote spawns + local-queue overflow</text>
+          <rect x="250" y="12" width="320" height="42" rx="9" fill="rgba(37,99,235,0.08)" stroke="#2563EB" stroke-width="1.5"/>
+          <text x="410" y="30" font-size="12" font-weight="700" fill="#18181B">Global injection queue</text>
+          <text x="410" y="45" font-size="10" fill="#71717A">remote spawns + local-queue overflow</text>
 
-          <!-- Worker A -->
-          <rect x="70" y="108" width="200" height="86" rx="10" fill="rgba(217,119,6,0.08)" stroke="#D97706" stroke-width="1.5"/>
-          <text x="170" y="130" font-size="12" font-weight="700" fill="#18181B">Worker 1 (core 0)</text>
-          <text x="170" y="150" font-size="10" fill="#52525B">local run queue (256)</text>
-          <text x="170" y="168" font-size="10" fill="#52525B">+ LIFO slot</text>
+          <!-- ===== Worker 1 ===== -->
+          <rect x="36" y="86" width="330" height="170" rx="10" fill="rgba(217,119,6,0.06)" stroke="#D97706" stroke-width="1.5"/>
+          <text x="201" y="107" font-size="12" font-weight="700" fill="#18181B">Worker 1 (core 0)</text>
+          <text x="201" y="122" font-size="9.5" fill="#71717A">one OS thread, in a loop</text>
+          <text x="112" y="142" font-size="9" fill="#52525B">local run queue (256)</text>
+          <rect x="56" y="150" width="40" height="22" rx="4" fill="rgba(217,119,6,0.16)" stroke="#D97706" stroke-width="1"/>
+          <text x="76" y="165" font-size="9" fill="#7c4a03">task</text>
+          <rect x="100" y="150" width="40" height="22" rx="4" fill="rgba(217,119,6,0.16)" stroke="#D97706" stroke-width="1"/>
+          <text x="120" y="165" font-size="9" fill="#7c4a03">task</text>
+          <rect x="144" y="150" width="40" height="22" rx="4" fill="rgba(217,119,6,0.16)" stroke="#D97706" stroke-width="1"/>
+          <text x="164" y="165" font-size="9" fill="#7c4a03">task</text>
+          <rect x="56" y="178" width="128" height="20" rx="4" fill="rgba(37,99,235,0.10)" stroke="#2563EB" stroke-width="1" stroke-dasharray="3 2"/>
+          <text x="120" y="192" font-size="9" fill="#1e40af">LIFO slot (just-woken)</text>
+          <!-- the thread polling a task -->
+          <rect x="214" y="150" width="126" height="48" rx="8" fill="rgba(217,119,6,0.26)" stroke="#D97706" stroke-width="1.6"/>
+          <text x="277" y="170" font-size="12.5" font-weight="800" fill="#7c2d12">poll(task)</text>
+          <text x="277" y="185" font-size="8.5" fill="#7c2d12">thread runs the task</text>
+          <line x1="186" y1="161" x2="212" y2="170" stroke="#52525B" stroke-width="1.3" marker-end="url(#sched-arrow)"/>
+          <text x="199" y="149" font-size="8.5" fill="#52525B">pop</text>
+          <text x="277" y="214" font-size="9" fill="#16653a">Ready ✓ done · else Pending ↓</text>
+          <text x="277" y="228" font-size="8.5" fill="#A16207">then loops for the next task</text>
 
-          <!-- Worker B -->
-          <rect x="550" y="108" width="200" height="86" rx="10" fill="rgba(217,119,6,0.08)" stroke="#D97706" stroke-width="1.5"/>
-          <text x="650" y="130" font-size="12" font-weight="700" fill="#18181B">Worker 2 (core 1)</text>
-          <text x="650" y="150" font-size="10" fill="#52525B">local run queue (256)</text>
-          <text x="650" y="168" font-size="10" fill="#52525B">+ LIFO slot</text>
+          <!-- ===== Worker 2 ===== -->
+          <rect x="454" y="86" width="330" height="170" rx="10" fill="rgba(217,119,6,0.06)" stroke="#D97706" stroke-width="1.5"/>
+          <text x="619" y="107" font-size="12" font-weight="700" fill="#18181B">Worker 2 (core 1)</text>
+          <text x="619" y="122" font-size="9.5" fill="#71717A">one OS thread, in a loop</text>
+          <text x="530" y="142" font-size="9" fill="#52525B">local run queue (256)</text>
+          <rect x="474" y="150" width="40" height="22" rx="4" fill="rgba(217,119,6,0.16)" stroke="#D97706" stroke-width="1"/>
+          <text x="494" y="165" font-size="9" fill="#7c4a03">task</text>
+          <rect x="518" y="150" width="40" height="22" rx="4" fill="rgba(217,119,6,0.16)" stroke="#D97706" stroke-width="1"/>
+          <text x="538" y="165" font-size="9" fill="#7c4a03">task</text>
+          <rect x="562" y="150" width="40" height="22" rx="4" fill="rgba(217,119,6,0.16)" stroke="#D97706" stroke-width="1"/>
+          <text x="582" y="165" font-size="9" fill="#7c4a03">task</text>
+          <rect x="474" y="178" width="128" height="20" rx="4" fill="rgba(37,99,235,0.10)" stroke="#2563EB" stroke-width="1" stroke-dasharray="3 2"/>
+          <text x="538" y="192" font-size="9" fill="#1e40af">LIFO slot (just-woken)</text>
+          <rect x="632" y="150" width="126" height="48" rx="8" fill="rgba(217,119,6,0.26)" stroke="#D97706" stroke-width="1.6"/>
+          <text x="695" y="170" font-size="12.5" font-weight="800" fill="#7c2d12">poll(task)</text>
+          <text x="695" y="185" font-size="8.5" fill="#7c2d12">thread runs the task</text>
+          <line x1="604" y1="161" x2="630" y2="170" stroke="#52525B" stroke-width="1.3" marker-end="url(#sched-arrow)"/>
+          <text x="617" y="149" font-size="8.5" fill="#52525B">pop</text>
+          <text x="695" y="214" font-size="9" fill="#16653a">Ready ✓ done · else Pending ↓</text>
+          <text x="695" y="228" font-size="8.5" fill="#A16207">then loops for the next task</text>
 
           <!-- injection -> workers -->
-          <line x1="330" y1="58" x2="200" y2="106" stroke="#71717A" stroke-width="1.3" marker-end="url(#sched-arrow)"/>
-          <line x1="490" y1="58" x2="620" y2="106" stroke="#71717A" stroke-width="1.3" marker-end="url(#sched-arrow)"/>
+          <line x1="330" y1="54" x2="200" y2="84" stroke="#71717A" stroke-width="1.3" marker-end="url(#sched-arrow)"/>
+          <line x1="490" y1="54" x2="620" y2="84" stroke="#71717A" stroke-width="1.3" marker-end="url(#sched-arrow)"/>
 
           <!-- steal between workers -->
-          <path d="M550 140 L270 140" fill="none" stroke="#16653a" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#sched-arrow)"/>
-          <text x="410" y="132" font-size="10" font-weight="600" fill="#16653a">steal ~half when idle</text>
+          <path d="M452 120 L370 120" fill="none" stroke="#16653a" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#sched-arrow-green)"/>
+          <text x="411" y="113" font-size="9.5" font-weight="600" fill="#16653a">steal ~half when idle</text>
 
           <!-- Reactor -->
-          <rect x="250" y="238" width="320" height="46" rx="9" fill="rgba(22,101,58,0.10)" stroke="#16653a" stroke-width="1.5"/>
-          <text x="410" y="258" font-size="12" font-weight="700" fill="#16653a">Reactor / driver: mio -> epoll / kqueue / IOCP</text>
-          <text x="410" y="274" font-size="10" fill="#16653a">readiness fires a Waker -> task requeued</text>
+          <rect x="210" y="300" width="400" height="52" rx="9" fill="rgba(22,101,58,0.10)" stroke="#16653a" stroke-width="1.5"/>
+          <text x="410" y="322" font-size="12" font-weight="700" fill="#16653a">Reactor / driver: mio → epoll / kqueue / IOCP</text>
+          <text x="410" y="338" font-size="10" fill="#16653a">one epoll_wait watches all fds; readiness fires a Waker</text>
 
-          <!-- reactor -> workers (wake) -->
-          <line x1="330" y1="238" x2="200" y2="196" stroke="#71717A" stroke-width="1.3" marker-end="url(#sched-arrow)"/>
-          <line x1="490" y1="238" x2="620" y2="196" stroke="#71717A" stroke-width="1.3" marker-end="url(#sched-arrow)"/>
+          <!-- Pending: worker -> reactor (park + register waker) -->
+          <line x1="140" y1="256" x2="284" y2="300" stroke="#be185d" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#sched-arrow-pink)"/>
+          <line x1="680" y1="256" x2="536" y2="300" stroke="#be185d" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#sched-arrow-pink)"/>
+
+          <!-- Ready/wake: reactor -> worker (requeue) -->
+          <line x1="360" y1="300" x2="240" y2="256" stroke="#16653a" stroke-width="1.3" marker-end="url(#sched-arrow-green)"/>
+          <line x1="460" y1="300" x2="580" y2="256" stroke="#16653a" stroke-width="1.3" marker-end="url(#sched-arrow-green)"/>
+
+          <!-- legend -->
+          <rect x="48" y="362" width="14" height="10" rx="2" fill="none" stroke="#be185d" stroke-width="1.3" stroke-dasharray="3 2"/>
+          <text x="68" y="371" text-anchor="start" font-size="9.5" fill="#52525B">worker → reactor: poll returned Pending, register the Waker</text>
+          <rect x="470" y="362" width="14" height="10" rx="2" fill="#16653a"/>
+          <text x="490" y="371" text-anchor="start" font-size="9.5" fill="#52525B">reactor → worker: resource ready, requeue the task</text>
         </g>
       </svg>
       <figcaption class="mt-3 text-sm text-brand-muted">
-        The multi-thread scheduler. Workers mostly run their own local queue; when one empties it steals from a sibling. The shared reactor watches all I/O through one <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">epoll</code>-style call and requeues a task the moment its resource is ready.
+        The multi-thread scheduler. Each worker <em>is</em> one OS thread running a loop: pop a ready task from its local queue, call <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">poll(task)</code>, then move to the next. If <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">poll</code> returns <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Ready</code> the task is done; if it returns <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Pending</code> the task is parked and its <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Waker</code> is registered with the shared reactor (pink). When a worker's queue empties it steals ~half a sibling's tasks. The reactor runs one <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">epoll_wait</code> over all descriptors and, the moment a resource is ready, requeues that task onto a worker (green), where it gets polled again.
       </figcaption>
     </figure>
+
+    <div class="mb-8 rounded-xl border border-brand-border bg-white p-5" style="border-left:3px solid #4338CA">
+      <p class="mb-2 text-sm font-semibold" style="color:#4338CA">Where the epoll instance actually comes from</p>
+      <p class="mb-3 text-sm text-brand-body">
+        The reactor in the diagram is Tokio's <strong class="text-brand-text">I/O driver</strong>, and it is created once, when you build the runtime. You never call <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">epoll_create</code>: <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">enable_io()</code> does, through <a href="https://github.com/tokio-rs/mio" class="text-accent-blue underline underline-offset-2 transition-colors hover:text-accent-emerald" target="_blank" rel="noopener">mio</a> (the crate that abstracts <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">epoll</code> / <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">kqueue</code> / IOCP behind one API). <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">#[tokio::main]</code> just expands to this:
+      </p>
+      <div class="mb-3 overflow-x-auto rounded-lg text-[12px] [&>pre]:!rounded-lg [&>pre]:!p-4" set:html={ioDriverHtml} />
+      <p class="text-sm text-brand-body">
+        That single epoll instance is shared by every task on the runtime. Individual descriptors are added to it lazily with <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">epoll_ctl</code> the first time each resource is polled, and removed when the resource is dropped. When every worker's run queue is empty, one worker <strong class="text-brand-text">parks</strong> on the driver and calls <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">epoll_wait</code>; the readiness it returns is what fires the wakers that put tasks back on the queues. Forget <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">enable_io()</code> and the first socket you await panics with <em>"there is no reactor running"</em>, because the instance was never created.
+      </p>
+    </div>
 
     <div class="rounded-xl border border-brand-border bg-white p-5" style="border-left:3px solid #be185d">
       <p class="mb-2 text-sm font-semibold" style="color:#be185d">Where does blocking go?</p>
@@ -1442,7 +1785,7 @@ const comparisonTable = [
     <p class="mono-eyebrow mb-2">// same task, different runtimes</p>
     <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Same Pattern, Different Runtimes">Same Pattern, Different Runtimes</h2>
     <p class="mb-6 text-brand-body">
-      Pick up to four runtimes and compare them directly. First the same <strong class="text-brand-text">spawn &amp; collect</strong> task as above (4 workers computing <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">i * i</code>) to see the bare syntax, then a real-world <strong class="text-brand-text">outbox-relay worker</strong>: a listener watches for new work (e.g. database LISTEN/NOTIFY), signals a wakeup, and N relay workers pick it up and process it concurrently. Each snippet has a short note on what makes that runtime distinctive.
+      You have seen one runtime from the inside; now compare several from the outside. Pick up to four and put them head to head: first the same <strong class="text-brand-text">spawn &amp; collect</strong> task as above (4 workers computing <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">i * i</code>) to see the bare syntax, then a real-world <strong class="text-brand-text">outbox-relay worker</strong>: a listener watches for new work (e.g. database LISTEN/NOTIFY), signals a wakeup, and N relay workers pick it up and process it concurrently. Each snippet has a short note on what makes that runtime distinctive.
     </p>
 
     <RuntimeCompare
@@ -1456,74 +1799,4 @@ const comparisonTable = [
     </p>
   </section>
 
-  <!-- ====== PIPELINE DIAGRAM ====== -->
-  <section class="mb-14">
-    <p class="mono-eyebrow mb-2">// from source to execution</p>
-    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="The Big Picture">The Big Picture</h2>
-    <p class="mb-6 text-brand-body">
-      All execution models are variations on the same pipeline. The key question is <em>when</em> compilation happens and <em>how many layers</em> sit between your source code and the CPU.
-    </p>
-
-    <figure class="rounded-xl border border-brand-border bg-white p-4 sm:p-6">
-      <svg viewBox="0 0 800 260" class="h-auto w-full" role="img" aria-label="Source code to execution pipeline showing AOT, JIT, interpreter and Wasm paths">
-        <defs>
-          <marker id="rt-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M0,0 L10,5 L0,10 z" fill="#71717A" />
-          </marker>
-        </defs>
-        <g font-family="Inter, sans-serif" text-anchor="middle">
-          <!-- Source -->
-          <rect x="20" y="100" width="120" height="56" rx="9" fill="rgba(37,99,235,0.08)" stroke="#2563EB" stroke-width="1.5"/>
-          <text x="80" y="124" font-size="13" font-weight="700" fill="#18181B">Source code</text>
-          <text x="80" y="142" font-size="10" fill="#71717A">.rs / .c / .py / .js</text>
-
-          <!-- AOT path -->
-          <rect x="220" y="20" width="130" height="48" rx="9" fill="rgba(22,101,58,0.10)" stroke="#16653a" stroke-width="1.5"/>
-          <text x="285" y="42" font-size="12" font-weight="700" fill="#16653a">AOT compiler</text>
-          <text x="285" y="56" font-size="10" fill="#16653a">gcc, rustc, go</text>
-          <line x1="140" y1="118" x2="218" y2="50" stroke="#71717A" stroke-width="1.3" marker-end="url(#rt-arrow)"/>
-
-          <rect x="420" y="20" width="120" height="48" rx="9" fill="rgba(22,101,58,0.10)" stroke="#16653a" stroke-width="1.5"/>
-          <text x="480" y="42" font-size="12" font-weight="700" fill="#16653a">Machine code</text>
-          <text x="480" y="56" font-size="10" fill="#16653a">ELF / Mach-O / PE</text>
-          <line x1="350" y1="44" x2="418" y2="44" stroke="#71717A" stroke-width="1.3" marker-end="url(#rt-arrow)"/>
-
-          <!-- JIT path -->
-          <rect x="220" y="100" width="130" height="48" rx="9" fill="rgba(67,56,202,0.10)" stroke="#4338CA" stroke-width="1.5"/>
-          <text x="285" y="122" font-size="12" font-weight="700" fill="#4338CA">Bytecode + JIT</text>
-          <text x="285" y="136" font-size="10" fill="#4338CA">JVM, V8, CLR</text>
-          <line x1="140" y1="128" x2="218" y2="124" stroke="#71717A" stroke-width="1.3" marker-end="url(#rt-arrow)"/>
-
-          <rect x="420" y="100" width="120" height="48" rx="9" fill="rgba(67,56,202,0.10)" stroke="#4338CA" stroke-width="1.5"/>
-          <text x="480" y="122" font-size="12" font-weight="700" fill="#4338CA">Optimised code</text>
-          <text x="480" y="136" font-size="10" fill="#4338CA">at runtime</text>
-          <line x1="350" y1="124" x2="418" y2="124" stroke="#71717A" stroke-width="1.3" marker-end="url(#rt-arrow)"/>
-
-          <!-- Interpreter path -->
-          <rect x="220" y="180" width="130" height="48" rx="9" fill="rgba(190,24,93,0.10)" stroke="#be185d" stroke-width="1.5"/>
-          <text x="285" y="202" font-size="12" font-weight="700" fill="#be185d">Interpreter</text>
-          <text x="285" y="216" font-size="10" fill="#be185d">CPython, MRI, Bash</text>
-          <line x1="140" y1="138" x2="218" y2="198" stroke="#71717A" stroke-width="1.3" marker-end="url(#rt-arrow)"/>
-
-          <rect x="420" y="180" width="120" height="48" rx="9" fill="rgba(190,24,93,0.10)" stroke="#be185d" stroke-width="1.5"/>
-          <text x="480" y="202" font-size="12" font-weight="700" fill="#be185d">Executed live</text>
-          <text x="480" y="216" font-size="10" fill="#be185d">statement by stmt</text>
-          <line x1="350" y1="204" x2="418" y2="204" stroke="#71717A" stroke-width="1.3" marker-end="url(#rt-arrow)"/>
-
-          <!-- CPU -->
-          <rect x="620" y="80" width="140" height="76" rx="12" fill="rgba(16,185,129,0.12)" stroke="#10B981" stroke-width="2"/>
-          <text x="690" y="108" font-size="15" font-weight="800" fill="#047857">CPU</text>
-          <text x="690" y="126" font-size="10" fill="#059669">hardware execution</text>
-          <text x="690" y="142" font-size="9" fill="#6B7280">x86 / ARM / RISC-V</text>
-
-          <line x1="540" y1="44" x2="618" y2="100" stroke="#71717A" stroke-width="1.3" marker-end="url(#rt-arrow)"/>
-          <line x1="540" y1="124" x2="618" y2="118" stroke="#71717A" stroke-width="1.3" marker-end="url(#rt-arrow)"/>
-          <line x1="540" y1="204" x2="618" y2="140" stroke="#71717A" stroke-width="1.3" marker-end="url(#rt-arrow)"/>
-        </g>
-      </svg>
-      <figcaption class="mt-3 text-sm text-brand-muted">
-        AOT-compiled languages (Rust, C, Go) take the top path: everything is resolved before execution. JIT languages (Java, JS) defer optimisation to runtime. Interpreters (Python, Bash) skip compilation entirely.
-      </figcaption>
-    </figure>
-  </section>
 </BaseLayout>
