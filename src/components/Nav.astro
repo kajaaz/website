@@ -13,6 +13,7 @@ const links: ({ href: string; label: string } | { label: string; children: { hre
     children: [
       { href: "/pl-timeline", label: "PL Timeline" },
       { href: "/runtimes", label: "Runtimes" },
+      { href: "/hardware", label: "Hardware" },
       { href: "/fv", label: "Formal Verification" },
     ],
   },
@@ -24,7 +25,7 @@ function isActive(href: string) {
   return currentPath.startsWith(href);
 }
 
-const cheatSheetPaths = ["/pl-timeline", "/runtimes", "/fv"];
+const cheatSheetPaths = ["/pl-timeline", "/runtimes", "/hardware", "/fv"];
 const cheatSheetActive = cheatSheetPaths.some((p) => currentPath.startsWith(p));
 ---
 
