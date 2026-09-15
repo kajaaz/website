@@ -1,0 +1,419 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const steps = [
+  {
+    n: "0",
+    title: "Pre-boot",
+    body:
+      "Power management brings up the voltage rails, clock/PLL switches off the slow internal oscillator onto the main clock, and boot mode straps (a handful of pins sampled once at reset) tell boot ROM which source to boot from. In parallel, the reset controller gates when reset actually releases, the watchdog timer is armed to catch a hang later on, the TRNG becomes available for nonces, and glitch-detection sensors start watching the power and clock lines for fault-injection attempts.",
+  },
+  {
+    n: "1",
+    title: "Reset",
+    body:
+      "The CPU's program counter is set to a fixed address inside boot ROM. Nothing else is initialized yet.",
+  },
+  {
+    n: "2",
+    title: "Boot ROM executes",
+    body:
+      "Immutable code, burned in at fabrication, starts running. It cannot be patched.",
+  },
+  {
+    n: "3",
+    title: "Read the root key",
+    body:
+      "Boot ROM reads the public key hash and anti-rollback counter from OTP/eFuses.",
+  },
+  {
+    n: "4",
+    title: "Fetch the bootloader",
+    body:
+      "Boot ROM reads the next-stage image from external flash over SPI/QSPI into on-chip SRAM, since DRAM isn't usable yet.",
+  },
+  {
+    n: "5",
+    title: "Stage-2 runs from SRAM",
+    body: "The fetched image is staged in SRAM pending verification.",
+  },
+  {
+    n: "6",
+    title: "Verify the signature",
+    body:
+      "The secure boot engine checks the image against the OTP root key. If a glitch is detected at any point up to here, or the signature doesn't check out, execution branches to the failure path instead of continuing.",
+  },
+  {
+    n: "7",
+    title: "Bring up DRAM",
+    body:
+      "Once trusted, the memory controller calibrates timing and initializes external DRAM. MPU/MMU protections are configured before anything is allowed to run there.",
+  },
+  {
+    n: "8",
+    title: "Load and run",
+    body:
+      "The DMA controller copies the verified firmware into DRAM; the CPU jumps to its entry point. From here, a TrustZone-style switch may separate secure and normal execution worlds, an attestation register can record a hash of what was loaded, and the interrupt controller and UART come online for normal operation. If this eventually boots an OS, control passes via a device tree at kernel handoff.",
+  },
+];
+
+const connections = [
+  {
+    title: "Debug port (JTAG/SWD)",
+    body:
+      "wires directly into the CPU's own debug access port logic, not into boot ROM, flash, or anything else. It's a standing, always-available override channel, independent of whatever software is or isn't running, which is why production parts either blow a fuse to disable it or gate it behind an authenticated challenge.",
+  },
+  {
+    title: "Boot straps",
+    body:
+      "feed a small hardware latch sampled once at reset. That latched value becomes a config register that only boot ROM reads: it's a fixed, one-time hardware input, not something software chooses.",
+  },
+];
+---
+
+<BaseLayout title="Hardware">
+  <p class="mono-eyebrow mb-1"><span class="text-accent-blue">$</span> dmesg | grep -i boot</p>
+  <h1 class="glitch is-intro mb-4 text-3xl font-bold tracking-tight text-brand-text" data-text="Hardware">Hardware</h1>
+
+  <!-- What is it? -->
+  <div class="mb-10 rounded-lg border-l-2 border-accent-green/40 bg-accent-green/5 px-4 py-3">
+    <h2 class="mb-1 text-sm font-bold text-brand-text">What is it?</h2>
+    <p class="text-sm leading-relaxed text-brand-body">
+      A cheat sheet on what the hardware actually does before your code ever runs. First topic: the secure boot
+      chain of a modern SoC, from the first voltage rail to a verified program executing in DRAM, and what happens
+      when verification fails.
+    </p>
+  </div>
+
+  <!-- ====== SECURE BOOT ====== -->
+  <section class="mb-14">
+    <p class="mono-eyebrow mb-2">// power-on &rarr; chain of trust</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Anatomy of a secure boot">Anatomy of a secure boot</h2>
+    <p class="mb-6 text-brand-body">
+      A reference diagram and walkthrough of what actually happens between power-on and a verified program running
+      on a typical secure microcontroller (SoC, boot ROM, flash and DRAM), including the failure path, since that is
+      usually the more interesting part.
+    </p>
+
+    <!-- Boot sequence diagram -->
+    <figure class="mb-8 overflow-x-auto rounded-xl border border-brand-border bg-white p-4 sm:p-6">
+      <svg viewBox="0 0 680 875" class="soc-svg mx-auto block h-auto w-full max-w-[620px] min-w-[520px] sm:min-w-0" role="img" aria-labelledby="soc-boot-title soc-boot-desc">
+        <title id="soc-boot-title">Complete SoC boot sequence reference diagram</title>
+        <desc id="soc-boot-desc">Full reference diagram of an SoC boot chain including power management, clock and PLL setup, reset controller, watchdog timer, TRNG, glitch detection sensors, boot mode straps, debug port, CPU, secure boot engine, OTP eFuses, boot ROM, on-chip SRAM, DMA controller, memory controller, MPU/MMU, TrustZone-style world switch, attestation register, interrupt controller, UART, external flash and DRAM, a verification failure branch, and final kernel handoff.</desc>
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+
+        <g class="c-purple">
+          <rect x="60" y="175" width="560" height="430" rx="20" stroke-width="1"/>
+          <text class="th" x="340" y="205" text-anchor="middle" dominant-baseline="central">SoC (system on chip)</text>
+          <text class="ts" x="340" y="223" text-anchor="middle" dominant-baseline="central">single integrated circuit</text>
+        </g>
+
+        <g class="c-red">
+          <rect x="80" y="10" width="115" height="55" rx="10" stroke-width="1"/>
+          <text class="th" x="137.5" y="28" text-anchor="middle" dominant-baseline="central">Debug port</text>
+          <text class="ts" x="137.5" y="47" text-anchor="middle" dominant-baseline="central">JTAG / SWD</text>
+        </g>
+        <g class="c-gray">
+          <rect x="215" y="10" width="115" height="55" rx="10" stroke-width="1"/>
+          <text class="th" x="272.5" y="28" text-anchor="middle" dominant-baseline="central">Power mgmt</text>
+          <text class="ts" x="272.5" y="47" text-anchor="middle" dominant-baseline="central">Voltage rails</text>
+        </g>
+        <g class="c-purple badge"><circle cx="321" cy="19" r="9"/><text class="ts" x="321" y="19" text-anchor="middle" dominant-baseline="central">0</text></g>
+        <g class="c-gray">
+          <rect x="350" y="10" width="115" height="55" rx="10" stroke-width="1"/>
+          <text class="th" x="407.5" y="28" text-anchor="middle" dominant-baseline="central">Clock / PLL</text>
+          <text class="ts" x="407.5" y="47" text-anchor="middle" dominant-baseline="central">Main clock</text>
+        </g>
+        <g class="c-purple badge"><circle cx="456" cy="19" r="9"/><text class="ts" x="456" y="19" text-anchor="middle" dominant-baseline="central">0</text></g>
+        <g class="c-gray">
+          <rect x="485" y="10" width="115" height="55" rx="10" stroke-width="1"/>
+          <text class="th" x="542.5" y="28" text-anchor="middle" dominant-baseline="central">Boot straps</text>
+          <text class="ts" x="542.5" y="47" text-anchor="middle" dominant-baseline="central">Boot source</text>
+        </g>
+        <g class="c-purple badge"><circle cx="591" cy="19" r="9"/><text class="ts" x="591" y="19" text-anchor="middle" dominant-baseline="central">0</text></g>
+
+        <line x1="330" y1="37.5" x2="350" y2="37.5" class="arr" marker-end="url(#arrow)"/>
+        <line x1="465" y1="37.5" x2="485" y2="37.5" class="arr" marker-end="url(#arrow)"/>
+
+        <g class="c-gray">
+          <rect x="80" y="80" width="115" height="55" rx="10" stroke-width="1"/>
+          <text class="th" x="137.5" y="98" text-anchor="middle" dominant-baseline="central">Watchdog</text>
+          <text class="ts" x="137.5" y="117" text-anchor="middle" dominant-baseline="central">Catches hangs</text>
+        </g>
+        <g class="c-purple badge"><circle cx="186" cy="89" r="9"/><text class="ts" x="186" y="89" text-anchor="middle" dominant-baseline="central">0</text></g>
+        <g class="c-pink">
+          <rect x="215" y="80" width="115" height="55" rx="10" stroke-width="1"/>
+          <text class="th" x="272.5" y="98" text-anchor="middle" dominant-baseline="central">TRNG</text>
+          <text class="ts" x="272.5" y="117" text-anchor="middle" dominant-baseline="central">Randomness</text>
+        </g>
+        <g class="c-purple badge"><circle cx="321" cy="89" r="9"/><text class="ts" x="321" y="89" text-anchor="middle" dominant-baseline="central">0</text></g>
+        <g class="c-pink">
+          <rect x="350" y="80" width="115" height="55" rx="10" stroke-width="1"/>
+          <text class="th" x="407.5" y="98" text-anchor="middle" dominant-baseline="central">Glitch check</text>
+          <text class="ts" x="407.5" y="117" text-anchor="middle" dominant-baseline="central">Detects faults</text>
+        </g>
+        <g class="c-purple badge"><circle cx="456" cy="89" r="9"/><text class="ts" x="456" y="89" text-anchor="middle" dominant-baseline="central">0</text></g>
+        <g class="c-gray">
+          <rect x="485" y="80" width="115" height="55" rx="10" stroke-width="1"/>
+          <text class="th" x="542.5" y="98" text-anchor="middle" dominant-baseline="central">Reset ctrl</text>
+          <text class="ts" x="542.5" y="117" text-anchor="middle" dominant-baseline="central">Releases CPU</text>
+        </g>
+        <g class="c-purple badge"><circle cx="591" cy="89" r="9"/><text class="ts" x="591" y="89" text-anchor="middle" dominant-baseline="central">0</text></g>
+
+        <path d="M137.5 65 L137.5 72 L30 72 L30 245 L137.5 245 L137.5 255" class="wire-debug"/>
+        <path d="M542.5 65 L542.5 72 L655 72 L655 245 L542.5 245 L542.5 255" class="arr" marker-end="url(#arrow)"/>
+        <line x1="137.5" y1="135" x2="137.5" y2="255" class="arr" marker-end="url(#arrow)"/>
+        <line x1="272.5" y1="135" x2="272.5" y2="255" class="arr" marker-end="url(#arrow)"/>
+        <line x1="542.5" y1="135" x2="542.5" y2="255" class="arr" marker-end="url(#arrow)"/>
+        <path d="M407.5 135 L407.5 150 L660 150 L660 740 L520 740 L520 755" class="wire-fail"/>
+
+        <g class="c-gray">
+          <rect x="80" y="255" width="115" height="90" rx="12" stroke-width="1"/>
+          <text class="th" x="137.5" y="299" text-anchor="middle" dominant-baseline="central">CPU + cache</text>
+          <text class="ts" x="137.5" y="327" text-anchor="middle" dominant-baseline="central">Executes code</text>
+        </g>
+        <g class="c-purple badge"><circle cx="186" cy="264" r="9"/><text class="ts" x="186" y="264" text-anchor="middle" dominant-baseline="central">1</text></g>
+        <g class="c-coral">
+          <rect x="215" y="255" width="115" height="90" rx="12" stroke-width="1"/>
+          <text class="th" x="272.5" y="299" text-anchor="middle" dominant-baseline="central">Secure boot</text>
+          <text class="ts" x="272.5" y="327" text-anchor="middle" dominant-baseline="central">Verifies boot</text>
+        </g>
+        <g class="c-purple badge"><circle cx="321" cy="264" r="9"/><text class="ts" x="321" y="264" text-anchor="middle" dominant-baseline="central">6</text></g>
+        <g class="c-coral">
+          <rect x="350" y="255" width="115" height="90" rx="12" stroke-width="1"/>
+          <text class="th" x="407.5" y="299" text-anchor="middle" dominant-baseline="central">OTP/eFuses</text>
+          <text class="ts" x="407.5" y="327" text-anchor="middle" dominant-baseline="central">Keys, rollback</text>
+        </g>
+        <g class="c-purple badge"><circle cx="456" cy="264" r="9"/><text class="ts" x="456" y="264" text-anchor="middle" dominant-baseline="central">3</text></g>
+        <g class="c-coral">
+          <rect x="485" y="255" width="115" height="90" rx="12" stroke-width="1"/>
+          <text class="th" x="542.5" y="299" text-anchor="middle" dominant-baseline="central">Boot ROM</text>
+          <text class="ts" x="542.5" y="327" text-anchor="middle" dominant-baseline="central">Runs first</text>
+        </g>
+        <g class="c-purple badge"><circle cx="591" cy="264" r="9"/><text class="ts" x="591" y="264" text-anchor="middle" dominant-baseline="central">2</text></g>
+
+        <line x1="485" y1="300" x2="465" y2="300" class="arr" marker-end="url(#arrow)"/>
+        <line x1="350" y1="300" x2="330" y2="300" class="arr" marker-end="url(#arrow)"/>
+        <path d="M272.5 345 L160 375" class="arr" marker-end="url(#arrow)" fill="none"/>
+        <line x1="542.5" y1="345" x2="542.5" y2="375" class="arr" marker-end="url(#arrow)"/>
+        <path d="M330 330 L340 330 L340 360 L635 360 L635 730 L440 730 L440 755" class="wire-fail"/>
+
+        <g class="c-teal">
+          <rect x="80" y="375" width="115" height="90" rx="12" stroke-width="1"/>
+          <text class="th" x="137.5" y="419" text-anchor="middle" dominant-baseline="central">On-chip SRAM</text>
+          <text class="ts" x="137.5" y="447" text-anchor="middle" dominant-baseline="central">Runs stage-2</text>
+        </g>
+        <g class="c-purple badge"><circle cx="186" cy="384" r="9"/><text class="ts" x="186" y="384" text-anchor="middle" dominant-baseline="central">5</text></g>
+        <g class="c-gray">
+          <rect x="215" y="375" width="115" height="90" rx="12" stroke-width="1"/>
+          <text class="th" x="272.5" y="419" text-anchor="middle" dominant-baseline="central">DMA ctrl</text>
+          <text class="ts" x="272.5" y="447" text-anchor="middle" dominant-baseline="central">Moves data</text>
+        </g>
+        <g class="c-purple badge"><circle cx="321" cy="384" r="9"/><text class="ts" x="321" y="384" text-anchor="middle" dominant-baseline="central">8</text></g>
+        <g class="c-gray">
+          <rect x="350" y="375" width="115" height="90" rx="12" stroke-width="1"/>
+          <text class="th" x="407.5" y="419" text-anchor="middle" dominant-baseline="central">Mem ctrl</text>
+          <text class="ts" x="407.5" y="447" text-anchor="middle" dominant-baseline="central">Inits DRAM</text>
+        </g>
+        <g class="c-purple badge"><circle cx="456" cy="384" r="9"/><text class="ts" x="456" y="384" text-anchor="middle" dominant-baseline="central">7</text></g>
+        <g class="c-gray">
+          <rect x="485" y="375" width="115" height="90" rx="12" stroke-width="1"/>
+          <text class="th" x="542.5" y="419" text-anchor="middle" dominant-baseline="central">MPU / MMU</text>
+          <text class="ts" x="542.5" y="447" text-anchor="middle" dominant-baseline="central">Memory perms</text>
+        </g>
+
+        <line x1="137.5" y1="465" x2="137.5" y2="495" class="arr" marker-end="url(#arrow)"/>
+        <line x1="272.5" y1="465" x2="272.5" y2="495" class="arr" marker-end="url(#arrow)"/>
+        <line x1="407.5" y1="465" x2="407.5" y2="495" class="arr" marker-end="url(#arrow)"/>
+        <line x1="542.5" y1="465" x2="542.5" y2="495" class="arr" marker-end="url(#arrow)"/>
+
+        <g class="c-coral">
+          <rect x="80" y="495" width="115" height="90" rx="12" stroke-width="1"/>
+          <text class="th" x="137.5" y="539" text-anchor="middle" dominant-baseline="central">TrustZone</text>
+          <text class="ts" x="137.5" y="567" text-anchor="middle" dominant-baseline="central">Splits worlds</text>
+        </g>
+        <g class="c-coral">
+          <rect x="215" y="495" width="115" height="90" rx="12" stroke-width="1"/>
+          <text class="th" x="272.5" y="539" text-anchor="middle" dominant-baseline="central">Attestation</text>
+          <text class="ts" x="272.5" y="567" text-anchor="middle" dominant-baseline="central">Records hashes</text>
+        </g>
+        <g class="c-gray">
+          <rect x="350" y="495" width="115" height="90" rx="12" stroke-width="1"/>
+          <text class="th" x="407.5" y="539" text-anchor="middle" dominant-baseline="central">IRQ ctrl</text>
+          <text class="ts" x="407.5" y="567" text-anchor="middle" dominant-baseline="central">Handles events</text>
+        </g>
+        <g class="c-gray">
+          <rect x="485" y="495" width="115" height="90" rx="12" stroke-width="1"/>
+          <text class="th" x="542.5" y="539" text-anchor="middle" dominant-baseline="central">UART</text>
+          <text class="ts" x="542.5" y="567" text-anchor="middle" dominant-baseline="central">Early console</text>
+        </g>
+
+        <g class="c-amber">
+          <rect x="90" y="645" width="190" height="80" rx="12" stroke-width="1"/>
+          <text class="th" x="185" y="677" text-anchor="middle" dominant-baseline="central">Flash memory</text>
+          <text class="ts" x="185" y="701" text-anchor="middle" dominant-baseline="central">Non-volatile storage</text>
+        </g>
+        <g class="c-purple badge"><circle cx="271" cy="654" r="9"/><text class="ts" x="271" y="654" text-anchor="middle" dominant-baseline="central">4</text></g>
+        <g class="c-blue">
+          <rect x="400" y="645" width="210" height="80" rx="12" stroke-width="1"/>
+          <text class="th" x="505" y="677" text-anchor="middle" dominant-baseline="central">DRAM</text>
+          <text class="ts" x="505" y="701" text-anchor="middle" dominant-baseline="central">Runs verified firmware</text>
+        </g>
+        <g class="c-purple badge"><circle cx="601" cy="654" r="9"/><text class="ts" x="601" y="654" text-anchor="middle" dominant-baseline="central">8</text></g>
+
+        <line x1="175" y1="605" x2="175" y2="645" class="arr" marker-end="url(#arrow)"/>
+        <path d="M195 645 L195 615 L160 615 L160 465" class="arr" marker-end="url(#arrow)" fill="none"/>
+        <path d="M407.5 465 L407.5 480 L475 480 L475 615 L470 645" class="arr" marker-end="url(#arrow)" fill="none"/>
+        <path d="M272.5 465 L272.5 480 L340 480 L340 625 L540 625 L540 645" class="arr" marker-end="url(#arrow)" fill="none"/>
+        <path d="M542.5 585 L542.5 615 L580 615 L580 645" class="arr" marker-end="url(#arrow)" fill="none"/>
+
+        <path d="M505 725 L505 740 L180 740 L180 755" class="arr" marker-end="url(#arrow)" fill="none"/>
+
+        <g class="c-green">
+          <rect x="40" y="755" width="280" height="80" rx="12" stroke-width="1"/>
+          <text class="th" x="180" y="787" text-anchor="middle" dominant-baseline="central">Kernel handoff</text>
+          <text class="ts" x="180" y="811" text-anchor="middle" dominant-baseline="central">Device tree passed to OS</text>
+        </g>
+        <g class="c-red">
+          <rect x="340" y="755" width="280" height="80" rx="12" stroke-width="1"/>
+          <text class="th" x="480" y="787" text-anchor="middle" dominant-baseline="central">Verification failed</text>
+          <text class="ts" x="480" y="811" text-anchor="middle" dominant-baseline="central">Halt or enter recovery mode</text>
+        </g>
+      </svg>
+      <figcaption class="mt-3 text-sm text-brand-muted">
+        Numbered badges (0 to 8) trace the main execution sequence. Unbadged blocks are supporting infrastructure
+        without a single fixed step in the sequence.
+      </figcaption>
+    </figure>
+
+    <!-- Step by step -->
+    <h3 class="mb-4 mt-10 text-lg font-semibold text-brand-text">Step by step</h3>
+    <ol class="space-y-4">
+      {steps.map((s) => (
+        <li class="flex gap-3">
+          <span class="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-mono text-xs font-semibold text-white" style="background:#534AB7">{s.n}</span>
+          <p class="leading-relaxed text-brand-body"><strong class="text-brand-text">{s.title}.</strong> {s.body}</p>
+        </li>
+      ))}
+    </ol>
+
+    <!-- Two connections -->
+    <h3 class="mb-3 mt-10 text-lg font-semibold text-brand-text">Two connections worth calling out</h3>
+    <ul class="ml-5 list-disc space-y-3 marker:text-accent-green">
+      {connections.map((c) => (
+        <li class="leading-relaxed text-brand-body"><strong class="text-brand-text">{c.title}</strong> {c.body}</li>
+      ))}
+    </ul>
+
+    <p class="mt-8 rounded-lg border border-brand-border bg-brand-bg px-4 py-3 text-sm leading-relaxed text-brand-muted">
+      Note: TrustZone, attestation, the interrupt controller and UART don't have one universal ordering the way
+      steps 1 to 8 do: real designs vary in exactly when each gets configured. They're shown in one plausible order
+      here for clarity, not as a claim about a fixed sequence.
+    </p>
+  </section>
+</BaseLayout>
+
+<style>
+  .soc-svg {
+    --purple-50: #eeedfe;
+    --purple-600: #534ab7;
+    --purple-800: #3c3489;
+    --gray-50: #f1efe8;
+    --gray-600: #5f5e5a;
+    --gray-800: #444441;
+    --coral-50: #faece7;
+    --coral-600: #993c1d;
+    --coral-800: #712b13;
+    --pink-50: #fbeaf0;
+    --pink-600: #993556;
+    --pink-800: #72243e;
+    --teal-50: #e1f5ee;
+    --teal-600: #0f6e56;
+    --teal-800: #085041;
+    --amber-50: #faeeda;
+    --amber-600: #854f0b;
+    --amber-800: #633806;
+    --blue-50: #e6f1fb;
+    --blue-600: #185fa5;
+    --blue-800: #0c447c;
+    --green-50: #eaf3de;
+    --green-600: #3b6d11;
+    --green-800: #27500a;
+    --red-50: #fcebeb;
+    --red-600: #a32d2d;
+    --red-800: #791f1f;
+    --arrow-color: #5f5e5a;
+  }
+
+  .soc-svg .th {
+    font-family: "Inter", system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .soc-svg .ts {
+    font-family: "Inter", system-ui, sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+  }
+
+  .soc-svg .arr {
+    stroke: var(--arrow-color);
+    stroke-width: 1.5;
+    fill: none;
+  }
+  .soc-svg .wire-debug {
+    stroke: var(--red-600);
+    stroke-width: 1.4;
+    stroke-dasharray: 4 3;
+    fill: none;
+    opacity: 0.85;
+  }
+  .soc-svg .wire-fail {
+    stroke: var(--red-600);
+    stroke-width: 1.2;
+    stroke-dasharray: 5 3;
+    fill: none;
+  }
+
+  .soc-svg .c-purple rect { fill: var(--purple-50); stroke: var(--purple-600); }
+  .soc-svg .c-purple .th { fill: var(--purple-800); }
+  .soc-svg .c-purple .ts { fill: var(--purple-600); }
+  .soc-svg .c-purple.badge circle { fill: var(--purple-600); }
+  .soc-svg .c-purple.badge .ts { fill: #fff; }
+
+  .soc-svg .c-gray rect { fill: var(--gray-50); stroke: var(--gray-600); }
+  .soc-svg .c-gray .th { fill: var(--gray-800); }
+  .soc-svg .c-gray .ts { fill: var(--gray-600); }
+
+  .soc-svg .c-coral rect { fill: var(--coral-50); stroke: var(--coral-600); }
+  .soc-svg .c-coral .th { fill: var(--coral-800); }
+  .soc-svg .c-coral .ts { fill: var(--coral-600); }
+
+  .soc-svg .c-pink rect { fill: var(--pink-50); stroke: var(--pink-600); }
+  .soc-svg .c-pink .th { fill: var(--pink-800); }
+  .soc-svg .c-pink .ts { fill: var(--pink-600); }
+
+  .soc-svg .c-teal rect { fill: var(--teal-50); stroke: var(--teal-600); }
+  .soc-svg .c-teal .th { fill: var(--teal-800); }
+  .soc-svg .c-teal .ts { fill: var(--teal-600); }
+
+  .soc-svg .c-amber rect { fill: var(--amber-50); stroke: var(--amber-600); }
+  .soc-svg .c-amber .th { fill: var(--amber-800); }
+  .soc-svg .c-amber .ts { fill: var(--amber-600); }
+
+  .soc-svg .c-blue rect { fill: var(--blue-50); stroke: var(--blue-600); }
+  .soc-svg .c-blue .th { fill: var(--blue-800); }
+  .soc-svg .c-blue .ts { fill: var(--blue-600); }
+
+  .soc-svg .c-green rect { fill: var(--green-50); stroke: var(--green-600); }
+  .soc-svg .c-green .th { fill: var(--green-800); }
+  .soc-svg .c-green .ts { fill: var(--green-600); }
+
+  .soc-svg .c-red rect { fill: var(--red-50); stroke: var(--red-600); }
+  .soc-svg .c-red .th { fill: var(--red-800); }
+  .soc-svg .c-red .ts { fill: var(--red-600); }
+</style>
