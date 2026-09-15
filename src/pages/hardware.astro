@@ -97,7 +97,7 @@ const connections = [
 
     <!-- Boot sequence diagram -->
     <figure class="mb-8 overflow-x-auto rounded-xl border border-brand-border bg-white p-4 sm:p-6">
-      <svg viewBox="0 0 680 875" class="soc-svg mx-auto block h-auto w-full max-w-[620px] min-w-[520px] sm:min-w-0" role="img" aria-labelledby="soc-boot-title soc-boot-desc">
+      <svg viewBox="0 0 680 1060" class="soc-svg mx-auto block h-auto w-full max-w-[620px] min-w-[520px] sm:min-w-0" role="img" aria-labelledby="soc-boot-title soc-boot-desc">
         <title id="soc-boot-title">Complete SoC boot sequence reference diagram</title>
         <desc id="soc-boot-desc">Full reference diagram of an SoC boot chain including power management, clock and PLL setup, reset controller, watchdog timer, TRNG, glitch detection sensors, boot mode straps, debug port, CPU, secure boot engine, OTP eFuses, boot ROM, on-chip SRAM, DMA controller, memory controller, MPU/MMU, TrustZone-style world switch, attestation register, interrupt controller, UART, external flash and DRAM, a verification failure branch, and final kernel handoff.</desc>
         <defs>
@@ -198,7 +198,7 @@ const connections = [
 
         <line x1="485" y1="300" x2="465" y2="300" class="arr" marker-end="url(#arrow)"/>
         <line x1="350" y1="300" x2="330" y2="300" class="arr" marker-end="url(#arrow)"/>
-        <path d="M272.5 345 L160 375" class="arr" marker-end="url(#arrow)" fill="none"/>
+        <path d="M160 375 L272.5 345" class="arr" marker-end="url(#arrow)" fill="none"/>
         <line x1="542.5" y1="345" x2="542.5" y2="375" class="arr" marker-end="url(#arrow)"/>
         <path d="M330 330 L340 330 L340 360 L635 360 L635 730 L440 730 L440 755" class="wire-fail"/>
 
@@ -283,10 +283,48 @@ const connections = [
           <text class="th" x="480" y="787" text-anchor="middle" dominant-baseline="central">Verification failed</text>
           <text class="ts" x="480" y="811" text-anchor="middle" dominant-baseline="central">Halt or enter recovery mode</text>
         </g>
+
+        <!-- ===== firmware / OS boundary ===== -->
+        <line x1="24" y1="868" x2="656" y2="868" class="divider"/>
+        <text class="divider-label" x="652" y="861" text-anchor="end">&#8593; hardware &amp; firmware world</text>
+        <text class="divider-label" x="652" y="888" text-anchor="end">&#8595; operating-system world (software)</text>
+
+        <!-- only a verified boot crosses the boundary -->
+        <path d="M180 835 L180 918 L116 918 L116 948" class="arr" marker-end="url(#arrow)" fill="none"/>
+
+        <!-- ===== after handoff: OS world ===== -->
+        <rect class="os-world" x="40" y="905" width="580" height="142" rx="14"/>
+
+        <g class="c-green">
+          <rect x="56" y="948" width="120" height="70" rx="10" stroke-width="1"/>
+          <text class="th" x="116" y="975" text-anchor="middle" dominant-baseline="central">OS kernel</text>
+          <text class="ts" x="116" y="996" text-anchor="middle" dominant-baseline="central">takes control</text>
+        </g>
+        <g class="c-amber">
+          <rect x="200" y="948" width="120" height="70" rx="10" stroke-width="1"/>
+          <text class="th" x="260" y="975" text-anchor="middle" dominant-baseline="central">Mount FS</text>
+          <text class="ts" x="260" y="996" text-anchor="middle" dominant-baseline="central">files appear</text>
+        </g>
+        <g class="c-gray">
+          <rect x="344" y="948" width="120" height="70" rx="10" stroke-width="1"/>
+          <text class="th" x="404" y="975" text-anchor="middle" dominant-baseline="central">init / systemd</text>
+          <text class="ts" x="404" y="996" text-anchor="middle" dominant-baseline="central">starts services</text>
+        </g>
+        <g class="c-gray">
+          <rect x="488" y="948" width="120" height="70" rx="10" stroke-width="1"/>
+          <text class="th" x="548" y="975" text-anchor="middle" dominant-baseline="central">Shell / scripts</text>
+          <text class="ts" x="548" y="996" text-anchor="middle" dominant-baseline="central">bash, python&#8230;</text>
+        </g>
+
+        <line x1="176" y1="983" x2="200" y2="983" class="arr" marker-end="url(#arrow)"/>
+        <line x1="320" y1="983" x2="344" y2="983" class="arr" marker-end="url(#arrow)"/>
+        <line x1="464" y1="983" x2="488" y2="983" class="arr" marker-end="url(#arrow)"/>
       </svg>
       <figcaption class="mt-3 text-sm text-brand-muted">
         Numbered badges (0 to 8) trace the main execution sequence. Unbadged blocks are supporting infrastructure
-        without a single fixed step in the sequence.
+        without a single fixed step in the sequence. Below the dashed line is the OS world: only a verified boot
+        crosses the firmware/software boundary, after which the kernel mounts a file system, init starts services,
+        and shells and scripts finally become possible.
       </figcaption>
     </figure>
 
@@ -377,6 +415,24 @@ const connections = [
     stroke-width: 1.2;
     stroke-dasharray: 5 3;
     fill: none;
+  }
+
+  .soc-svg .divider {
+    stroke: #94a3b8;
+    stroke-width: 1.2;
+    stroke-dasharray: 6 4;
+  }
+  .soc-svg .divider-label {
+    font-family: "Inter", system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    fill: #64748b;
+  }
+  .soc-svg .os-world {
+    fill: #f6f8fb;
+    stroke: #94a3b8;
+    stroke-width: 1;
+    stroke-dasharray: 6 4;
   }
 
   .soc-svg .c-purple rect { fill: var(--purple-50); stroke: var(--purple-600); }
