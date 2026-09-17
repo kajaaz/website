@@ -4,56 +4,45 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 const steps = [
   {
     n: "0",
-    title: "Pre-boot",
+    title: "Always-on hardware (level 0)",
     body:
-      "Power management brings up the voltage rails, clock/PLL switches off the slow internal oscillator onto the main clock, and boot mode straps (a handful of pins sampled once at reset) tell boot ROM which source to boot from. In parallel, the reset controller gates when reset actually releases, the watchdog timer is armed to catch a hang later on, the TRNG becomes available for nonces, and glitch-detection sensors start watching the power and clock lines for fault-injection attempts.",
+      "Some silicon is present and powered the whole time rather than being a step in the sequence: the CPU and its caches execute whatever the current stage points them at, immutable Trusted ROM holds the very first code, and on-chip Trusted SRAM is where the writable stages (BL1's data, then BL2, then BL31 and BL32) are copied and run. That is why they carry no step number and are tagged as level 0.",
   },
   {
     n: "1",
     title: "Reset",
     body:
-      "The CPU's program counter is set to a fixed address inside boot ROM. Nothing else is initialized yet.",
+      "The primary CPU is released from reset. Its registers are reset to known values and the program counter is set to the reset vector, a fixed address that points into Trusted ROM. On a multicore SoC the other cores are held in a safe state until the primary has done enough setup to bring them up (later handled by PSCI in BL31).",
   },
   {
     n: "2",
-    title: "Boot ROM executes",
+    title: "BL1, Application Processor Trusted ROM (EL3)",
     body:
-      "Immutable code, burned in at fabrication, starts running. It cannot be patched.",
+      "The application processor is the main CPU cluster that will eventually run the OS (as opposed to a separate System Control Processor that some SoCs use for power and clocks). Immutable code in its Trusted ROM runs first at EL3. It installs exception vectors and runs the CPU reset handler, then brings up the platform: raise the clock/PLL to full speed, enable the Trusted Watchdog (which resets the SoC if boot ever hangs in a loop), set up the console, enable interconnect coherency and the MMU, and configure the flash it loads from. It reads a root-key hash from OTP/eFuses, uses the crypto engine to verify the BL2 image, copies it into Trusted SRAM and hands control to BL2 at Secure-EL1.",
   },
   {
     n: "3",
-    title: "Read the root key",
+    title: "BL2, Trusted Boot Firmware (Secure-EL1)",
     body:
-      "Boot ROM reads the public key hash and anti-rollback counter from OTP/eFuses.",
+      "BL2 runs from Trusted SRAM and does the platform security setup, including programming the TrustZone controller (TZC) that splits DRAM and peripherals into secure and non-secure regions. It then loads the later stages (the BL3x images) from the Firmware Image Package (FIP) in flash, verifying each against the same root of trust: the EL3 runtime (BL31), the optional secure payload (BL32) and the non-trusted firmware (BL33). BL2 raises an SMC so BL1 turns off the MMU, flushes caches and jumps to BL31 at EL3.",
   },
   {
     n: "4",
-    title: "Fetch the bootloader",
+    title: "BL31, EL3 Runtime Software (EL3)",
     body:
-      "Boot ROM reads the next-stage image from external flash over SPI/QSPI into on-chip SRAM, since DRAM isn't usable yet.",
+      "BL31 is the resident EL3 runtime; it never exits. It re-initialises the architecture, sets up the generic interrupt controller (GIC), initialises PSCI power management (secondary-CPU boot, hotplug, idle) and registers the runtime services that the normal world calls into later through the SMC (Secure Monitor Call) instruction. It stays in Trusted SRAM for the life of the system.",
   },
   {
     n: "5",
-    title: "Stage-2 runs from SRAM",
-    body: "The fetched image is staged in SRAM pending verification.",
+    title: "BL32, Secure-EL1 Payload (Secure-EL1, optional)",
+    body:
+      "If present, BL32 is the Trusted OS (or other secure payload) running in the secure world at Secure-EL1. BL31 initialises it through a Secure-EL1 Payload Dispatcher (SPD) and routes secure/normal world switches to it over SMCs. It is optional; on AArch32 there is no BL31, and BL32 (for example SP_MIN) plays the EL3 runtime role instead.",
   },
   {
     n: "6",
-    title: "Verify the signature",
+    title: "BL33, Non-trusted Firmware (EL2/EL1)",
     body:
-      "The secure boot engine checks the image against the OTP root key. If a glitch is detected at any point up to here, or the signature doesn't check out, execution branches to the failure path instead of continuing.",
-  },
-  {
-    n: "7",
-    title: "Bring up DRAM",
-    body:
-      "Once trusted, the memory controller calibrates timing and initializes external DRAM. MPU/MMU protections are configured before anything is allowed to run there.",
-  },
-  {
-    n: "8",
-    title: "Load and run",
-    body:
-      "The DMA controller copies the verified firmware into DRAM; the CPU jumps to its entry point. From here, a TrustZone-style switch may separate secure and normal execution worlds, an attestation register can record a hash of what was loaded, and the interrupt controller and UART come online for normal operation. If this eventually boots an OS, control passes via a device tree at kernel handoff.",
+      "BL31 sets up the normal-world context and jumps to BL33 at the highest non-secure exception level (EL2 if available, otherwise EL1). BL33 is normal-world firmware such as UEFI or U-Boot, running from non-secure DRAM. It is the first non-secure code to run, and it goes on to boot the operating system.",
   },
 ];
 
@@ -61,12 +50,12 @@ const connections = [
   {
     title: "Debug port (JTAG/SWD)",
     body:
-      "wires directly into the CPU's own debug access port logic, not into boot ROM, flash, or anything else. It's a standing, always-available override channel, independent of whatever software is or isn't running, which is why production parts either blow a fuse to disable it or gate it behind an authenticated challenge.",
+      "wires into the CPU's own debug access port, independent of the boot code. On a production secure part it is disabled by a fuse or gated behind an authenticated debug challenge, because otherwise it would bypass the entire chain of trust.",
   },
   {
-    title: "Boot straps",
+    title: "Boot straps and the reset vector",
     body:
-      "feed a small hardware latch sampled once at reset. That latched value becomes a config register that only boot ROM reads: it's a fixed, one-time hardware input, not something software chooses.",
+      "a handful of pins latched once at reset (together with the PROGRAMMABLE_RESET_ADDRESS option) decide where the primary CPU starts and which image BL1 loads. It is a one-time hardware input, not something software chooses.",
   },
 ];
 ---
@@ -79,9 +68,9 @@ const connections = [
   <div class="mb-10 rounded-lg border-l-2 border-accent-green/40 bg-accent-green/5 px-4 py-3">
     <h2 class="mb-1 text-sm font-bold text-brand-text">What is it?</h2>
     <p class="text-sm leading-relaxed text-brand-body">
-      A cheat sheet on what the hardware actually does before your code ever runs. First topic: the secure boot
-      chain of a modern SoC, from the first voltage rail to a verified program executing in DRAM, and what happens
-      when verification fails.
+      A cheat sheet on what an Arm SoC does between power-on and the operating system. First topic: the
+      Arm Trusted Firmware-A (TF-A) secure boot chain, BL1 &rarr; BL2 &rarr; BL31 / BL32 &rarr; BL33, the exception
+      levels and memory regions each stage uses, and where a verification failure stops everything.
     </p>
   </div>
 
@@ -90,241 +79,206 @@ const connections = [
     <p class="mono-eyebrow mb-2">// power-on &rarr; chain of trust</p>
     <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Anatomy of a secure boot">Anatomy of a secure boot</h2>
     <p class="mb-6 text-brand-body">
-      A reference diagram and walkthrough of what actually happens between power-on and a verified program running
-      on a typical secure microcontroller (SoC, boot ROM, flash and DRAM), including the failure path, since that is
-      usually the more interesting part.
+      A walkthrough of a secure boot on an Arm application processor, following the{" "}
+      <a href="https://github.com/ARM-software/arm-trusted-firmware/blob/master/docs/design/firmware-design.rst" target="_blank" rel="noopener noreferrer" class="text-accent-blue underline underline-offset-2 transition-colors hover:text-accent-emerald">Arm Trusted Firmware-A (TF-A)</a>{" "}
+      cold boot: the chain of trust from the reset vector in Trusted ROM, through BL1 and BL2, into the EL3 runtime
+      (BL31), the optional secure payload (BL32) and the non-trusted firmware (BL33) that finally boots the OS in DRAM.
+      Here <strong class="text-brand-text">BL means Boot Loader stage</strong>, so BL1 is stage 1, BL2 is stage 2, and
+      BL31, BL32 and BL33 are the three parts of stage 3. The number in the name already tells you the stage, which is
+      why the boxes below only carry the memory and exception-level detail.
     </p>
 
-    <!-- Boot sequence diagram -->
+    <!-- ===== Unified diagram: die photo + full boot anatomy ===== -->
     <figure class="mb-8 overflow-x-auto rounded-xl border border-brand-border bg-white p-4 sm:p-6">
-      <svg viewBox="0 0 680 1060" class="soc-svg mx-auto block h-auto w-full max-w-[620px] min-w-[520px] sm:min-w-0" role="img" aria-labelledby="soc-boot-title soc-boot-desc">
-        <title id="soc-boot-title">Complete SoC boot sequence reference diagram</title>
-        <desc id="soc-boot-desc">Full reference diagram of an SoC boot chain including power management, clock and PLL setup, reset controller, watchdog timer, TRNG, glitch detection sensors, boot mode straps, debug port, CPU, secure boot engine, OTP eFuses, boot ROM, on-chip SRAM, DMA controller, memory controller, MPU/MMU, TrustZone-style world switch, attestation register, interrupt controller, UART, external flash and DRAM, a verification failure branch, and final kernel handoff.</desc>
+      <svg viewBox="0 0 1000 1040" class="soc-svg mx-auto block h-auto w-full max-w-[980px] min-w-[900px]" role="img" aria-labelledby="soc-uni-title soc-uni-desc">
+        <title id="soc-uni-title">Arm TF-A secure boot, mapped onto a real Broadcom BCM7019 die</title>
+        <desc id="soc-uni-desc">A single diagram combining a real die photograph of the Broadcom BCM7019 Arm SoC (left) with the full Arm Trusted Firmware-A cold boot anatomy. Labelled callouts for the CPU cluster, clock/PLL, watchdog, boot ROM, OTP/eFuses, crypto engine and on-chip Trusted SRAM point onto the die and each carries a coloured arrow to the boot stage it serves in the Reset, BL1, BL2, BL31, BL32, BL33 spine on the right. Flash and DRAM are shown as off-die board chips. A verification-failure branch halts the SoC, a dashed line marks the secure/normal world boundary, and the operating system starts once BL33 runs. Block positions on the photo are approximate because the die is not officially annotated.</desc>
         <defs>
-          <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-            <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <marker id="abig" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M1.5 1L8.5 5L1.5 9" fill="none" stroke="context-stroke" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
           </marker>
         </defs>
 
-        <g class="c-purple">
-          <rect x="60" y="175" width="560" height="430" rx="20" stroke-width="1"/>
-          <text class="th" x="340" y="205" text-anchor="middle" dominant-baseline="central">SoC (system on chip)</text>
-          <text class="ts" x="340" y="223" text-anchor="middle" dominant-baseline="central">single integrated circuit</text>
+        <!-- top labels -->
+        <text class="divider-label" x="24" y="40">Physical chip (Broadcom BCM7019 die, block positions approximate)</text>
+        <text class="divider-label" x="858" y="40">Boot execution chain</text>
+
+        <!-- ===== Die photo ===== -->
+        <image href="/images/broadcom-bcm7019-die.jpg" x="24" y="74" width="520" height="446" preserveAspectRatio="xMidYMid meet"/>
+        <rect x="24" y="74" width="520" height="446" rx="8" fill="none" stroke="#cbd5e1" stroke-width="1"/>
+        <text class="divider-label" x="24" y="540">Real die shot (public domain). Coloured dots are illustrative block positions.</text>
+
+        <!-- ===== Leaders from on-die parts to the die ===== -->
+        <g stroke-linecap="round">
+          <line x1="580" y1="101" x2="310" y2="297" stroke="#5f5e5a" stroke-width="1.5" opacity="0.7"/>
+          <line x1="580" y1="171" x2="138" y2="132" stroke="#5f5e5a" stroke-width="1.5" opacity="0.7"/>
+          <line x1="580" y1="241" x2="201" y2="114" stroke="#5f5e5a" stroke-width="1.5" opacity="0.7"/>
+          <line x1="580" y1="311" x2="86"  y2="252" stroke="#0f6e56" stroke-width="1.5" opacity="0.7"/>
+          <line x1="580" y1="381" x2="55"  y2="136" stroke="#993556" stroke-width="1.5" opacity="0.7"/>
+          <line x1="580" y1="451" x2="268" y2="194" stroke="#993c1d" stroke-width="1.5" opacity="0.7"/>
+          <line x1="580" y1="521" x2="461" y2="359" stroke="#0f6e56" stroke-width="1.5" opacity="0.7"/>
+        </g>
+        <g stroke="#fff" stroke-width="1.4">
+          <circle cx="310" cy="297" r="3.6" fill="#5f5e5a"/>
+          <circle cx="138" cy="132" r="3.6" fill="#5f5e5a"/>
+          <circle cx="201" cy="114" r="3.6" fill="#5f5e5a"/>
+          <circle cx="86"  cy="252" r="3.6" fill="#0f6e56"/>
+          <circle cx="55"  cy="136" r="3.6" fill="#993556"/>
+          <circle cx="268" cy="194" r="3.6" fill="#993c1d"/>
+          <circle cx="461" cy="359" r="3.6" fill="#0f6e56"/>
         </g>
 
-        <g class="c-red">
-          <rect x="80" y="10" width="115" height="55" rx="10" stroke-width="1"/>
-          <text class="th" x="137.5" y="28" text-anchor="middle" dominant-baseline="central">Debug port</text>
-          <text class="ts" x="137.5" y="47" text-anchor="middle" dominant-baseline="central">JTAG / SWD</text>
+        <!-- ===== Boot spine (grouped, white stage boxes) ===== -->
+        <g class="c-stage">
+          <rect x="858" y="74" width="132" height="54" rx="10" stroke-width="1.4"/>
+          <text class="th" x="924" y="96" text-anchor="middle" dominant-baseline="central">Reset</text>
+          <text class="ts" x="924" y="113" text-anchor="middle" dominant-baseline="central">power-on</text>
         </g>
-        <g class="c-gray">
-          <rect x="215" y="10" width="115" height="55" rx="10" stroke-width="1"/>
-          <text class="th" x="272.5" y="28" text-anchor="middle" dominant-baseline="central">Power mgmt</text>
-          <text class="ts" x="272.5" y="47" text-anchor="middle" dominant-baseline="central">Voltage rails</text>
-        </g>
-        <g class="c-purple badge"><circle cx="321" cy="19" r="9"/><text class="ts" x="321" y="19" text-anchor="middle" dominant-baseline="central">0</text></g>
-        <g class="c-gray">
-          <rect x="350" y="10" width="115" height="55" rx="10" stroke-width="1"/>
-          <text class="th" x="407.5" y="28" text-anchor="middle" dominant-baseline="central">Clock / PLL</text>
-          <text class="ts" x="407.5" y="47" text-anchor="middle" dominant-baseline="central">Main clock</text>
-        </g>
-        <g class="c-purple badge"><circle cx="456" cy="19" r="9"/><text class="ts" x="456" y="19" text-anchor="middle" dominant-baseline="central">0</text></g>
-        <g class="c-gray">
-          <rect x="485" y="10" width="115" height="55" rx="10" stroke-width="1"/>
-          <text class="th" x="542.5" y="28" text-anchor="middle" dominant-baseline="central">Boot straps</text>
-          <text class="ts" x="542.5" y="47" text-anchor="middle" dominant-baseline="central">Boot source</text>
-        </g>
-        <g class="c-purple badge"><circle cx="591" cy="19" r="9"/><text class="ts" x="591" y="19" text-anchor="middle" dominant-baseline="central">0</text></g>
+        <g class="c-purple badge"><circle cx="978" cy="88" r="9"/><text class="ts" x="978" y="88" text-anchor="middle" dominant-baseline="central">1</text></g>
+        <line x1="924" y1="128" x2="924" y2="144" stroke="#334155" stroke-width="2.4" marker-end="url(#abig)"/>
 
-        <line x1="330" y1="37.5" x2="350" y2="37.5" class="arr" marker-end="url(#arrow)"/>
-        <line x1="465" y1="37.5" x2="485" y2="37.5" class="arr" marker-end="url(#arrow)"/>
+        <g class="c-stage">
+          <rect x="858" y="144" width="132" height="264" rx="10" stroke-width="1.4"/>
+          <text class="th" x="924" y="172" text-anchor="middle" dominant-baseline="central">BL1</text>
+          <text class="ts" x="924" y="190" text-anchor="middle" dominant-baseline="central">Trusted ROM, EL3</text>
+          <text class="ts" x="924" y="212" text-anchor="middle" dominant-baseline="central">Brings up the platform,</text>
+          <text class="ts" x="924" y="228" text-anchor="middle" dominant-baseline="central">verifies and loads BL2.</text>
+        </g>
+        <g class="c-purple badge"><circle cx="978" cy="158" r="9"/><text class="ts" x="978" y="158" text-anchor="middle" dominant-baseline="central">2</text></g>
+        <line x1="924" y1="408" x2="924" y2="424" stroke="#334155" stroke-width="2.4" marker-end="url(#abig)"/>
 
-        <g class="c-gray">
-          <rect x="80" y="80" width="115" height="55" rx="10" stroke-width="1"/>
-          <text class="th" x="137.5" y="98" text-anchor="middle" dominant-baseline="central">Watchdog</text>
-          <text class="ts" x="137.5" y="117" text-anchor="middle" dominant-baseline="central">Catches hangs</text>
+        <g class="c-stage">
+          <rect x="858" y="424" width="132" height="194" rx="10" stroke-width="1.4"/>
+          <text class="th" x="924" y="452" text-anchor="middle" dominant-baseline="central">BL2</text>
+          <text class="ts" x="924" y="470" text-anchor="middle" dominant-baseline="central">SRAM, Secure-EL1</text>
+          <text class="ts" x="924" y="492" text-anchor="middle" dominant-baseline="central">Locks TrustZone,</text>
+          <text class="ts" x="924" y="508" text-anchor="middle" dominant-baseline="central">loads the BL3x images.</text>
         </g>
-        <g class="c-purple badge"><circle cx="186" cy="89" r="9"/><text class="ts" x="186" y="89" text-anchor="middle" dominant-baseline="central">0</text></g>
-        <g class="c-pink">
-          <rect x="215" y="80" width="115" height="55" rx="10" stroke-width="1"/>
-          <text class="th" x="272.5" y="98" text-anchor="middle" dominant-baseline="central">TRNG</text>
-          <text class="ts" x="272.5" y="117" text-anchor="middle" dominant-baseline="central">Randomness</text>
-        </g>
-        <g class="c-purple badge"><circle cx="321" cy="89" r="9"/><text class="ts" x="321" y="89" text-anchor="middle" dominant-baseline="central">0</text></g>
-        <g class="c-pink">
-          <rect x="350" y="80" width="115" height="55" rx="10" stroke-width="1"/>
-          <text class="th" x="407.5" y="98" text-anchor="middle" dominant-baseline="central">Glitch check</text>
-          <text class="ts" x="407.5" y="117" text-anchor="middle" dominant-baseline="central">Detects faults</text>
-        </g>
-        <g class="c-purple badge"><circle cx="456" cy="89" r="9"/><text class="ts" x="456" y="89" text-anchor="middle" dominant-baseline="central">0</text></g>
-        <g class="c-gray">
-          <rect x="485" y="80" width="115" height="55" rx="10" stroke-width="1"/>
-          <text class="th" x="542.5" y="98" text-anchor="middle" dominant-baseline="central">Reset ctrl</text>
-          <text class="ts" x="542.5" y="117" text-anchor="middle" dominant-baseline="central">Releases CPU</text>
-        </g>
-        <g class="c-purple badge"><circle cx="591" cy="89" r="9"/><text class="ts" x="591" y="89" text-anchor="middle" dominant-baseline="central">0</text></g>
+        <g class="c-purple badge"><circle cx="978" cy="438" r="9"/><text class="ts" x="978" y="438" text-anchor="middle" dominant-baseline="central">3</text></g>
+        <line x1="924" y1="618" x2="924" y2="634" stroke="#334155" stroke-width="2.4" marker-end="url(#abig)"/>
 
-        <path d="M137.5 65 L137.5 72 L30 72 L30 245 L137.5 245 L137.5 255" class="wire-debug"/>
-        <path d="M542.5 65 L542.5 72 L655 72 L655 245 L542.5 245 L542.5 255" class="arr" marker-end="url(#arrow)"/>
-        <line x1="137.5" y1="135" x2="137.5" y2="255" class="arr" marker-end="url(#arrow)"/>
-        <line x1="272.5" y1="135" x2="272.5" y2="255" class="arr" marker-end="url(#arrow)"/>
-        <line x1="542.5" y1="135" x2="542.5" y2="255" class="arr" marker-end="url(#arrow)"/>
-        <path d="M407.5 135 L407.5 150 L660 150 L660 740 L520 740 L520 755" class="wire-fail"/>
+        <g class="c-stage">
+          <rect x="858" y="634" width="132" height="64" rx="10" stroke-width="1.4"/>
+          <text class="th" x="924" y="660" text-anchor="middle" dominant-baseline="central">BL31</text>
+          <text class="ts" x="924" y="678" text-anchor="middle" dominant-baseline="central">EL3 runtime</text>
+        </g>
+        <g class="c-purple badge"><circle cx="978" cy="648" r="9"/><text class="ts" x="978" y="648" text-anchor="middle" dominant-baseline="central">4</text></g>
+        <line x1="924" y1="698" x2="924" y2="714" stroke="#334155" stroke-width="2.4" marker-end="url(#abig)"/>
 
-        <g class="c-gray">
-          <rect x="80" y="255" width="115" height="90" rx="12" stroke-width="1"/>
-          <text class="th" x="137.5" y="299" text-anchor="middle" dominant-baseline="central">CPU + cache</text>
-          <text class="ts" x="137.5" y="327" text-anchor="middle" dominant-baseline="central">Executes code</text>
+        <g class="c-stage">
+          <rect x="858" y="714" width="132" height="64" rx="10" stroke-width="1.4" stroke-dasharray="5 3"/>
+          <text class="th" x="924" y="740" text-anchor="middle" dominant-baseline="central">BL32</text>
+          <text class="ts" x="924" y="758" text-anchor="middle" dominant-baseline="central">optional</text>
         </g>
-        <g class="c-purple badge"><circle cx="186" cy="264" r="9"/><text class="ts" x="186" y="264" text-anchor="middle" dominant-baseline="central">1</text></g>
-        <g class="c-coral">
-          <rect x="215" y="255" width="115" height="90" rx="12" stroke-width="1"/>
-          <text class="th" x="272.5" y="299" text-anchor="middle" dominant-baseline="central">Secure boot</text>
-          <text class="ts" x="272.5" y="327" text-anchor="middle" dominant-baseline="central">Verifies boot</text>
-        </g>
-        <g class="c-purple badge"><circle cx="321" cy="264" r="9"/><text class="ts" x="321" y="264" text-anchor="middle" dominant-baseline="central">6</text></g>
-        <g class="c-coral">
-          <rect x="350" y="255" width="115" height="90" rx="12" stroke-width="1"/>
-          <text class="th" x="407.5" y="299" text-anchor="middle" dominant-baseline="central">OTP/eFuses</text>
-          <text class="ts" x="407.5" y="327" text-anchor="middle" dominant-baseline="central">Keys, rollback</text>
-        </g>
-        <g class="c-purple badge"><circle cx="456" cy="264" r="9"/><text class="ts" x="456" y="264" text-anchor="middle" dominant-baseline="central">3</text></g>
-        <g class="c-coral">
-          <rect x="485" y="255" width="115" height="90" rx="12" stroke-width="1"/>
-          <text class="th" x="542.5" y="299" text-anchor="middle" dominant-baseline="central">Boot ROM</text>
-          <text class="ts" x="542.5" y="327" text-anchor="middle" dominant-baseline="central">Runs first</text>
-        </g>
-        <g class="c-purple badge"><circle cx="591" cy="264" r="9"/><text class="ts" x="591" y="264" text-anchor="middle" dominant-baseline="central">2</text></g>
+        <g class="c-purple badge"><circle cx="978" cy="728" r="9"/><text class="ts" x="978" y="728" text-anchor="middle" dominant-baseline="central">5</text></g>
+        <line x1="924" y1="778" x2="924" y2="800" stroke="#334155" stroke-width="2.4" marker-end="url(#abig)"/>
 
-        <line x1="485" y1="300" x2="465" y2="300" class="arr" marker-end="url(#arrow)"/>
-        <line x1="350" y1="300" x2="330" y2="300" class="arr" marker-end="url(#arrow)"/>
-        <path d="M160 375 L272.5 345" class="arr" marker-end="url(#arrow)" fill="none"/>
-        <line x1="542.5" y1="345" x2="542.5" y2="375" class="arr" marker-end="url(#arrow)"/>
-        <path d="M330 330 L340 330 L340 360 L635 360 L635 730 L440 730 L440 755" class="wire-fail"/>
+        <g class="c-stage">
+          <rect x="858" y="800" width="132" height="54" rx="10" stroke-width="1.4"/>
+          <text class="th" x="924" y="820" text-anchor="middle" dominant-baseline="central">BL33</text>
+          <text class="ts" x="924" y="837" text-anchor="middle" dominant-baseline="central">DRAM, EL2/EL1</text>
+        </g>
+        <g class="c-purple badge"><circle cx="978" cy="814" r="9"/><text class="ts" x="978" y="814" text-anchor="middle" dominant-baseline="central">6</text></g>
 
-        <g class="c-teal">
-          <rect x="80" y="375" width="115" height="90" rx="12" stroke-width="1"/>
-          <text class="th" x="137.5" y="419" text-anchor="middle" dominant-baseline="central">On-chip SRAM</text>
-          <text class="ts" x="137.5" y="447" text-anchor="middle" dominant-baseline="central">Runs stage-2</text>
-        </g>
-        <g class="c-purple badge"><circle cx="186" cy="384" r="9"/><text class="ts" x="186" y="384" text-anchor="middle" dominant-baseline="central">5</text></g>
-        <g class="c-gray">
-          <rect x="215" y="375" width="115" height="90" rx="12" stroke-width="1"/>
-          <text class="th" x="272.5" y="419" text-anchor="middle" dominant-baseline="central">DMA ctrl</text>
-          <text class="ts" x="272.5" y="447" text-anchor="middle" dominant-baseline="central">Moves data</text>
-        </g>
-        <g class="c-purple badge"><circle cx="321" cy="384" r="9"/><text class="ts" x="321" y="384" text-anchor="middle" dominant-baseline="central">8</text></g>
-        <g class="c-gray">
-          <rect x="350" y="375" width="115" height="90" rx="12" stroke-width="1"/>
-          <text class="th" x="407.5" y="419" text-anchor="middle" dominant-baseline="central">Mem ctrl</text>
-          <text class="ts" x="407.5" y="447" text-anchor="middle" dominant-baseline="central">Inits DRAM</text>
-        </g>
-        <g class="c-purple badge"><circle cx="456" cy="384" r="9"/><text class="ts" x="456" y="384" text-anchor="middle" dominant-baseline="central">7</text></g>
-        <g class="c-gray">
-          <rect x="485" y="375" width="115" height="90" rx="12" stroke-width="1"/>
-          <text class="th" x="542.5" y="419" text-anchor="middle" dominant-baseline="central">MPU / MMU</text>
-          <text class="ts" x="542.5" y="447" text-anchor="middle" dominant-baseline="central">Memory perms</text>
-        </g>
+        <!-- ===== Hardware / memory cards (name + role) ===== -->
+        <!-- c1 CPU cluster -> Reset -->
+        <g class="c-gray"><rect x="580" y="74" width="250" height="54" rx="9" stroke-width="1"/>
+          <text class="th" x="594" y="95" dominant-baseline="central">CPU cluster</text>
+          <text class="ts" x="594" y="112" dominant-baseline="central">Arm cores; runs every stage.</text></g>
+        <line x1="832" y1="101" x2="856" y2="101" stroke="#5f5e5a" stroke-width="2.4" marker-end="url(#abig)"/>
 
-        <line x1="137.5" y1="465" x2="137.5" y2="495" class="arr" marker-end="url(#arrow)"/>
-        <line x1="272.5" y1="465" x2="272.5" y2="495" class="arr" marker-end="url(#arrow)"/>
-        <line x1="407.5" y1="465" x2="407.5" y2="495" class="arr" marker-end="url(#arrow)"/>
-        <line x1="542.5" y1="465" x2="542.5" y2="495" class="arr" marker-end="url(#arrow)"/>
+        <!-- c2 Clock / PLL -> BL1 -->
+        <g class="c-gray"><rect x="580" y="144" width="250" height="54" rx="9" stroke-width="1"/>
+          <text class="th" x="594" y="165" dominant-baseline="central">Clock / PLL</text>
+          <text class="ts" x="594" y="182" dominant-baseline="central">Ramps the CPU to full speed.</text></g>
+        <line x1="832" y1="171" x2="856" y2="171" stroke="#5f5e5a" stroke-width="2.4" marker-end="url(#abig)"/>
 
-        <g class="c-coral">
-          <rect x="80" y="495" width="115" height="90" rx="12" stroke-width="1"/>
-          <text class="th" x="137.5" y="539" text-anchor="middle" dominant-baseline="central">TrustZone</text>
-          <text class="ts" x="137.5" y="567" text-anchor="middle" dominant-baseline="central">Splits worlds</text>
-        </g>
-        <g class="c-coral">
-          <rect x="215" y="495" width="115" height="90" rx="12" stroke-width="1"/>
-          <text class="th" x="272.5" y="539" text-anchor="middle" dominant-baseline="central">Attestation</text>
-          <text class="ts" x="272.5" y="567" text-anchor="middle" dominant-baseline="central">Records hashes</text>
-        </g>
-        <g class="c-gray">
-          <rect x="350" y="495" width="115" height="90" rx="12" stroke-width="1"/>
-          <text class="th" x="407.5" y="539" text-anchor="middle" dominant-baseline="central">IRQ ctrl</text>
-          <text class="ts" x="407.5" y="567" text-anchor="middle" dominant-baseline="central">Handles events</text>
-        </g>
-        <g class="c-gray">
-          <rect x="485" y="495" width="115" height="90" rx="12" stroke-width="1"/>
-          <text class="th" x="542.5" y="539" text-anchor="middle" dominant-baseline="central">UART</text>
-          <text class="ts" x="542.5" y="567" text-anchor="middle" dominant-baseline="central">Early console</text>
-        </g>
+        <!-- c3 Watchdog -> BL1 -->
+        <g class="c-gray"><rect x="580" y="214" width="250" height="54" rx="9" stroke-width="1"/>
+          <text class="th" x="594" y="235" dominant-baseline="central">Watchdog</text>
+          <text class="ts" x="594" y="252" dominant-baseline="central">Resets the SoC if boot hangs.</text></g>
+        <line x1="832" y1="241" x2="856" y2="241" stroke="#5f5e5a" stroke-width="2.4" marker-end="url(#abig)"/>
 
-        <g class="c-amber">
-          <rect x="90" y="645" width="190" height="80" rx="12" stroke-width="1"/>
-          <text class="th" x="185" y="677" text-anchor="middle" dominant-baseline="central">Flash memory</text>
-          <text class="ts" x="185" y="701" text-anchor="middle" dominant-baseline="central">Non-volatile storage</text>
-        </g>
-        <g class="c-purple badge"><circle cx="271" cy="654" r="9"/><text class="ts" x="271" y="654" text-anchor="middle" dominant-baseline="central">4</text></g>
-        <g class="c-blue">
-          <rect x="400" y="645" width="210" height="80" rx="12" stroke-width="1"/>
-          <text class="th" x="505" y="677" text-anchor="middle" dominant-baseline="central">DRAM</text>
-          <text class="ts" x="505" y="701" text-anchor="middle" dominant-baseline="central">Runs verified firmware</text>
-        </g>
-        <g class="c-purple badge"><circle cx="601" cy="654" r="9"/><text class="ts" x="601" y="654" text-anchor="middle" dominant-baseline="central">8</text></g>
+        <!-- c4 Boot ROM -> BL1 -->
+        <g class="c-teal"><rect x="580" y="284" width="250" height="54" rx="9" stroke-width="1"/>
+          <text class="th" x="594" y="305" dominant-baseline="central">Boot ROM</text>
+          <text class="ts" x="594" y="322" dominant-baseline="central">Immutable first code; root of trust.</text></g>
+        <line x1="832" y1="311" x2="856" y2="311" stroke="#0f6e56" stroke-width="2.4" marker-end="url(#abig)"/>
 
-        <line x1="175" y1="605" x2="175" y2="645" class="arr" marker-end="url(#arrow)"/>
-        <path d="M195 645 L195 615 L160 615 L160 465" class="arr" marker-end="url(#arrow)" fill="none"/>
-        <path d="M407.5 465 L407.5 480 L475 480 L475 615 L470 645" class="arr" marker-end="url(#arrow)" fill="none"/>
-        <path d="M272.5 465 L272.5 480 L340 480 L340 625 L540 625 L540 645" class="arr" marker-end="url(#arrow)" fill="none"/>
-        <path d="M542.5 585 L542.5 615 L580 615 L580 645" class="arr" marker-end="url(#arrow)" fill="none"/>
+        <!-- c5 OTP / eFuses -> BL1 -->
+        <g class="c-pink"><rect x="580" y="354" width="250" height="54" rx="9" stroke-width="1"/>
+          <text class="th" x="594" y="375" dominant-baseline="central">OTP / eFuses</text>
+          <text class="ts" x="594" y="392" dominant-baseline="central">Burned-in root-key hash + config.</text></g>
+        <line x1="832" y1="381" x2="856" y2="381" stroke="#993556" stroke-width="2.4" marker-end="url(#abig)"/>
 
-        <path d="M505 725 L505 740 L180 740 L180 755" class="arr" marker-end="url(#arrow)" fill="none"/>
+        <!-- c6 Crypto engine -> BL2 -->
+        <g class="c-coral"><rect x="580" y="424" width="250" height="54" rx="9" stroke-width="1"/>
+          <text class="th" x="594" y="445" dominant-baseline="central">Crypto engine</text>
+          <text class="ts" x="594" y="462" dominant-baseline="central">Verifies each image signature.</text></g>
+        <line x1="832" y1="451" x2="856" y2="451" stroke="#993c1d" stroke-width="2.4" marker-end="url(#abig)"/>
 
-        <g class="c-green">
-          <rect x="40" y="755" width="280" height="80" rx="12" stroke-width="1"/>
-          <text class="th" x="180" y="787" text-anchor="middle" dominant-baseline="central">Kernel handoff</text>
-          <text class="ts" x="180" y="811" text-anchor="middle" dominant-baseline="central">Device tree passed to OS</text>
-        </g>
-        <g class="c-red">
-          <rect x="340" y="755" width="280" height="80" rx="12" stroke-width="1"/>
-          <text class="th" x="480" y="787" text-anchor="middle" dominant-baseline="central">Verification failed</text>
-          <text class="ts" x="480" y="811" text-anchor="middle" dominant-baseline="central">Halt or enter recovery mode</text>
-        </g>
+        <!-- c7 Trusted SRAM -> BL2 -->
+        <g class="c-teal"><rect x="580" y="494" width="250" height="54" rx="9" stroke-width="1"/>
+          <text class="th" x="594" y="515" dominant-baseline="central">Trusted SRAM</text>
+          <text class="ts" x="594" y="532" dominant-baseline="central">On-chip RAM: BL2/BL31/BL32 run here.</text></g>
+        <line x1="832" y1="521" x2="856" y2="521" stroke="#0f6e56" stroke-width="2.4" marker-end="url(#abig)"/>
 
-        <!-- ===== firmware / OS boundary ===== -->
-        <line x1="24" y1="868" x2="656" y2="868" class="divider"/>
-        <text class="divider-label" x="652" y="861" text-anchor="end">&#8593; hardware &amp; firmware world</text>
-        <text class="divider-label" x="652" y="888" text-anchor="end">&#8595; operating-system world (software)</text>
+        <!-- c8 Flash (off-die) -> BL2 -->
+        <g class="c-amber"><rect x="580" y="564" width="250" height="54" rx="9" stroke-width="1"/>
+          <text class="th" x="594" y="585" dominant-baseline="central">Flash storage (off-die)</text>
+          <text class="ts" x="594" y="602" dominant-baseline="central">Board chip; holds the FIP images.</text></g>
+        <line x1="832" y1="591" x2="856" y2="591" stroke="#854f0b" stroke-width="2.4" marker-end="url(#abig)"/>
 
-        <!-- only a verified boot crosses the boundary -->
-        <path d="M180 835 L180 918 L116 918 L116 948" class="arr" marker-end="url(#arrow)" fill="none"/>
+        <!-- c9 DRAM (off-die) -> BL33 -->
+        <g class="c-blue"><rect x="580" y="800" width="250" height="54" rx="9" stroke-width="1"/>
+          <text class="th" x="594" y="821" dominant-baseline="central">DRAM (off-die)</text>
+          <text class="ts" x="594" y="838" dominant-baseline="central">Board memory; BL33 and OS run here.</text></g>
+        <line x1="832" y1="827" x2="856" y2="827" stroke="#185fa5" stroke-width="2.4" marker-end="url(#abig)"/>
 
-        <!-- ===== after handoff: OS world ===== -->
-        <rect class="os-world" x="40" y="905" width="580" height="142" rx="14"/>
+        <!-- ===== Verification-failure branch ===== -->
+        <g class="c-red"><rect x="598" y="650" width="214" height="60" rx="10" stroke-width="1"/>
+          <text class="th" x="705" y="672" text-anchor="middle" dominant-baseline="central">Verification failed</text>
+          <text class="ts" x="705" y="690" text-anchor="middle" dominant-baseline="central">Any BL check fails: halt or recover.</text></g>
+        <path d="M858 392 L838 392 L838 668 L814 674" class="wire-fail" fill="none" marker-end="url(#abig)"/>
+        <path d="M858 590 L846 590 L846 694 L814 690" class="wire-fail" fill="none" marker-end="url(#abig)"/>
 
-        <g class="c-green">
-          <rect x="56" y="948" width="120" height="70" rx="10" stroke-width="1"/>
-          <text class="th" x="116" y="975" text-anchor="middle" dominant-baseline="central">OS kernel</text>
-          <text class="ts" x="116" y="996" text-anchor="middle" dominant-baseline="central">takes control</text>
-        </g>
-        <g class="c-amber">
-          <rect x="200" y="948" width="120" height="70" rx="10" stroke-width="1"/>
-          <text class="th" x="260" y="975" text-anchor="middle" dominant-baseline="central">Mount FS</text>
-          <text class="ts" x="260" y="996" text-anchor="middle" dominant-baseline="central">files appear</text>
-        </g>
-        <g class="c-gray">
-          <rect x="344" y="948" width="120" height="70" rx="10" stroke-width="1"/>
-          <text class="th" x="404" y="975" text-anchor="middle" dominant-baseline="central">init / systemd</text>
-          <text class="ts" x="404" y="996" text-anchor="middle" dominant-baseline="central">starts services</text>
-        </g>
-        <g class="c-gray">
-          <rect x="488" y="948" width="120" height="70" rx="10" stroke-width="1"/>
-          <text class="th" x="548" y="975" text-anchor="middle" dominant-baseline="central">Shell / scripts</text>
-          <text class="ts" x="548" y="996" text-anchor="middle" dominant-baseline="central">bash, python&#8230;</text>
-        </g>
+        <!-- ===== Secure / normal boundary ===== -->
+        <line x1="16" y1="779" x2="992" y2="779" class="divider"/>
+        <text class="divider-label" x="844" y="772" text-anchor="end">&#8593; Secure world (EL3 / Secure-EL1)</text>
+        <text class="divider-label" x="844" y="793" text-anchor="end">&#8595; Normal world (EL2 / EL1)</text>
 
-        <line x1="176" y1="983" x2="200" y2="983" class="arr" marker-end="url(#arrow)"/>
-        <line x1="320" y1="983" x2="344" y2="983" class="arr" marker-end="url(#arrow)"/>
-        <line x1="464" y1="983" x2="488" y2="983" class="arr" marker-end="url(#arrow)"/>
+        <!-- ===== OS world ===== -->
+        <path d="M924 854 L924 878 L147 878 L147 933" stroke="#334155" stroke-width="2.4" fill="none" marker-end="url(#abig)"/>
+        <rect class="os-world" x="16" y="900" width="976" height="132" rx="14"/>
+        <text class="divider-label" x="32" y="922">Operating system, normal world (booted by BL33)</text>
+        <g class="c-green"><rect x="40" y="945" width="215" height="66" rx="10" stroke-width="1"/>
+          <text class="th" x="147" y="972" text-anchor="middle" dominant-baseline="central">OS kernel</text>
+          <text class="ts" x="147" y="992" text-anchor="middle" dominant-baseline="central">takes control</text></g>
+        <g class="c-amber"><rect x="280" y="945" width="215" height="66" rx="10" stroke-width="1"/>
+          <text class="th" x="387" y="972" text-anchor="middle" dominant-baseline="central">Mount FS</text>
+          <text class="ts" x="387" y="992" text-anchor="middle" dominant-baseline="central">files appear</text></g>
+        <g class="c-gray"><rect x="520" y="945" width="215" height="66" rx="10" stroke-width="1"/>
+          <text class="th" x="627" y="972" text-anchor="middle" dominant-baseline="central">init / systemd</text>
+          <text class="ts" x="627" y="992" text-anchor="middle" dominant-baseline="central">starts services</text></g>
+        <g class="c-gray"><rect x="760" y="945" width="215" height="66" rx="10" stroke-width="1"/>
+          <text class="th" x="867" y="972" text-anchor="middle" dominant-baseline="central">Shell / scripts</text>
+          <text class="ts" x="867" y="992" text-anchor="middle" dominant-baseline="central">bash, python&#8230;</text></g>
+        <line x1="255" y1="978" x2="280" y2="978" stroke="#334155" stroke-width="2" marker-end="url(#abig)"/>
+        <line x1="495" y1="978" x2="520" y2="978" stroke="#334155" stroke-width="2" marker-end="url(#abig)"/>
+        <line x1="735" y1="978" x2="760" y2="978" stroke="#334155" stroke-width="2" marker-end="url(#abig)"/>
       </svg>
       <figcaption class="mt-3 text-sm text-brand-muted">
-        Numbered badges (0 to 8) trace the main execution sequence. Unbadged blocks are supporting infrastructure
-        without a single fixed step in the sequence. Below the dashed line is the OS world: only a verified boot
-        crosses the firmware/software boundary, after which the kernel mounts a file system, init starts services,
-        and shells and scripts finally become possible.
+        One diagram, two views. On the left, a real die photograph of the Broadcom BCM7019 Arm SoC; on the right, the Arm
+        Trusted Firmware-A cold boot chain. Each <span class="font-semibold text-brand-text">white numbered box (1 to 6)</span> is
+        a boot stage; each <span class="font-semibold text-brand-text">coloured card</span> is a piece of hardware or memory,
+        and its colour follows from its spot on the die (or an off-die board chip) through to the stage it serves. BL1 uses the
+        clock, watchdog, boot ROM, OTP fuses and crypto engine; BL2 loads the later images from
+        <span style="color:#854f0b"> Flash</span> into <span style="color:#0f6e56">Trusted SRAM</span>; a failed signature check
+        halts the SoC; and once the verified chain crosses into the normal world, BL33 boots the OS in
+        <span style="color:#185fa5"> DRAM</span>. Block positions on the die are approximate: the BCM7019 is not officially
+        annotated, so the markers show where such structures typically sit. Source: {" "}
+        <a href="https://commons.wikimedia.org/wiki/File:Broadcom_BCM7019_STB_SoC_die_shot.jpg" target="_blank" rel="noopener noreferrer" class="text-accent-blue underline underline-offset-2 transition-colors hover:text-accent-emerald">Broadcom BCM7019 STB SoC die shot</a>{" "}
+        by Martijn Boer (Flickr), public domain.
       </figcaption>
     </figure>
 
@@ -348,9 +302,10 @@ const connections = [
     </ul>
 
     <p class="mt-8 rounded-lg border border-brand-border bg-brand-bg px-4 py-3 text-sm leading-relaxed text-brand-muted">
-      Note: TrustZone, attestation, the interrupt controller and UART don't have one universal ordering the way
-      steps 1 to 8 do: real designs vary in exactly when each gets configured. They're shown in one plausible order
-      here for clarity, not as a claim about a fixed sequence.
+      Note: this is one representative TF-A cold boot on AArch64; details vary by platform. BL32 is optional, and on
+      AArch32 the five stages collapse to four (there is no BL31, and BL32 such as SP_MIN plays the EL3 runtime role).
+      Exactly when the clock, watchdog, crypto engine and TrustZone controller are programmed is platform-specific;
+      they are shown at one plausible point in the BL1 / BL2 flow, not as a fixed hardware sequence.
     </p>
   </section>
 </BaseLayout>
@@ -397,22 +352,21 @@ const connections = [
     font-size: 12px;
     font-weight: 400;
   }
+  .soc-svg .lg {
+    font-family: "Inter", system-ui, sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    fill: #334155;
+  }
 
   .soc-svg .arr {
     stroke: var(--arrow-color);
     stroke-width: 1.5;
     fill: none;
   }
-  .soc-svg .wire-debug {
-    stroke: var(--red-600);
-    stroke-width: 1.4;
-    stroke-dasharray: 4 3;
-    fill: none;
-    opacity: 0.85;
-  }
   .soc-svg .wire-fail {
     stroke: var(--red-600);
-    stroke-width: 1.2;
+    stroke-width: 1.3;
     stroke-dasharray: 5 3;
     fill: none;
   }
@@ -435,6 +389,10 @@ const connections = [
     stroke-dasharray: 6 4;
   }
 
+  .soc-svg .c-stage rect { fill: #ffffff; stroke: #475569; }
+  .soc-svg .c-stage .th { fill: #1e293b; }
+  .soc-svg .c-stage .ts { fill: #475569; }
+
   .soc-svg .c-purple rect { fill: var(--purple-50); stroke: var(--purple-600); }
   .soc-svg .c-purple .th { fill: var(--purple-800); }
   .soc-svg .c-purple .ts { fill: var(--purple-600); }
@@ -456,6 +414,8 @@ const connections = [
   .soc-svg .c-teal rect { fill: var(--teal-50); stroke: var(--teal-600); }
   .soc-svg .c-teal .th { fill: var(--teal-800); }
   .soc-svg .c-teal .ts { fill: var(--teal-600); }
+  .soc-svg .c-teal.badge circle { fill: var(--teal-600); }
+  .soc-svg .c-teal.badge .ts { fill: #fff; }
 
   .soc-svg .c-amber rect { fill: var(--amber-50); stroke: var(--amber-600); }
   .soc-svg .c-amber .th { fill: var(--amber-800); }
