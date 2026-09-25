@@ -1,16 +1,115 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", "Helvetica Neue", "Arial", sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", "Menlo", "Consolas", monospace;
+  /* Terminal typeface, everywhere. DejaVu Sans Mono is the reference look
+     (and ships with most Linux distros); Noto Sans Mono is the webfont
+     fallback loaded in the layout for everyone else. */
+  --font-sans: "DejaVu Sans Mono", "Noto Sans Mono", "Liberation Mono", ui-monospace, "SFMono-Regular", "Menlo", "Consolas", monospace;
+  --font-mono: var(--font-sans);
 
+  /* Page is a black terminal; light cards are handled by .surface-light below. */
+  --color-brand-bg: #000000;
+  --color-brand-text: #EDEDEA;
+  --color-brand-body: #C9C9C4;
+  --color-brand-muted: #8B8B85;
+  --color-brand-border: #2A2A28;
+
+  /* accent palette — blue → green. accent-blue and accent-emerald are one
+     step brighter than their light-theme values so they stay legible on black;
+     .surface-light restores the originals. */
+  --color-accent-blue: #3B82F6;
+  --color-accent-cyan: #0EA5E9;
+  --color-accent-green: #10B981;
+  --color-accent-emerald: #34D399;
+
+  --color-band-dep-typed: #A78BFA;
+  --color-band-logic-rel: #0EA5E9;
+  --color-band-fn-pure: #34D399;
+  --color-band-fn-impure: #A3E635;
+  --color-band-multi-par: #F59E0B;
+  --color-band-oo: #EF4444;
+  --color-band-imp-proc: #FB7185;
+
+  /* Neutral scale flipped for the dark page: the light steps become dark
+     surfaces, the dark steps become readable text. .surface-light puts the
+     stock Tailwind values back inside cards. */
+  --color-gray-50: #0E0E10;
+  --color-gray-100: #161618;
+  --color-gray-200: #232326;
+  --color-gray-300: #34343A;
+  --color-gray-400: #8A8A93;
+  --color-gray-500: #A8A8B0;
+  --color-gray-600: #C2C2C8;
+  --color-gray-700: #D6D6DA;
+  --color-gray-800: #E8E8EA;
+  --color-gray-900: #F4F4F5;
+  --color-blue-600: #60A5FA;
+}
+
+/* ── Light "islands" ──────────────────────────────────────────────────
+   Cards, tables, code chips and diagrams keep the original light palette
+   on top of the black page. Re-declaring the theme variables on the
+   surface itself makes both its own background utility and every colour
+   utility inside it resolve back to the light-theme value. */
+.surface-light,
+.bg-white,
+.bg-zinc-50,
+.bg-gray-50,
+.bg-gray-100,
+.bg-gray-200 {
   --color-brand-bg: #FCFCFA;
   --color-brand-text: #18181B;
   --color-brand-body: #27272A;
   --color-brand-muted: #71717A;
   --color-brand-border: #E4E4E7;
 
-  /* accent palette — blue → green */
+  --color-accent-blue: #2563EB;
+  --color-accent-emerald: #059669;
+
+  --color-band-dep-typed: #8B5CF6;
+  --color-band-fn-pure: #059669;
+  --color-band-fn-impure: #65A30D;
+  --color-band-multi-par: #D97706;
+  --color-band-oo: #DC2626;
+  --color-band-imp-proc: #9F1239;
+
+  --color-gray-50: oklch(98.5% 0.002 247.839);
+  --color-gray-100: oklch(96.7% 0.003 264.542);
+  --color-gray-200: oklch(92.8% 0.006 264.531);
+  --color-gray-300: oklch(87.2% 0.01 258.338);
+  --color-gray-400: oklch(70.7% 0.022 261.325);
+  --color-gray-500: oklch(55.1% 0.027 264.364);
+  --color-gray-600: oklch(44.6% 0.03 256.802);
+  --color-gray-700: oklch(37.3% 0.034 259.733);
+  --color-gray-800: oklch(27.8% 0.033 256.848);
+  --color-gray-900: oklch(21% 0.034 264.665);
+  --color-blue-600: oklch(54.6% 0.245 262.881);
+}
+
+/* Text colour is inherited as a computed value, so a light island has to
+   restate it; kept in the components layer so utilities still win. */
+@layer components {
+  .surface-light,
+  .bg-white,
+  .bg-zinc-50,
+  .bg-gray-50,
+  .bg-gray-100,
+  .bg-gray-200 {
+    color: var(--color-brand-body);
+  }
+}
+
+/* ── Light mode ────────────────────────────────────────────────────────
+   Dark is the default (the tokens in @theme). Adding `light` to <html>
+   restores the original light palette on the root, so the whole page — not
+   just the islands — reads light again. */
+html.light {
+  --color-brand-bg: #FCFCFA;
+  --color-brand-text: #18181B;
+  --color-brand-body: #27272A;
+  --color-brand-muted: #71717A;
+  --color-brand-border: #E4E4E7;
+
   --color-accent-blue: #2563EB;
   --color-accent-cyan: #0EA5E9;
   --color-accent-green: #10B981;
@@ -23,17 +122,53 @@
   --color-band-multi-par: #D97706;
   --color-band-oo: #DC2626;
   --color-band-imp-proc: #9F1239;
+
+  --color-gray-50: oklch(98.5% 0.002 247.839);
+  --color-gray-100: oklch(96.7% 0.003 264.542);
+  --color-gray-200: oklch(92.8% 0.006 264.531);
+  --color-gray-300: oklch(87.2% 0.01 258.338);
+  --color-gray-400: oklch(70.7% 0.022 261.325);
+  --color-gray-500: oklch(55.1% 0.027 264.364);
+  --color-gray-600: oklch(44.6% 0.03 256.802);
+  --color-gray-700: oklch(37.3% 0.034 259.733);
+  --color-gray-800: oklch(27.8% 0.033 256.848);
+  --color-gray-900: oklch(21% 0.034 264.665);
+  --color-blue-600: oklch(54.6% 0.245 262.881);
 }
 
-/* Faint "blueprint" grid — keeps the page reading as white but adds
-   a subtle technical texture reminiscent of graph paper / CAD. */
+/* Faint "blueprint" grid. Dark mode dials the lines up to read against
+   black; light mode uses the original barely-there graph-paper texture. */
+html {
+  background-color: var(--color-brand-bg);
+}
 body {
   background-color: var(--color-brand-bg);
   background-image:
-    linear-gradient(to right, rgba(37, 99, 235, 0.035) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(16, 185, 129, 0.035) 1px, transparent 1px);
+    linear-gradient(to right, rgba(59, 130, 246, 0.10) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(16, 185, 129, 0.09) 1px, transparent 1px);
   background-size: 34px 34px;
   background-attachment: fixed;
+}
+html.light body {
+  background-image:
+    linear-gradient(to right, rgba(37, 99, 235, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(16, 185, 129, 0.035) 1px, transparent 1px);
+}
+
+/* Theme-toggle icons: sun shows in dark mode (click → light),
+   moon shows in light mode (click → dark). */
+.theme-icon-moon { display: none; }
+html.light .theme-icon-sun { display: none; }
+html.light .theme-icon-moon { display: inline-block; }
+.theme-label-light { display: none; }
+html.light .theme-label-dark { display: none; }
+html.light .theme-label-light { display: inline; }
+
+/* Left-hand page plan (table of contents) active state. */
+.toc-link.toc-active {
+  color: var(--color-accent-emerald);
+  border-color: var(--color-accent-green);
+  font-weight: 600;
 }
 
 /* Hacker-green text selection. */
@@ -184,7 +319,7 @@ h3:hover > .heading-anchor,
   padding: 0.12rem 0.4rem;
   border-radius: 5px;
   background: var(--color-brand-text);
-  color: #fff;
+  color: var(--color-brand-bg);
   font-family: var(--font-sans);
   font-size: 0.68rem;
   font-weight: 500;

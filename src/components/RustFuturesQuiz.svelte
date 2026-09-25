@@ -501,7 +501,7 @@ drop(handle);   // we never await it
         " border-l-gray-200 bg-white hover:border-l-[#D97706] hover:bg-gray-50"
       );
     if (i === q.correct)
-      return base + " border-l-accent-green bg-accent-green/5 text-brand-text";
+      return base + " border-l-accent-green bg-accent-green/15 text-brand-text";
     if (i === chosen) return base + " border-l-[#DC2626] bg-red-50 text-brand-text";
     return base + " border-l-gray-200 bg-white opacity-45";
   }

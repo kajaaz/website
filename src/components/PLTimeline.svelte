@@ -208,10 +208,10 @@
 
 <!-- Trait highlight bar -->
 {#if traitMeta.length > 0}
-  <div class="mb-6 rounded-xl border border-gray-200 border-l-accent-emerald bg-gradient-to-br from-accent-emerald/5 to-white p-4 shadow-sm" style="border-left-width: 3px;">
+  <div class="mb-6 rounded-xl border border-accent-blue/25 border-l-accent-blue bg-accent-blue/12 p-4 shadow-sm" style="border-left-width: 3px;">
     <div class="mb-3 flex items-center justify-between">
       <div class="flex items-center gap-2.5">
-        <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-emerald/15 text-accent-emerald">
+        <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-blue/15 text-accent-blue">
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.042 21.672 13.684 16.6m0 0-2.51 2.225.569-9.47 5.227 7.917-3.286-.672Zm-7.518-.267A8.25 8.25 0 1 1 20.25 10.5M8.288 14.212A5.25 5.25 0 1 1 17.25 10.5" />
           </svg>
@@ -266,7 +266,7 @@
 <!-- Timeline (fits container width on desktop) -->
 <div
   bind:clientWidth={containerWidth}
-  class="w-full overflow-x-auto"
+  class="w-full overflow-x-auto rounded-xl border border-brand-border bg-white p-3"
   role="region"
   aria-label="Programming languages timeline"
 >

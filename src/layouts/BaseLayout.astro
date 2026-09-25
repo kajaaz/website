@@ -6,9 +6,10 @@ import "../styles/global.css";
 interface Props {
   title: string;
   description?: string;
+  toc?: boolean;
 }
 
-const { title, description = "Karolina Gorna – Cybersecurity researcher, PhD candidate at Télécom Paris & Ledger Donjon" } = Astro.props;
+const { title, description = "Karolina Gorna – Cybersecurity researcher, PhD candidate at Télécom Paris & Ledger Donjon", toc = false } = Astro.props;
 ---
 
 <!doctype html>
@@ -17,18 +18,40 @@ const { title, description = "Karolina Gorna – Cybersecurity researcher, PhD c
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
+    <script is:inline>
+      // Apply the saved theme before first paint to avoid a flash.
+      // Dark is the default; only opt into light when explicitly chosen.
+      try {
+        if (localStorage.getItem("theme") === "light") {
+          document.documentElement.classList.add("light");
+        }
+      } catch (e) {}
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <title>{title} | Karolina GORNA</title>
   </head>
   <body class="flex min-h-screen flex-col bg-brand-bg font-sans text-brand-body antialiased">
     <div class="h-1 w-full bg-gradient-to-r from-accent-blue via-accent-cyan to-accent-green"></div>
     <Nav />
-    <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
-      <slot />
-    </main>
+    {toc ? (
+      <main class="mx-auto w-full max-w-[88rem] flex-1 px-4 py-10 sm:px-6">
+        <div class="lg:flex lg:gap-10">
+          <aside id="page-toc-wrap" class="hidden lg:block lg:w-56 lg:shrink-0">
+            <nav id="page-toc" aria-label="On this page" class="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pr-2"></nav>
+          </aside>
+          <div id="toc-scope" class="min-w-0 lg:flex-1">
+            <slot />
+          </div>
+        </div>
+      </main>
+    ) : (
+      <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
+        <slot />
+      </main>
+    )}
     <Footer />
     <script>
       // Give every section heading a stable id and a GitHub-style "#" anchor
@@ -89,10 +112,76 @@ const { title, description = "Karolina Gorna – Cybersecurity researcher, PhD c
         }
       }
 
-      if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", initHeadingAnchors);
-      } else {
+      // Build the left-hand "plan" (table of contents) from the section
+      // headings, with a scroll-spy that highlights the current section.
+      function buildToc() {
+        const nav = document.getElementById("page-toc");
+        const scope = document.getElementById("toc-scope");
+        const wrap = document.getElementById("page-toc-wrap");
+        if (!nav || !scope) return;
+
+        const heads = Array.from(
+          scope.querySelectorAll<HTMLElement>("h2.glitch"),
+        ).filter(
+          (h) => h.id && !h.closest("astro-island") && !h.closest("article"),
+        );
+
+        // Not enough sections to warrant a plan: drop the column entirely so
+        // the content spans the full width.
+        if (heads.length < 2) {
+          if (wrap) wrap.remove();
+          return;
+        }
+
+        const eyebrow = document.createElement("p");
+        eyebrow.className =
+          "mb-3 font-mono text-[10px] uppercase tracking-widest text-accent-emerald";
+        eyebrow.textContent = "// on this page";
+
+        const ul = document.createElement("ul");
+        ul.className = "border-l border-brand-border";
+
+        const links: { a: HTMLAnchorElement; el: HTMLElement }[] = [];
+        heads.forEach((h) => {
+          const label = (h.getAttribute("data-text") || h.textContent || "")
+            .replace(/#$/, "")
+            .trim();
+          const li = document.createElement("li");
+          const a = document.createElement("a");
+          a.href = "#" + h.id;
+          a.textContent = label;
+          a.className =
+            "toc-link -ml-px block border-l-2 border-transparent py-1 pl-3 text-sm leading-snug text-brand-muted transition-colors hover:text-brand-text";
+          li.appendChild(a);
+          ul.appendChild(li);
+          links.push({ a, el: h });
+        });
+
+        nav.appendChild(eyebrow);
+        nav.appendChild(ul);
+
+        const setActive = () => {
+          let active = links[0];
+          for (const l of links) {
+            if (l.el.getBoundingClientRect().top - 130 <= 0) active = l;
+            else break;
+          }
+          links.forEach((l) => l.a.classList.toggle("toc-active", l === active));
+        };
+        setActive();
+        window.addEventListener("scroll", setActive, { passive: true });
+        window.addEventListener("resize", setActive);
+      }
+
+      function init() {
         initHeadingAnchors();
+        buildToc();
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+      } else {
+        init();
       }
     </script>
   </body>
