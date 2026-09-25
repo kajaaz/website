@@ -93,7 +93,7 @@ const smtTools = [
 ];
 ---
 
-<BaseLayout title="Formal Verification">
+<BaseLayout title="Formal Verification" toc>
   <p class="mono-eyebrow mb-1"><span class="text-accent-blue">$</span> coqc -Q . FV</p>
   <h1 class="glitch is-intro mb-8 text-3xl font-bold tracking-tight text-brand-text" data-text="Formal Verification">Formal Verification</h1>
 
@@ -116,7 +116,7 @@ const smtTools = [
         <p class="mt-2 text-2xl font-bold text-brand-text">finds bugs</p>
         <p class="mt-2 text-sm text-brand-body">Runs the program on chosen inputs. A green suite means "no bug seen yet": the untested paths stay unknown.</p>
       </div>
-      <div class="rounded-xl border border-accent-green/40 bg-accent-green/5 p-5">
+      <div class="rounded-xl border border-accent-green/40 bg-accent-green/15 p-5">
         <p class="font-mono text-xs uppercase tracking-wider text-accent-emerald">Proving</p>
         <p class="mt-2 text-2xl font-bold text-brand-text">proves their absence</p>
         <p class="mt-2 text-sm text-brand-body">A machine-checked argument covers every input at once. If it type-checks, the property holds, permanently.</p>

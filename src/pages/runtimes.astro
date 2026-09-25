@@ -963,18 +963,13 @@ const comparisonTable = [
 ];
 ---
 
-<BaseLayout title="Runtimes">
+<BaseLayout title="Runtimes" toc>
   <p class="mono-eyebrow mb-1"><span class="text-accent-blue">$</span> ldd --version # how does your code actually run?</p>
   <h1 class="glitch is-intro mb-6 text-3xl font-bold tracking-tight text-brand-text" data-text="Runtimes">Runtimes</h1>
 
   <p class="mb-10 text-brand-body">
     Two questions, one page. First, <strong class="text-brand-text">how does a single program run</strong>, from source code down to the CPU? Then, <strong class="text-brand-text">how does it do many things at once</strong>, with threads, async, futures and the runtimes that schedule them? Read straight through or jump around: each section builds on the one before it.
   </p>
-
-  <div class="mb-8 flex items-center gap-3">
-    <span class="text-xs font-bold uppercase tracking-widest text-accent-emerald">Part 1 · How your code runs</span>
-    <span class="h-px flex-1 bg-gray-200"></span>
-  </div>
 
   <!-- ====== INTRO ====== -->
   <section class="mb-14">
@@ -1141,7 +1136,7 @@ const comparisonTable = [
     <p class="mono-eyebrow mb-2">// from source to execution</p>
     <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="The Big Picture">The Big Picture</h2>
     <p class="mb-6 text-brand-body">
-      To close Part 1: all execution models are variations on the same pipeline. The key question is <em>when</em> compilation happens and <em>how many layers</em> sit between your source code and the CPU.
+      To tie it together: all execution models are variations on the same pipeline. The key question is <em>when</em> compilation happens and <em>how many layers</em> sit between your source code and the CPU.
     </p>
 
     <figure class="overflow-x-auto rounded-xl border border-brand-border bg-white p-4 sm:p-6">
@@ -1207,12 +1202,8 @@ const comparisonTable = [
     </figure>
   </section>
 
-  <!-- ====== PART 2 DIVIDER ====== -->
+  <!-- ====== TRANSITION TO CONCURRENCY ====== -->
   <div class="mb-8 mt-4">
-    <div class="mb-3 flex items-center gap-3">
-      <span class="text-xs font-bold uppercase tracking-widest text-accent-emerald">Part 2 · Doing many things at once</span>
-      <span class="h-px flex-1 bg-gray-200"></span>
-    </div>
     <p class="text-brand-body">
       So far, one program running start to finish. But servers and apps must juggle thousands of things at once, and most of the time each one is just <em>waiting</em>, on a socket, a disk, or a timer. The rest of this page is about how a runtime manages all that waiting: threads, async, futures, and the schedulers that drive them.
     </p>
