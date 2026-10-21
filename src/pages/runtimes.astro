@@ -837,7 +837,7 @@ const executionModels = [
     name: "Transpiler",
     accent: "#0891B2",
     desc: "Translated to another high-level language (usually JS or C) rather than machine code, then that language's toolchain takes over.",
-    langs: ["TypeScript → JS", "Elm → JS", "PureScript → JS", "Cython → C"],
+    langs: ["TypeScript --> JS", "Elm --> JS", "PureScript --> JS", "Cython --> C"],
   },
 ];
 
@@ -1471,9 +1471,9 @@ const comparisonTable = [
 
             <!-- pending self-loops -->
             <path d="M304 196 C 304 164, 352 164, 352 196" fill="none" stroke="#be185d" stroke-width="1.3" marker-end="url(#sm-arrow-pink)"/>
-            <text x="328" y="158" font-size="10" font-weight="600" fill="#be185d">poll → Pending</text>
+            <text x="328" y="158" font-size="10" font-weight="600" fill="#be185d">poll --&gt; Pending</text>
             <path d="M506 196 C 506 164, 554 164, 554 196" fill="none" stroke="#be185d" stroke-width="1.3" marker-end="url(#sm-arrow-pink)"/>
-            <text x="530" y="158" font-size="10" font-weight="600" fill="#be185d">poll → Pending</text>
+            <text x="530" y="158" font-size="10" font-weight="600" fill="#be185d">poll --&gt; Pending</text>
           </g>
         </g>
       </svg>
@@ -1490,7 +1490,7 @@ const comparisonTable = [
       <svg viewBox="0 0 820 300" class="h-auto w-full min-w-[560px] sm:min-w-0" role="img" aria-label="Two futures A and B tracked over time. Each future's lifecycle is a lane: created, then running while polled, then Pending and parked with a waker, then running again when woken, then Ready. Below, a single thread lane shows it polls only one future at a time.">
         <g font-family="Inter, sans-serif">
           <text x="14" y="20" font-size="11" font-weight="700" fill="#18181B">One thread, over time</text>
-          <text x="806" y="20" font-size="10" fill="#71717A" text-anchor="end">time →</text>
+          <text x="806" y="20" font-size="10" fill="#71717A" text-anchor="end">time --&gt;</text>
 
           <!-- row labels -->
           <text x="14" y="73" font-size="11" font-weight="700" fill="#18181B">Future A</text>
@@ -1498,8 +1498,8 @@ const comparisonTable = [
           <text x="14" y="201" font-size="11" font-weight="700" fill="#18181B">Thread</text>
 
           <!-- wake markers -->
-          <text x="472" y="45" font-size="10" font-weight="600" fill="#B45309" text-anchor="middle">A's I/O ready → wake()</text>
-          <text x="592" y="103" font-size="10" font-weight="600" fill="#2563EB" text-anchor="middle">B's I/O ready → wake()</text>
+          <text x="472" y="45" font-size="10" font-weight="600" fill="#B45309" text-anchor="middle">A's I/O ready --&gt; wake()</text>
+          <text x="592" y="103" font-size="10" font-weight="600" fill="#2563EB" text-anchor="middle">B's I/O ready --&gt; wake()</text>
 
           <g text-anchor="middle">
             <!-- ===== Future A lane (y 54..84) ===== -->
@@ -1529,11 +1529,11 @@ const comparisonTable = [
             <!-- ===== Thread lane (y 176..218) ===== -->
             <rect x="152" y="176" width="100" height="42" rx="7" fill="rgba(217,119,6,0.14)" stroke="#D97706" stroke-width="1.3"/>
             <text x="202" y="195" font-size="11" font-weight="700" fill="#18181B">poll(A)</text>
-            <text x="202" y="210" font-size="9" fill="#be185d">→ Pending</text>
+            <text x="202" y="210" font-size="9" fill="#be185d">--&gt; Pending</text>
 
             <rect x="272" y="176" width="100" height="42" rx="7" fill="rgba(37,99,235,0.14)" stroke="#2563EB" stroke-width="1.3"/>
             <text x="322" y="195" font-size="11" font-weight="700" fill="#18181B">poll(B)</text>
-            <text x="322" y="210" font-size="9" fill="#be185d">→ Pending</text>
+            <text x="322" y="210" font-size="9" fill="#be185d">--&gt; Pending</text>
 
             <rect x="382" y="176" width="80" height="42" rx="7" fill="#FAFAFA" stroke="#E4E4E7" stroke-width="1.2" stroke-dasharray="4 4"/>
             <text x="422" y="195" font-size="10" fill="#A1A1AA">idle</text>
@@ -1541,11 +1541,11 @@ const comparisonTable = [
 
             <rect x="472" y="176" width="100" height="42" rx="7" fill="rgba(217,119,6,0.14)" stroke="#D97706" stroke-width="1.3"/>
             <text x="522" y="195" font-size="11" font-weight="700" fill="#18181B">poll(A)</text>
-            <text x="522" y="210" font-size="9" fill="#16653a">→ Ready ✓</text>
+            <text x="522" y="210" font-size="9" fill="#16653a">--&gt; Ready ✓</text>
 
             <rect x="592" y="176" width="100" height="42" rx="7" fill="rgba(37,99,235,0.14)" stroke="#2563EB" stroke-width="1.3"/>
             <text x="642" y="195" font-size="11" font-weight="700" fill="#18181B">poll(B)</text>
-            <text x="642" y="210" font-size="9" fill="#16653a">→ Ready ✓</text>
+            <text x="642" y="210" font-size="9" fill="#16653a">--&gt; Ready ✓</text>
           </g>
 
           <!-- connectors: the thread is polling that future right now -->
@@ -1659,7 +1659,7 @@ const comparisonTable = [
         <g font-family="Inter, sans-serif" text-anchor="middle">
           <!-- wake loop, top arc -->
           <path d="M719,52 C719,18 103,18 103,52" fill="none" stroke="#71717A" stroke-width="1.3" marker-end="url(#poll-arrow)"/>
-          <text x="411" y="14" font-size="10.5" fill="#52525B">⑥ waker.wake() → re-queue the task, then poll() again</text>
+          <text x="411" y="14" font-size="10.5" fill="#52525B">⑥ waker.wake() --&gt; re-queue the task, then poll() again</text>
 
           <!-- Executor -->
           <rect x="28" y="54" width="150" height="62" rx="10" fill="rgba(217,119,6,0.10)" stroke="#D97706" stroke-width="1.5"/>
@@ -1674,7 +1674,7 @@ const comparisonTable = [
           <!-- Reactor -->
           <rect x="642" y="54" width="154" height="62" rx="10" fill="rgba(22,101,58,0.10)" stroke="#16653a" stroke-width="1.5"/>
           <text x="719" y="82" font-size="13" font-weight="700" fill="#16653a">Reactor</text>
-          <text x="719" y="100" font-size="10" fill="#16653a">map: fd → Waker</text>
+          <text x="719" y="100" font-size="10" fill="#16653a">map: fd --&gt; Waker</text>
 
           <!-- (1) poll -->
           <line x1="178" y1="78" x2="320" y2="78" stroke="#71717A" stroke-width="1.3" marker-end="url(#poll-arrow)"/>
@@ -1701,7 +1701,7 @@ const comparisonTable = [
           <rect x="636" y="212" width="160" height="74" rx="10" fill="rgba(190,24,93,0.07)" stroke="#be185d" stroke-width="1.4"/>
           <text x="716" y="236" font-size="12" font-weight="700" fill="#be185d">TCP socket · fd 7</text>
           <text x="716" y="254" font-size="9.5" fill="#9d174d">peer sends bytes</text>
-          <text x="716" y="270" font-size="9.5" fill="#9d174d">→ becomes readable</text>
+          <text x="716" y="270" font-size="9.5" fill="#9d174d">--&gt; becomes readable</text>
 
           <!-- (3) epoll_ctl : reactor -> kernel -->
           <line x1="668" y1="116" x2="452" y2="196" stroke="#71717A" stroke-width="1.3" marker-end="url(#poll-arrow)"/>
@@ -1820,7 +1820,7 @@ const comparisonTable = [
             <line x1="544" y1="140" x2="544" y2="170" stroke="#be185d" stroke-width="2"/>
             <text x="544" y="136" font-size="9" font-weight="700" fill="#be185d" text-anchor="middle">wake()</text>
             <rect x="548" y="144" width="146" height="26" rx="5" fill="#16a34a" fill-opacity="0.5"/>
-            <text x="621" y="161" font-size="10" fill="#14532d" text-anchor="middle">poll once → Ready</text>
+            <text x="621" y="161" font-size="10" fill="#14532d" text-anchor="middle">poll once --&gt; Ready</text>
           </g>
         </svg>
       </figure>
@@ -1927,7 +1927,7 @@ const comparisonTable = [
             )}
             {s.id === "preemptive" && (
               <svg viewBox="0 0 240 100" class="mx-auto w-full max-w-[260px]" aria-hidden="true">
-                <text x="6" y="12" font-size="8" fill="#6B7280">one thread's timeline &#8594;</text>
+                <text x="6" y="12" font-size="8" fill="#6B7280">one thread's timeline --&gt;</text>
                 <rect x="6" y="40" width="228" height="24" rx="5" fill="#00ADD8" fill-opacity="0.06" stroke="#00ADD8" stroke-width="1"/>
                 <rect x="10" y="44" width="52" height="16" rx="2" fill="#00ADD8" fill-opacity="0.42"/>
                 <text x="36" y="56" font-size="8" fill="#075985" text-anchor="middle">task A</text>
@@ -2100,7 +2100,7 @@ const comparisonTable = [
 
           <!-- Reactor -->
           <rect x="210" y="300" width="400" height="52" rx="9" fill="rgba(22,101,58,0.10)" stroke="#16653a" stroke-width="1.5"/>
-          <text x="410" y="322" font-size="12" font-weight="700" fill="#16653a">Reactor / driver: mio → epoll / kqueue / IOCP</text>
+          <text x="410" y="322" font-size="12" font-weight="700" fill="#16653a">Reactor / driver: mio --&gt; epoll / kqueue / IOCP</text>
           <text x="410" y="338" font-size="10" fill="#16653a">one epoll_wait watches all fds; readiness fires a Waker</text>
 
           <!-- Pending: worker -> reactor (park + register waker) -->
@@ -2113,9 +2113,9 @@ const comparisonTable = [
 
           <!-- legend -->
           <rect x="48" y="362" width="14" height="10" rx="2" fill="none" stroke="#be185d" stroke-width="1.3" stroke-dasharray="3 2"/>
-          <text x="68" y="371" text-anchor="start" font-size="9.5" fill="#52525B">worker → reactor: poll returned Pending, register the Waker</text>
+          <text x="68" y="371" text-anchor="start" font-size="9.5" fill="#52525B">worker --&gt; reactor: poll returned Pending, register the Waker</text>
           <rect x="470" y="362" width="14" height="10" rx="2" fill="#16653a"/>
-          <text x="490" y="371" text-anchor="start" font-size="9.5" fill="#52525B">reactor → worker: resource ready, requeue the task</text>
+          <text x="490" y="371" text-anchor="start" font-size="9.5" fill="#52525B">reactor --&gt; worker: resource ready, requeue the task</text>
         </g>
       </svg>
       <figcaption class="mt-3 text-sm text-brand-muted">
