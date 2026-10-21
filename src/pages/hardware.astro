@@ -4,63 +4,193 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 const steps = [
   {
     n: "0",
-    title: "Always-on hardware (level 0)",
-    body:
-      "Some silicon is present and powered the whole time rather than being a step in the sequence: the CPU and its caches execute whatever the current stage points them at, immutable Trusted ROM holds the very first code, and on-chip Trusted SRAM is where the writable stages (BL1's data, then BL2, then BL31 and BL32) are copied and run. That is why they carry no step number and are tagged as level 0.",
+    title: "Always-on hardware",
+    body: "The CPU, Trusted ROM and on-chip Trusted SRAM are not steps: ROM holds the first code, and SRAM is where BL1's data, BL2, BL31 and BL32 run.",
   },
   {
     n: "1",
     title: "Reset",
-    body:
-      "The primary CPU is released from reset. Its registers are reset to known values and the program counter is set to the reset vector, a fixed address that points into Trusted ROM. On a multicore SoC the other cores are held in a safe state until the primary has done enough setup to bring them up (later handled by PSCI in BL31).",
+    body: "The primary core leaves reset at the reset vector in Trusted ROM; the other cores wait until BL31 starts them through PSCI.",
   },
   {
     n: "2",
-    title: "BL1, Application Processor Trusted ROM (EL3)",
-    body:
-      "The application processor is the main CPU cluster that will eventually run the OS (as opposed to a separate System Control Processor that some SoCs use for power and clocks). Immutable code in its Trusted ROM runs first at EL3. It installs exception vectors and runs the CPU reset handler, then brings up the platform: raise the clock/PLL to full speed, enable the Trusted Watchdog (which resets the SoC if boot ever hangs in a loop), set up the console, enable interconnect coherency and the MMU, and configure the flash it loads from. It reads a root-key hash from OTP/eFuses, uses the crypto engine to verify the BL2 image, copies it into Trusted SRAM and hands control to BL2 at Secure-EL1.",
+    title: "BL1, Trusted ROM (EL3)",
+    body: "Immutable code sets up exceptions, clocks, the watchdog, the console and the MMU, reads the root-key hash from OTP, verifies BL2 with the crypto engine and copies it into Trusted SRAM.",
   },
   {
     n: "3",
     title: "BL2, Trusted Boot Firmware (Secure-EL1)",
-    body:
-      "BL2 runs from Trusted SRAM and does the platform security setup, including programming the TrustZone controller (TZC) that splits DRAM and peripherals into secure and non-secure regions. It then loads the later stages (the BL3x images) from the Firmware Image Package (FIP) in flash, verifying each against the same root of trust: the EL3 runtime (BL31), the optional secure payload (BL32) and the non-trusted firmware (BL33). BL2 raises an SMC so BL1 turns off the MMU, flushes caches and jumps to BL31 at EL3.",
+    body: "Programs the TrustZone controller to split DRAM and peripherals into secure and non-secure, then loads and verifies BL31, BL32 and BL33 from the Firmware Image Package (FIP) in flash.",
   },
   {
     n: "4",
-    title: "BL31, EL3 Runtime Software (EL3)",
-    body:
-      "BL31 is the resident EL3 runtime; it never exits. It re-initialises the architecture, sets up the generic interrupt controller (GIC), initialises PSCI power management (secondary-CPU boot, hotplug, idle) and registers the runtime services that the normal world calls into later through the SMC (Secure Monitor Call) instruction. It stays in Trusted SRAM for the life of the system.",
+    title: "BL31, EL3 runtime",
+    body: "The resident secure monitor: sets up the interrupt controller and PSCI power management, and handles Secure Monitor Calls (SMC) from the normal world for the life of the system.",
   },
   {
     n: "5",
-    title: "BL32, Secure-EL1 Payload (Secure-EL1, optional)",
-    body:
-      "If present, BL32 is the Trusted OS (or other secure payload) running in the secure world at Secure-EL1. BL31 initialises it through a Secure-EL1 Payload Dispatcher (SPD) and routes secure/normal world switches to it over SMCs. It is optional; on AArch32 there is no BL31, and BL32 (for example SP_MIN) plays the EL3 runtime role instead.",
+    title: "BL32, Trusted OS (Secure-EL1, optional)",
+    body: "A Trusted OS such as OP-TEE, reached through BL31. On AArch32 there is no BL31 and BL32 also plays the monitor role.",
   },
   {
     n: "6",
-    title: "BL33, Non-trusted Firmware (EL2/EL1)",
-    body:
-      "BL31 sets up the normal-world context and jumps to BL33 at the highest non-secure exception level (EL2 if available, otherwise EL1). BL33 is normal-world firmware such as UEFI or U-Boot, running from non-secure DRAM. It is the first non-secure code to run, and it goes on to boot the operating system.",
+    title: "BL33, Non-trusted firmware (EL2/EL1)",
+    body: "The first non-secure code, usually U-Boot or UEFI, running from DRAM; it boots the OS.",
   },
 ];
 
-const connections = [
+// TF-A stages are flagged true; vendor or third-party stages false.
+const chainRows: { name: string; url: string; chain: [string, boolean][] }[] = [
+  { name: "Arm Juno / FVP", url: "https://trustedfirmware-a.readthedocs.io/en/latest/plat/arm/juno/index.html", chain: [["BL1", true], ["BL2", true], ["BL31", true], ["OP-TEE", false], ["U-Boot", false]] },
+  { name: "ST STM32MP25", url: "https://trustedfirmware-a.readthedocs.io/en/latest/plat/st/stm32mpus.html", chain: [["ROM", false], ["BL2", true], ["BL31", true], ["OP-TEE", false], ["U-Boot", false]] },
+  { name: "Renesas R-Car Gen3", url: "https://trustedfirmware-a.readthedocs.io/en/latest/plat/rcar-gen3.html", chain: [["ROM", false], ["BL2", true], ["BL31", true], ["OP-TEE", false], ["U-Boot", false]] },
+  { name: "NXP Layerscape", url: "https://trustedfirmware-a.readthedocs.io/en/v2.6/plat/nxp/nxp-layerscape.html", chain: [["ROM", false], ["BL2", true], ["BL31", true], ["OP-TEE", false], ["U-Boot", false]] },
+  { name: "ST STM32MP15", url: "https://trustedfirmware-a.readthedocs.io/en/latest/plat/st/stm32mpus.html", chain: [["ROM", false], ["BL2", true], ["OP-TEE", false], ["U-Boot", false]] },
+  { name: "NXP i.MX 8M", url: "https://trustedfirmware-a.readthedocs.io/en/stable/plat/imx8m.html", chain: [["ROM", false], ["SPL", false], ["BL31", true], ["U-Boot", false]] },
+];
+
+// Each "used" / "brk" item is [text, source url].
+type Ref = [string, string];
+const chips: {
+  chip: string; cpu: string; rom: string; key: string; tz: string; tfa: string;
+  used: Ref[]; brk: Ref[]; src: Ref[];
+}[] = [
   {
-    title: "Debug port (JTAG/SWD)",
-    body:
-      "wires into the CPU's own debug access port, independent of the boot code. On a production secure part it is disabled by a fuse or gated behind an authenticated debug challenge, because otherwise it would bypass the entire chain of trust.",
+    chip: "Arm Juno / FVP", cpu: "Cortex-A72 or A57 (+ A53)", rom: "No vendor ROM: TF-A BL1 (in flash) verifies BL2, RSA or ECDSA",
+    key: "Read-only registers (fixed key hash; no OTP)", tz: "Yes", tfa: "BL1, BL2, BL31 (full chain)",
+    used: [
+      ["Arm's reference development board", "https://trustedfirmware-a.readthedocs.io/en/latest/plat/arm/juno/index.html"],
+      ["FVP software model", "https://trustedfirmware-a.readthedocs.io/en/latest/plat/arm/fvp/index.html"],
+    ],
+    brk: [],
+    src: [
+      ["Juno key storage", "https://support.arm.com/documentation/dto0038/c/hardware-functional-description/trusted-execution-environment--tee-/trusted-key-storage"],
+      ["TF-A build options", "https://trustedfirmware-a.readthedocs.io/en/latest/plat/arm/arm-build-options.html"],
+    ],
   },
   {
-    title: "Boot straps and the reset vector",
-    body:
-      "a handful of pins latched once at reset (together with the PROGRAMMABLE_RESET_ADDRESS option) decide where the primary CPU starts and which image BL1 loads. It is a one-time hardware input, not something software chooses.",
+    chip: "ST STM32MP25", cpu: "Cortex-A35 (+ M33)", rom: "TF-A BL2, ECDSA (P-256 / Brainpool)", key: "OTP (key-table hash)",
+    tz: "Yes", tfa: "BL2, BL31",
+    used: [["Digi ConnectCore MP25 industrial edge-AI module", "https://www.digi.com/products/embedded-systems/digi-connectcore/system-on-modules/digi-connectcore-mp2"]],
+    brk: [],
+    src: [
+      ["ST wiki", "https://wiki.st.com/stm32mpu/wiki/STM32_MPU_ROM_code_secure_boot"],
+      ["TF-A", "https://trustedfirmware-a.readthedocs.io/en/latest/plat/st/stm32mpus.html"],
+    ],
+  },
+  {
+    chip: "Renesas R-Car Gen3", cpu: "Cortex-A57 + A53 (+ R7)", rom: "TF-A BL2, RSA certificates", key: "Fuses (root-key hash, programmed by Renesas)",
+    tz: "Yes", tfa: "BL2, BL31",
+    used: [
+      ["Toyota / Lexus multimedia (Lexus NX, 2021)", "https://www.renesas.com/en/about/newsroom/renesas-innovative-automotive-chips-drive-next-generation-multimedia-system-toyota-lexus"],
+      ["Parrot Faurecia cockpit", "https://www.renesas.com/en/about/press-room/renesas-and-opensynergy-adopted-parrot-faurecia-automotive-s-safe-multi-display-cockpit"],
+    ],
+    brk: [],
+    src: [
+      ["Renesas", "https://www.renesas.com/en/blogs/achieving-root-trust-secure-boot-automotive-rh850-and-r-car-devices-part-3"],
+      ["TF-A", "https://trustedfirmware-a.readthedocs.io/en/latest/plat/rcar-gen3.html"],
+    ],
+  },
+  {
+    chip: "NXP Layerscape LX2160A", cpu: "16× Cortex-A72", rom: "TF-A BL2, RSA (CSF header)", key: "Fuses (SRK hash)",
+    tz: "Yes", tfa: "BL2, BL31",
+    used: [["SolidRun HoneyComb LX2 Arm workstation", "https://www.solid-run.com/arm-servers-networking-platforms/honeycomb-servers-workstation/honeycomb-lx2/"]],
+    brk: [],
+    src: [
+      ["TF-A", "https://trustedfirmware-a.readthedocs.io/en/v2.6/plat/nxp/nxp-layerscape.html"],
+      ["TF-A secure boot", "https://trustedfirmware-a.readthedocs.io/en/v2.6/plat/nxp/nxp-ls-tbbr.html"],
+    ],
+  },
+  {
+    chip: "ST STM32MP15", cpu: "Cortex-A7 (+ M4)", rom: "TF-A BL2, ECDSA (P-256 / Brainpool)", key: "OTP (key hash)",
+    tz: "Yes", tfa: "BL2",
+    used: [
+      ["Kontron industrial / IoT module", "https://www.kontron.com/en/news/kontron-presents-system-on-module-based-on-the-new-stm32mp157-with-three-processor-cores-by-stmicroelectronics/n156087"],
+      ["Seeed ODYSSEY module", "https://www.st.com/en/partner-products-and-services/odyssey-stm32mp157c.html"],
+    ],
+    brk: [],
+    src: [
+      ["ST wiki", "https://wiki.st.com/stm32mpu/wiki/STM32_MPU_ROM_code_secure_boot"],
+      ["TF-A", "https://trustedfirmware-a.readthedocs.io/en/latest/plat/st/stm32mpus.html"],
+    ],
+  },
+  {
+    chip: "NXP i.MX 8M", cpu: "Cortex-A53 (+ M4 or M7)", rom: "U-Boot SPL, RSA (HABv4)", key: "eFuses (SRK hash)",
+    tz: "Yes", tfa: "BL31",
+    used: [
+      ["Google Coral Dev Board", "https://www.coral.ai/docs/dev-board/datasheet"],
+      ["Purism Librem 5 phone", "https://docs.puri.sm/Hardware/Librem_5/overview/specs.html"],
+    ],
+    brk: [],
+    src: [
+      ["U-Boot HABv4", "https://github.com/nxp-imx/uboot-imx/blob/lf_v2025.04/doc/imx/habv4/introduction_habv4.txt"],
+      ["TF-A", "https://trustedfirmware-a.readthedocs.io/en/stable/plat/imx8m.html"],
+    ],
+  },
+  {
+    chip: "NVIDIA Tegra X1", cpu: "Cortex-A57 (+ A53)", rom: "BCT + bootloader, RSA or AES-CMAC; ROM runs on an ARM7 boot CPU", key: "Fuses (RSA key hash)",
+    tz: "Yes", tfa: "BL31 (upstream port deprecated in 2026)",
+    used: [
+      ["Nintendo Switch", "https://switchbrew.github.io/34c3-slides/"],
+      ["NVIDIA Shield TV (2015, 2017)", "https://www.xda-developers.com/nvidia-shield-tv-pro-shield-tv-stick-announced/"],
+      ["Jetson Nano", "https://wiki.lineageos.org/devices/porg_tab/variant2/"],
+    ],
+    brk: [["Fusée Gelée (2018): USB bug in the boot ROM, unpatchable on shipped chips", "https://web.archive.org/web/20250710125856/https://ktemkin.com/post/fusee_gelee/"]],
+    src: [
+      ["NVIDIA", "https://download.nvidia.com/tegra-public-appnotes/tegra-boot-flow.html"],
+      ["34C3 talk", "https://switchbrew.github.io/34c3-slides/"],
+      ["TF-A commit", "https://github.com/ARM-software/arm-trusted-firmware/commits/master/plat/nvidia/tegra/soc/t210"],
+    ],
+  },
+  {
+    chip: "Raspberry Pi 5 (BCM2712)", cpu: "Cortex-A76", rom: "Bootloader, RSA-2048, signed by Raspberry Pi and counter-signed by the customer", key: "OTP (customer key hash)",
+    tz: "In the cores, but no secure memory controller", tfa: "Minimal BL31, not secure",
+    used: [["Raspberry Pi 5, Pi 500, Compute Module 5", "https://github.com/raspberrypi/usbboot/blob/master/secure-boot-recovery5/README.md"]],
+    brk: [],
+    src: [
+      ["Pi secure boot", "https://github.com/raspberrypi/usbboot/blob/master/docs/secure-boot.md"],
+      ["TF-A", "https://trustedfirmware-a.readthedocs.io/en/latest/plat/rpi5.html"],
+    ],
+  },
+  {
+    chip: "Raspberry Pi RP2350", cpu: "Cortex-M33 (+ Hazard3 RISC-V)", rom: "Signed image, ECDSA secp256k1 + SHA-256", key: "OTP (key hash)",
+    tz: "TrustZone-M", tfa: "None",
+    used: [["Raspberry Pi Pico 2", "https://www.raspberrypi.com/products/rp2350/"]],
+    brk: [
+      ["OTP power glitch (Aedan Cullen)", "https://github.com/aedancullen/hacking-the-rp2350"],
+      ["voltage and laser fault injection", "https://www.raspberrypi.com/news/security-through-transparency-rp2350-hacking-challenge-results-are-in/"],
+      ["FIB readout of the OTP (IOActive)", "https://www.ioactive.com/wp-content/uploads/2025/01/IOActive-RP2350HackingChallenge.pdf"],
+    ],
+    src: [
+      ["Pi white paper", "https://pip-assets.raspberrypi.com/categories/1214-rp2350/documents/RP-009377-WP-1-Understanding%20RP2350_s%20security%20features.pdf"],
+    ],
+  },
+  {
+    chip: "ST STM32L431", cpu: "Cortex-M4", rom: "Nothing; ST's X-CUBE-SBSFU adds a software secure boot in flash", key: "—",
+    tz: "No", tfa: "None",
+    used: [
+      ["Hermetis LoRa air-quality sensor", "https://hackaday.io/project/189644-hermetis/details"],
+      ["Andrew Zonenberg's lab hardware", "https://web.archive.org/web/20250513070742/https://serd.es/2025/01/02/STM32L431-teardown.html"],
+    ],
+    brk: [],
+    src: [["X-CUBE-SBSFU", "https://www.st.com/en/embedded-software/x-cube-sbsfu.html"]],
+  },
+  {
+    chip: "Espressif ESP32", cpu: "Xtensa LX6 (not Arm)", rom: "Bootloader, AES digest (Secure Boot v1); v3 silicon adds RSA (v2)", key: "eFuses (AES key)",
+    tz: "No", tfa: "None",
+    used: [["Shelly Plus 1 smart relay", "https://devices.esphome.io/devices/shelly-plus-1/"]],
+    brk: [
+      ["Voltage glitching read the eFuse keys (2019)", "https://limitedresults.com/results/pwn-the-esp32-forever-flash-encryption-and-sec-boot-keys-extraction"],
+      ["CVE-2019-17391 advisory", "https://www.espressif.com/en/news/Security_Advisory_Concerning_Fault_Injection_and_eFuse_Protections"],
+    ],
+    src: [["Espressif", "https://docs.espressif.com/projects/esp-idf/en/stable/esp32/security/secure-boot-v1.html"]],
   },
 ];
+
+const link = "text-accent-blue underline underline-offset-2 transition-colors hover:text-accent-emerald";
 ---
 
-<BaseLayout title="Hardware">
+<BaseLayout title="Hardware" toc>
   <p class="mono-eyebrow mb-1"><span class="text-accent-blue">$</span> dmesg | grep -i boot</p>
   <h1 class="glitch is-intro mb-4 text-3xl font-bold tracking-tight text-brand-text" data-text="Hardware">Hardware</h1>
 
@@ -68,31 +198,26 @@ const connections = [
   <div class="mb-10 rounded-xl bg-accent-green/15 p-5 sm:p-6">
     <h2 class="mb-1 text-sm font-bold text-brand-text">What is it?</h2>
     <p class="text-sm leading-relaxed text-brand-body">
-      A cheat sheet on what an Arm SoC does between power-on and the operating system. First topic: the
-      Arm Trusted Firmware-A (TF-A) secure boot chain, BL1 &rarr; BL2 &rarr; BL31 / BL32 &rarr; BL33, the exception
-      levels and memory regions each stage uses, and where a verification failure stops everything.
+      A cheat sheet on what an Arm chip does between power-on and the OS: the TF-A secure boot chain, the hardware it
+      relies on, and how common chips compare.
     </p>
   </div>
 
   <!-- ====== SECURE BOOT ====== -->
   <section class="mb-14">
-    <p class="mono-eyebrow mb-2">// power-on &rarr; chain of trust</p>
+    <p class="mono-eyebrow mb-2">// power-on --&gt; chain of trust</p>
     <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Anatomy of a secure boot">Anatomy of a secure boot</h2>
     <p class="mb-6 text-brand-body">
-      A walkthrough of a secure boot on an Arm application processor, following the{" "}
-      <a href="https://github.com/ARM-software/arm-trusted-firmware/blob/master/docs/design/firmware-design.rst" target="_blank" rel="noopener noreferrer" class="text-accent-blue underline underline-offset-2 transition-colors hover:text-accent-emerald">Arm Trusted Firmware-A (TF-A)</a>{" "}
-      cold boot: the chain of trust from the reset vector in Trusted ROM, through BL1 and BL2, into the EL3 runtime
-      (BL31), the optional secure payload (BL32) and the non-trusted firmware (BL33) that finally boots the OS in DRAM.
-      Here <strong class="text-brand-text">BL means Boot Loader stage</strong>, so BL1 is stage 1, BL2 is stage 2, and
-      BL31, BL32 and BL33 are the three parts of stage 3. The number in the name already tells you the stage, which is
-      why the boxes below only carry the memory and exception-level detail.
+      The{" "}
+      <a href="https://github.com/ARM-software/arm-trusted-firmware/blob/master/docs/design/firmware-design.rst" target="_blank" rel="noopener noreferrer" class={link}>Arm Trusted Firmware-A (TF-A)</a>{" "}
+      cold boot: each stage verifies the next before running it, from the reset vector in ROM to the OS.{" "}
+      <strong class="text-brand-text">BL</strong> stands for Boot Loader stage.
     </p>
 
-    <!-- ===== Unified diagram: die photo + full boot anatomy ===== -->
     <figure class="mb-8 overflow-x-auto rounded-xl border border-brand-border bg-white p-4 sm:p-6">
       <svg viewBox="0 0 1000 1040" class="soc-svg mx-auto block h-auto w-full max-w-[980px] min-w-[900px]" role="img" aria-labelledby="soc-uni-title soc-uni-desc">
-        <title id="soc-uni-title">Arm TF-A secure boot, mapped onto a real Broadcom BCM7019 die</title>
-        <desc id="soc-uni-desc">A single diagram combining a real die photograph of the Broadcom BCM7019 Arm SoC (left) with the full Arm Trusted Firmware-A cold boot anatomy. Labelled callouts for the CPU cluster, clock/PLL, watchdog, boot ROM, OTP/eFuses, crypto engine and on-chip Trusted SRAM point onto the die and each carries a coloured arrow to the boot stage it serves in the Reset, BL1, BL2, BL31, BL32, BL33 spine on the right. Flash and DRAM are shown as off-die board chips. A verification-failure branch halts the SoC, a dashed line marks the secure/normal world boundary, and the operating system starts once BL33 runs. Block positions on the photo are approximate because the die is not officially annotated.</desc>
+        <title id="soc-uni-title">Arm TF-A secure boot chain, the hardware it uses, and real chips that run it</title>
+        <desc id="soc-uni-desc">On the left, a list of real chips and the boot stages they run, with TF-A stages highlighted. In the middle, cards for the CPU, clock, watchdog, boot ROM, OTP fuses, crypto engine, Trusted SRAM, flash and DRAM, each with an arrow to the boot stage it serves. On the right, the Reset, BL1, BL2, BL31, BL32, BL33 spine. A verification-failure branch halts the SoC, a dashed line marks the secure/normal world boundary, and the operating system starts once BL33 runs.</desc>
         <defs>
           <marker id="abig" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M1.5 1L8.5 5L1.5 9" fill="none" stroke="context-stroke" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
@@ -100,35 +225,39 @@ const connections = [
         </defs>
 
         <!-- top labels -->
-        <text class="divider-label" x="24" y="40">Physical chip (Broadcom BCM7019 die, block positions approximate)</text>
+        <text class="divider-label" x="24" y="40">This chain on real chips</text>
+        <text class="divider-label" x="580" y="40">Hardware it relies on</text>
         <text class="divider-label" x="858" y="40">Boot execution chain</text>
 
-        <!-- ===== Die photo ===== -->
-        <image href="/images/broadcom-bcm7019-die.jpg" x="24" y="74" width="520" height="446" preserveAspectRatio="xMidYMid meet"/>
-        <rect x="24" y="74" width="520" height="446" rx="8" fill="none" stroke="#cbd5e1" stroke-width="1"/>
-        <text class="divider-label" x="24" y="540">Real die shot (public domain). Coloured dots are illustrative block positions.</text>
+        <!-- ===== Real chips panel ===== -->
+        <rect x="24" y="74" width="520" height="350" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+        <rect x="44" y="94" width="10" height="10" rx="2" fill="#0f6e56"/>
+        <text class="ts" x="60" y="99" dominant-baseline="central" fill="#334155">TF-A stage</text>
+        <rect x="144" y="94" width="10" height="10" rx="2" fill="#94a3b8"/>
+        <text class="ts" x="160" y="99" dominant-baseline="central" fill="#334155">vendor or other firmware</text>
+        {chainRows.map((r, i) => {
+          const y = 140 + i * 38;
+          return (
+            <g>
+              {i > 0 && <line x1="44" y1={y - 19} x2="524" y2={y - 19} stroke="#e2e8f0" stroke-width="1"/>}
+              <a href={r.url} target="_blank" rel="noopener noreferrer">
+                <text class="chain-name chain-link" x="44" y={y} dominant-baseline="central">{r.name}</text>
+              </a>
+              <text class="chain" x="232" y={y} dominant-baseline="central">
+                {r.chain.map(([label, tfa], j) => (
+                  <>
+                    {j > 0 && <tspan class="sep">{"\u00a0-->\u00a0"}</tspan>}
+                    <tspan class={tfa ? "tfa" : "ven"}>{label}</tspan>
+                  </>
+                ))}
+              </text>
+            </g>
+          );
+        })}
+        <text class="ts" x="44" y="384" dominant-baseline="central" fill="#475569">Real SoCs replace BL1 with their own boot ROM, which verifies and</text>
+        <text class="ts" x="44" y="402" dominant-baseline="central" fill="#475569">loads TF-A's BL2. Only Arm's reference platforms run TF-A's BL1.</text>
 
-        <!-- ===== Leaders from on-die parts to the die ===== -->
-        <g stroke-linecap="round">
-          <line x1="580" y1="101" x2="310" y2="297" stroke="#5f5e5a" stroke-width="1.5" opacity="0.7"/>
-          <line x1="580" y1="171" x2="138" y2="132" stroke="#5f5e5a" stroke-width="1.5" opacity="0.7"/>
-          <line x1="580" y1="241" x2="201" y2="114" stroke="#5f5e5a" stroke-width="1.5" opacity="0.7"/>
-          <line x1="580" y1="311" x2="86"  y2="252" stroke="#0f6e56" stroke-width="1.5" opacity="0.7"/>
-          <line x1="580" y1="381" x2="55"  y2="136" stroke="#993556" stroke-width="1.5" opacity="0.7"/>
-          <line x1="580" y1="451" x2="268" y2="194" stroke="#993c1d" stroke-width="1.5" opacity="0.7"/>
-          <line x1="580" y1="521" x2="461" y2="359" stroke="#0f6e56" stroke-width="1.5" opacity="0.7"/>
-        </g>
-        <g stroke="#fff" stroke-width="1.4">
-          <circle cx="310" cy="297" r="3.6" fill="#5f5e5a"/>
-          <circle cx="138" cy="132" r="3.6" fill="#5f5e5a"/>
-          <circle cx="201" cy="114" r="3.6" fill="#5f5e5a"/>
-          <circle cx="86"  cy="252" r="3.6" fill="#0f6e56"/>
-          <circle cx="55"  cy="136" r="3.6" fill="#993556"/>
-          <circle cx="268" cy="194" r="3.6" fill="#993c1d"/>
-          <circle cx="461" cy="359" r="3.6" fill="#0f6e56"/>
-        </g>
-
-        <!-- ===== Boot spine (grouped, white stage boxes) ===== -->
+        <!-- ===== Boot spine ===== -->
         <g class="c-stage">
           <rect x="858" y="74" width="132" height="54" rx="10" stroke-width="1.4"/>
           <text class="th" x="924" y="96" text-anchor="middle" dominant-baseline="central">Reset</text>
@@ -141,8 +270,10 @@ const connections = [
           <rect x="858" y="144" width="132" height="264" rx="10" stroke-width="1.4"/>
           <text class="th" x="924" y="172" text-anchor="middle" dominant-baseline="central">BL1</text>
           <text class="ts" x="924" y="190" text-anchor="middle" dominant-baseline="central">Trusted ROM, EL3</text>
-          <text class="ts" x="924" y="212" text-anchor="middle" dominant-baseline="central">Brings up the platform,</text>
-          <text class="ts" x="924" y="228" text-anchor="middle" dominant-baseline="central">verifies and loads BL2.</text>
+          <text class="ts" x="924" y="212" text-anchor="middle" dominant-baseline="central">Brings up the</text>
+          <text class="ts" x="924" y="228" text-anchor="middle" dominant-baseline="central">platform, then</text>
+          <text class="ts" x="924" y="244" text-anchor="middle" dominant-baseline="central">verifies and</text>
+          <text class="ts" x="924" y="260" text-anchor="middle" dominant-baseline="central">loads BL2.</text>
         </g>
         <g class="c-purple badge"><circle cx="978" cy="158" r="9"/><text class="ts" x="978" y="158" text-anchor="middle" dominant-baseline="central">2</text></g>
         <line x1="924" y1="408" x2="924" y2="424" stroke="#334155" stroke-width="2.4" marker-end="url(#abig)"/>
@@ -152,7 +283,8 @@ const connections = [
           <text class="th" x="924" y="452" text-anchor="middle" dominant-baseline="central">BL2</text>
           <text class="ts" x="924" y="470" text-anchor="middle" dominant-baseline="central">SRAM, Secure-EL1</text>
           <text class="ts" x="924" y="492" text-anchor="middle" dominant-baseline="central">Locks TrustZone,</text>
-          <text class="ts" x="924" y="508" text-anchor="middle" dominant-baseline="central">loads the BL3x images.</text>
+          <text class="ts" x="924" y="508" text-anchor="middle" dominant-baseline="central">loads the BL3x</text>
+          <text class="ts" x="924" y="524" text-anchor="middle" dominant-baseline="central">images.</text>
         </g>
         <g class="c-purple badge"><circle cx="978" cy="438" r="9"/><text class="ts" x="978" y="438" text-anchor="middle" dominant-baseline="central">3</text></g>
         <line x1="924" y1="618" x2="924" y2="634" stroke="#334155" stroke-width="2.4" marker-end="url(#abig)"/>
@@ -180,60 +312,51 @@ const connections = [
         </g>
         <g class="c-purple badge"><circle cx="978" cy="814" r="9"/><text class="ts" x="978" y="814" text-anchor="middle" dominant-baseline="central">6</text></g>
 
-        <!-- ===== Hardware / memory cards (name + role) ===== -->
-        <!-- c1 CPU cluster -> Reset -->
+        <!-- ===== Hardware / memory cards ===== -->
         <g class="c-gray"><rect x="580" y="74" width="250" height="54" rx="9" stroke-width="1"/>
           <text class="th" x="594" y="95" dominant-baseline="central">CPU cluster</text>
-          <text class="ts" x="594" y="112" dominant-baseline="central">Arm cores; runs every stage.</text></g>
-        <line x1="832" y1="101" x2="856" y2="101" stroke="#5f5e5a" stroke-width="2.4" marker-end="url(#abig)"/>
+          <text class="ts" x="594" y="112" dominant-baseline="central">Arm cores; run every stage.</text></g>
+        <line x1="826" y1="101" x2="857" y2="101" stroke="#444441" stroke-width="2.6" marker-end="url(#abig)"/>
 
-        <!-- c2 Clock / PLL -> BL1 -->
         <g class="c-gray"><rect x="580" y="144" width="250" height="54" rx="9" stroke-width="1"/>
           <text class="th" x="594" y="165" dominant-baseline="central">Clock / PLL</text>
           <text class="ts" x="594" y="182" dominant-baseline="central">Ramps the CPU to full speed.</text></g>
-        <line x1="832" y1="171" x2="856" y2="171" stroke="#5f5e5a" stroke-width="2.4" marker-end="url(#abig)"/>
+        <line x1="826" y1="171" x2="857" y2="171" stroke="#444441" stroke-width="2.6" marker-end="url(#abig)"/>
 
-        <!-- c3 Watchdog -> BL1 -->
         <g class="c-gray"><rect x="580" y="214" width="250" height="54" rx="9" stroke-width="1"/>
           <text class="th" x="594" y="235" dominant-baseline="central">Watchdog</text>
           <text class="ts" x="594" y="252" dominant-baseline="central">Resets the SoC if boot hangs.</text></g>
-        <line x1="832" y1="241" x2="856" y2="241" stroke="#5f5e5a" stroke-width="2.4" marker-end="url(#abig)"/>
+        <line x1="826" y1="241" x2="857" y2="241" stroke="#444441" stroke-width="2.6" marker-end="url(#abig)"/>
 
-        <!-- c4 Boot ROM -> BL1 -->
         <g class="c-teal"><rect x="580" y="284" width="250" height="54" rx="9" stroke-width="1"/>
           <text class="th" x="594" y="305" dominant-baseline="central">Boot ROM</text>
           <text class="ts" x="594" y="322" dominant-baseline="central">Immutable first code; root of trust.</text></g>
-        <line x1="832" y1="311" x2="856" y2="311" stroke="#0f6e56" stroke-width="2.4" marker-end="url(#abig)"/>
+        <line x1="826" y1="311" x2="857" y2="311" stroke="#0f6e56" stroke-width="2.6" marker-end="url(#abig)"/>
 
-        <!-- c5 OTP / eFuses -> BL1 -->
         <g class="c-pink"><rect x="580" y="354" width="250" height="54" rx="9" stroke-width="1"/>
           <text class="th" x="594" y="375" dominant-baseline="central">OTP / eFuses</text>
           <text class="ts" x="594" y="392" dominant-baseline="central">Burned-in root-key hash + config.</text></g>
-        <line x1="832" y1="381" x2="856" y2="381" stroke="#993556" stroke-width="2.4" marker-end="url(#abig)"/>
+        <line x1="826" y1="381" x2="857" y2="381" stroke="#993556" stroke-width="2.6" marker-end="url(#abig)"/>
 
-        <!-- c6 Crypto engine -> BL2 -->
         <g class="c-coral"><rect x="580" y="424" width="250" height="54" rx="9" stroke-width="1"/>
           <text class="th" x="594" y="445" dominant-baseline="central">Crypto engine</text>
           <text class="ts" x="594" y="462" dominant-baseline="central">Verifies each image signature.</text></g>
-        <line x1="832" y1="451" x2="856" y2="451" stroke="#993c1d" stroke-width="2.4" marker-end="url(#abig)"/>
+        <line x1="826" y1="451" x2="857" y2="451" stroke="#993c1d" stroke-width="2.6" marker-end="url(#abig)"/>
 
-        <!-- c7 Trusted SRAM -> BL2 -->
         <g class="c-teal"><rect x="580" y="494" width="250" height="54" rx="9" stroke-width="1"/>
           <text class="th" x="594" y="515" dominant-baseline="central">Trusted SRAM</text>
-          <text class="ts" x="594" y="532" dominant-baseline="central">On-chip RAM: BL2/BL31/BL32 run here.</text></g>
-        <line x1="832" y1="521" x2="856" y2="521" stroke="#0f6e56" stroke-width="2.4" marker-end="url(#abig)"/>
+          <text class="ts" x="594" y="532" dominant-baseline="central">BL2, BL31 and BL32 run here.</text></g>
+        <line x1="826" y1="521" x2="857" y2="521" stroke="#0f6e56" stroke-width="2.6" marker-end="url(#abig)"/>
 
-        <!-- c8 Flash (off-die) -> BL2 -->
         <g class="c-amber"><rect x="580" y="564" width="250" height="54" rx="9" stroke-width="1"/>
           <text class="th" x="594" y="585" dominant-baseline="central">Flash storage (off-die)</text>
           <text class="ts" x="594" y="602" dominant-baseline="central">Board chip; holds the FIP images.</text></g>
-        <line x1="832" y1="591" x2="856" y2="591" stroke="#854f0b" stroke-width="2.4" marker-end="url(#abig)"/>
+        <line x1="826" y1="591" x2="857" y2="591" stroke="#854f0b" stroke-width="2.6" marker-end="url(#abig)"/>
 
-        <!-- c9 DRAM (off-die) -> BL33 -->
         <g class="c-blue"><rect x="580" y="800" width="250" height="54" rx="9" stroke-width="1"/>
           <text class="th" x="594" y="821" dominant-baseline="central">DRAM (off-die)</text>
           <text class="ts" x="594" y="838" dominant-baseline="central">Board memory; BL33 and OS run here.</text></g>
-        <line x1="832" y1="827" x2="856" y2="827" stroke="#185fa5" stroke-width="2.4" marker-end="url(#abig)"/>
+        <line x1="826" y1="827" x2="857" y2="827" stroke="#185fa5" stroke-width="2.6" marker-end="url(#abig)"/>
 
         <!-- ===== Verification-failure branch ===== -->
         <g class="c-red"><rect x="598" y="650" width="214" height="60" rx="10" stroke-width="1"/>
@@ -268,23 +391,14 @@ const connections = [
         <line x1="735" y1="978" x2="760" y2="978" stroke="#334155" stroke-width="2" marker-end="url(#abig)"/>
       </svg>
       <figcaption class="mt-3 text-sm text-brand-muted">
-        One diagram, two views. On the left, a real die photograph of the Broadcom BCM7019 Arm SoC; on the right, the Arm
-        Trusted Firmware-A cold boot chain. Each <span class="font-semibold text-brand-text">white numbered box (1 to 6)</span> is
-        a boot stage; each <span class="font-semibold text-brand-text">coloured card</span> is a piece of hardware or memory,
-        and its colour follows from its spot on the die (or an off-die board chip) through to the stage it serves. BL1 uses the
-        clock, watchdog, boot ROM, OTP fuses and crypto engine; BL2 loads the later images from
-        <span style="color:#854f0b"> Flash</span> into <span style="color:#0f6e56">Trusted SRAM</span>; a failed signature check
-        halts the SoC; and once the verified chain crosses into the normal world, BL33 boots the OS in
-        <span style="color:#185fa5"> DRAM</span>. Block positions on the die are approximate: the BCM7019 is not officially
-        annotated, so the markers show where such structures typically sit. Source: {" "}
-        <a href="https://commons.wikimedia.org/wiki/File:Broadcom_BCM7019_STB_SoC_die_shot.jpg" target="_blank" rel="noopener noreferrer" class="text-accent-blue underline underline-offset-2 transition-colors hover:text-accent-emerald">Broadcom BCM7019 STB SoC die shot</a>{" "}
-        by Martijn Boer (Flickr), public domain.
+        White numbered boxes are boot stages; each coloured card is a piece of hardware, colour-matched to the stage that
+        uses it. Each chip name on the left links to the TF-A platform page its boot flow comes from; all of them are
+        compared in the table at the end.
       </figcaption>
     </figure>
 
-    <!-- Step by step -->
     <h3 class="mb-4 mt-10 text-lg font-semibold text-brand-text">Step by step</h3>
-    <ol class="space-y-4">
+    <ol class="space-y-3">
       {steps.map((s) => (
         <li class="flex gap-3">
           <span class="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-mono text-xs font-semibold text-white" style="background:#534AB7">{s.n}</span>
@@ -293,19 +407,133 @@ const connections = [
       ))}
     </ol>
 
-    <!-- Two connections -->
-    <h3 class="mb-3 mt-10 text-lg font-semibold text-brand-text">Two connections worth calling out</h3>
-    <ul class="ml-5 list-disc space-y-3 marker:text-accent-green">
-      {connections.map((c) => (
-        <li class="leading-relaxed text-brand-body"><strong class="text-brand-text">{c.title}</strong> {c.body}</li>
-      ))}
-    </ul>
-
     <p class="mt-8 rounded-lg border border-brand-border bg-brand-bg px-4 py-3 text-sm leading-relaxed text-brand-muted">
-      Note: this is one representative TF-A cold boot on AArch64; details vary by platform. BL32 is optional, and on
-      AArch32 the five stages collapse to four (there is no BL31, and BL32 such as SP_MIN plays the EL3 runtime role).
-      Exactly when the clock, watchdog, crypto engine and TrustZone controller are programmed is platform-specific;
-      they are shown at one plausible point in the BL1 / BL2 flow, not as a fixed hardware sequence.
+      Details vary by platform, including when the clock, watchdog and TrustZone controller are set up. Two hardware paths
+      bypass the whole chain if left open: the JTAG/SWD debug port (fused off or locked behind authenticated debug on
+      production parts) and the boot-strap pins latched at reset.
+    </p>
+  </section>
+
+  <!-- ====== REAL SILICON ====== -->
+  <section class="mb-14">
+    <p class="mono-eyebrow mb-2">// under the microscope</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Secure boot hardware on real dies">Secure boot hardware on real dies</h2>
+    <p class="mb-6 text-brand-body">
+      Neither chip runs TF-A, but their delayered dies show the blocks a secure boot relies on: boot ROM, fuses and SRAM.
+    </p>
+
+    <div class="grid gap-6 lg:grid-cols-2">
+      <!-- RP2350 -->
+      <figure class="rounded-xl border border-brand-border bg-white p-4">
+        <svg viewBox="0 0 520 456" class="soc-svg block h-auto w-full rounded-md" role="img" aria-label="Delayered Raspberry Pi RP2350 die with the OTP fuse array, the two SRAM banks, the boot ROM and the PLLs outlined">
+          <a href="https://github.com/aedancullen/hacking-the-rp2350/blob/master/2_anti_fuse_fuse_club/block_04_fromgimp_scaled_4k.png" target="_blank" rel="noopener noreferrer">
+            <image href="/images/rp2350-die.jpg" x="0" y="0" width="520" height="456"/>
+          </a>
+          <g fill="none" stroke-linejoin="round">
+            <g stroke="#ffffff" stroke-width="4" opacity="0.85">
+              <rect x="41"  y="41"  width="126" height="27"  rx="3"/>
+              <rect x="40"  y="95"  width="90"  height="318" rx="3"/>
+              <rect x="301" y="258" width="178" height="157" rx="3"/>
+              <rect x="264" y="382" width="35"  height="33"  rx="3"/>
+              <rect x="129" y="396" width="55"  height="19"  rx="3"/>
+            </g>
+            <rect x="41"  y="41"  width="126" height="27"  rx="3" stroke="#993556" stroke-width="2"/>
+            <rect x="40"  y="95"  width="90"  height="318" rx="3" stroke="#0f6e56" stroke-width="2"/>
+            <rect x="301" y="258" width="178" height="157" rx="3" stroke="#0f6e56" stroke-width="2"/>
+            <rect x="264" y="382" width="35"  height="33"  rx="3" stroke="#0f6e56" stroke-width="2"/>
+            <rect x="129" y="396" width="55"  height="19"  rx="3" stroke="#5f5e5a" stroke-width="2"/>
+          </g>
+          <g class="die-pill">
+            <rect x="41"  y="72"  width="66" height="15" rx="7" fill="#993556"/><text x="74"  y="80">OTP fuses</text>
+            <rect x="46"  y="101" width="40" height="15" rx="7" fill="#0f6e56"/><text x="66"  y="109">SRAM</text>
+            <rect x="307" y="264" width="40" height="15" rx="7" fill="#0f6e56"/><text x="327" y="272">SRAM</text>
+            <rect x="202" y="391" width="56" height="15" rx="7" fill="#0f6e56"/><text x="230" y="399">Boot ROM</text>
+            <rect x="133" y="378" width="34" height="15" rx="7" fill="#5f5e5a"/><text x="150" y="386">PLLs</text>
+          </g>
+        </svg>
+        <figcaption class="mt-3 text-sm text-brand-muted">
+          <strong class="text-brand-text">Raspberry Pi RP2350</strong> (Cortex-M33). The boot ROM checks a signed image
+          from external flash against a key hash in the OTP fuses; the cores sit in the unlabelled logic. Outlines from
+          Aedan Cullen's{" "}
+          <a href="https://media.ccc.de/v/38c3-hacking-the-rp2350" target="_blank" rel="noopener noreferrer" class={link}>38C3 talk</a>{" "}
+          annotation. Photo:{" "}
+          <a href="https://github.com/aedancullen/hacking-the-rp2350" target="_blank" rel="noopener noreferrer" class={link}>Aedan Cullen</a>,{" "}
+          <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer" class={link}>CC BY 4.0</a>.
+        </figcaption>
+      </figure>
+
+      <!-- STM32L431 -->
+      <figure class="rounded-xl border border-brand-border bg-white p-4">
+        <a href="https://web.archive.org/web/20250708134934/https://serd.es/assets/stm32l431-floorplan.jpg" target="_blank" rel="noopener noreferrer" class="block">
+          <img src="/images/stm32l431-floorplan.jpg" width="1400" height="1391" loading="lazy" class="h-auto w-full rounded-md" alt="Delayered STM32L431 die with Flash 1, Flash 2, the flash high-voltage block, SRAM1, SRAM2, small SRAMs A to D and a large-cell library region outlined in red"/>
+        </a>
+        <figcaption class="mt-3 text-sm text-brand-muted">
+          <strong class="text-brand-text">ST STM32L431</strong> (Cortex-M4). No secure boot in ROM: just a factory
+          bootloader in a system-memory region inside the flash. The uniform area is the logic, the irregular south edge
+          is analog. Annotated by Andrew Zonenberg in his{" "}
+          <a href="https://web.archive.org/web/20250513070742/https://serd.es/2025/01/02/STM32L431-teardown.html" target="_blank" rel="noopener noreferrer" class={link}>teardown</a>{" "}
+          (archived). Photo:{" "}
+          <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer" class={link}>CC BY-SA 4.0</a>.
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ====== CHIP COMPARISON ====== -->
+  <section class="mb-14">
+    <p class="mono-eyebrow mb-2">// who verifies what</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Common chips compared">Common chips compared</h2>
+
+    <div class="mb-4 overflow-x-auto">
+      <table class="w-full min-w-[1100px] border-collapse text-sm">
+        <thead>
+          <tr class="border-b border-brand-border text-left whitespace-nowrap text-brand-text">
+            <th class="py-2 pr-4 font-semibold">Chip</th>
+            <th class="py-2 pr-4 font-semibold">Used in</th>
+            <th class="py-2 pr-4 font-semibold">CPU</th>
+            <th class="py-2 pr-4 font-semibold">Boot ROM verifies</th>
+            <th class="py-2 pr-4 font-semibold">Root key in</th>
+            <th class="py-2 pr-4 font-semibold">TrustZone</th>
+            <th class="py-2 pr-4 font-semibold">TF-A</th>
+            <th class="py-2 font-semibold">Public break</th>
+          </tr>
+        </thead>
+        <tbody class="align-top text-brand-body">
+          {chips.map((c, i) => (
+            <tr class={i < chips.length - 1 ? "border-b border-brand-border/60" : ""}>
+              <td class="py-2 pr-4">
+                <span class="font-medium text-brand-text">{c.chip}</span>
+                <span class="mt-1 block text-xs text-brand-muted">
+                  {c.src.map(([label, url], j) => (
+                    <>{j > 0 && ", "}<a href={url} target="_blank" rel="noopener noreferrer" class={link}>{label}</a></>
+                  ))}
+                </span>
+              </td>
+              <td class="py-2 pr-4">
+                {c.used.map(([text, url], j) => (
+                  <>{j > 0 && ", "}<a href={url} target="_blank" rel="noopener noreferrer" class={link}>{text}</a></>
+                ))}
+              </td>
+              <td class="py-2 pr-4">{c.cpu}</td>
+              <td class="py-2 pr-4">{c.rom}</td>
+              <td class="py-2 pr-4">{c.key}</td>
+              <td class="py-2 pr-4">{c.tz}</td>
+              <td class="py-2 pr-4">{c.tfa}</td>
+              <td class="py-2">
+                {c.brk.length === 0 ? "—" : c.brk.map(([text, url], j) => (
+                  <>{j > 0 && "; "}<a href={url} target="_blank" rel="noopener noreferrer" class={link}>{text}</a></>
+                ))}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <p class="text-sm leading-relaxed text-brand-muted">
+      Every &ldquo;Used in&rdquo; and &ldquo;Public break&rdquo; entry links to its source; the technical columns are
+      sourced under each chip name. &ldquo;—&rdquo; means none known or not applicable, and &ldquo;Used in&rdquo; gives
+      examples, not an exhaustive list.
     </p>
   </section>
 </BaseLayout>
@@ -352,13 +580,6 @@ const connections = [
     font-size: 12px;
     font-weight: 400;
   }
-  .soc-svg .lg {
-    font-family: "Inter", system-ui, sans-serif;
-    font-size: 12px;
-    font-weight: 500;
-    fill: #334155;
-  }
-
   .soc-svg .arr {
     stroke: var(--arrow-color);
     stroke-width: 1.5;
@@ -376,6 +597,32 @@ const connections = [
     stroke-width: 1.2;
     stroke-dasharray: 6 4;
   }
+  .soc-svg .die-pill text {
+    font-family: "Inter", system-ui, sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    fill: #ffffff;
+    text-anchor: middle;
+    dominant-baseline: central;
+  }
+  .soc-svg .chain-name {
+    font-family: "Inter", system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    fill: #1e293b;
+  }
+  .soc-svg .chain-link {
+    fill: #185fa5;
+    text-decoration: underline;
+  }
+  .soc-svg a:hover .chain-link { fill: #0f6e56; }
+  .soc-svg .chain {
+    font-family: "Inter", system-ui, sans-serif;
+    font-size: 12px;
+  }
+  .soc-svg .chain .tfa { fill: var(--teal-600); font-weight: 700; }
+  .soc-svg .chain .ven { fill: #64748b; }
+  .soc-svg .chain .sep { fill: #94a3b8; }
   .soc-svg .divider-label {
     font-family: "Inter", system-ui, sans-serif;
     font-size: 11px;
