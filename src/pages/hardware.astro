@@ -217,7 +217,7 @@ const link = "text-accent-blue underline underline-offset-2 transition-colors ho
     <figure class="mb-8 overflow-x-auto rounded-xl border border-brand-border bg-white p-4 sm:p-6">
       <svg viewBox="0 0 1000 1040" class="soc-svg mx-auto block h-auto w-full max-w-[980px] min-w-[900px]" role="img" aria-labelledby="soc-uni-title soc-uni-desc">
         <title id="soc-uni-title">Arm TF-A secure boot chain, the hardware it uses, and real chips that run it</title>
-        <desc id="soc-uni-desc">On the left, a list of real chips and the boot stages they run, with TF-A stages highlighted. In the middle, cards for the CPU, clock, watchdog, boot ROM, OTP fuses, crypto engine, Trusted SRAM, flash and DRAM, each with an arrow to the boot stage it serves. On the right, the Reset, BL1, BL2, BL31, BL32, BL33 spine. A verification-failure branch halts the SoC, a dashed line marks the secure/normal world boundary, and the operating system starts once BL33 runs.</desc>
+        <desc id="soc-uni-desc">On the left, a list of real chips and the boot stages they run, with TF-A stages highlighted. In the middle, cards for the CPU, PLL, watchdog, boot ROM, OTP fuses, crypto engine, Trusted SRAM, flash and DRAM, each with an arrow to the boot stage it serves. On the right, the Reset, BL1, BL2, BL31, BL32, BL33 spine. A verification-failure branch halts the SoC, a dashed line marks the secure/normal world boundary, and the operating system starts once BL33 runs.</desc>
         <defs>
           <marker id="abig" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M1.5 1L8.5 5L1.5 9" fill="none" stroke="context-stroke" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
@@ -319,8 +319,8 @@ const link = "text-accent-blue underline underline-offset-2 transition-colors ho
         <line x1="826" y1="101" x2="857" y2="101" stroke="#444441" stroke-width="2.6" marker-end="url(#abig)"/>
 
         <g class="c-gray"><rect x="580" y="144" width="250" height="54" rx="9" stroke-width="1"/>
-          <text class="th" x="594" y="165" dominant-baseline="central">Clock / PLL</text>
-          <text class="ts" x="594" y="182" dominant-baseline="central">Ramps the CPU to full speed.</text></g>
+          <text class="th" x="594" y="165" dominant-baseline="central">PLL</text>
+          <text class="ts" x="594" y="182" dominant-baseline="central">Multiplies the crystal frequency.</text></g>
         <line x1="826" y1="171" x2="857" y2="171" stroke="#444441" stroke-width="2.6" marker-end="url(#abig)"/>
 
         <g class="c-gray"><rect x="580" y="214" width="250" height="54" rx="9" stroke-width="1"/>
@@ -408,7 +408,7 @@ const link = "text-accent-blue underline underline-offset-2 transition-colors ho
     </ol>
 
     <p class="mt-8 rounded-lg border border-brand-border bg-brand-bg px-4 py-3 text-sm leading-relaxed text-brand-muted">
-      Details vary by platform, including when the clock, watchdog and TrustZone controller are set up. Two hardware paths
+      Details vary by platform, including when the PLLs, watchdog and TrustZone controller are set up. Two hardware paths
       bypass the whole chain if left open: the JTAG/SWD debug port (fused off or locked behind authenticated debug on
       production parts) and the boot-strap pins latched at reset.
     </p>
