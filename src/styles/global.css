@@ -140,6 +140,8 @@ html.light {
    black; light mode uses the original barely-there graph-paper texture. */
 html {
   background-color: var(--color-brand-bg);
+  /* Inter and some mono fonts otherwise merge "-->" into an arrow glyph. */
+  font-variant-ligatures: no-contextual;
 }
 body {
   background-color: var(--color-brand-bg);
