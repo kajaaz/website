@@ -1,0 +1,21 @@
+---
+// A logo + label pill for the Cloud Backend diagrams. Styles live in the page (.cloud-svg, global).
+export interface Props {
+  x: number;
+  y: number;
+  label: string;
+  logo?: string;
+  w?: number;
+  color?: string;
+}
+
+const { x, y, label, logo, color = "#334155" } = Astro.props;
+// Label widths are estimated (Inter 600 at 10.5px).
+const w = Astro.props.w ?? Math.round((logo ? 32 : 18) + label.length * 6);
+---
+
+<g>
+  <rect x={x} y={y} width={w} height="20" rx="10" fill="#ffffff" stroke={color} stroke-width="1.1" />
+  {logo && <image href={`/logos/${logo}`} x={x + 7} y={y + 3} width="14" height="14" />}
+  <text x={logo ? x + 25 : x + 9} y={y + 10} dominant-baseline="central" class="pill" fill={color}>{label}</text>
+</g>
