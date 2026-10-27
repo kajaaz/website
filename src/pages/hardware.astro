@@ -166,7 +166,7 @@ const chips: {
     ],
   },
   {
-    chip: "ST STM32L431", cpu: "Cortex-M4", rom: "Nothing; ST's X-CUBE-SBSFU adds a software secure boot in flash", key: "—",
+    chip: "ST STM32L431", cpu: "Cortex-M4", rom: "Nothing; ST's X-CUBE-SBSFU adds a software secure boot in flash", key: "none",
     tz: "No", tfa: "None",
     used: [
       ["Hermetis LoRa air-quality sensor", "https://hackaday.io/project/189644-hermetis/details"],
@@ -189,6 +189,143 @@ const chips: {
   },
 ];
 
+// Boxes: [colour class, title, line 1, line 2]. verified[i]: does box i check box i+1 before running it?
+const laneCols = ["Root of trust", "Early init, DRAM", "Drivers, boot menu", "OS loader", "Kernel"];
+const laneX = [130, 304, 478, 652, 826];
+const lanes: { name: string; sub: string; y: number; verified: boolean[]; boxes: [string, string, string, string][] }[] = [
+  {
+    name: "Arm + TF-A", sub: "SoCs, Arm servers", y: 76, verified: [true, true, true, true],
+    boxes: [
+      ["c-teal", "Boot ROM / BL1", "key hash in OTP;", "verifies BL2"],
+      ["c-stage", "BL2", "inits DRAM, verifies", "BL31, BL32, BL33"],
+      ["c-stage", "BL33", "UEFI (EDK2) or U-Boot;", "checks the OS loader"],
+      ["c-stage", "OS loader", "GRUB, systemd-boot,", "or none (EFI stub)"],
+      ["c-green", "Kernel", "Image + devicetree", "or ACPI tables"],
+    ],
+  },
+  {
+    name: "PC with UEFI", sub: "x86 today", y: 186, verified: [true, true, true, true],
+    boxes: [
+      ["c-teal", "Boot Guard / PSB", "Intel ACM or AMD PSP;", "OEM key hash in fuses"],
+      ["c-stage", "SEC + PEI", "cache as RAM,", "then DRAM init"],
+      ["c-stage", "DXE + BDS", "drivers, BootOrder;", "Secure Boot: db, dbx"],
+      ["c-stage", "OS loader", "shim + GRUB, or", "Windows Boot Manager"],
+      ["c-green", "Kernel", "verifies its modules", "and drivers"],
+    ],
+  },
+  {
+    name: "PC with BIOS", sub: "before UEFI", y: 296, verified: [false, false, false, false],
+    boxes: [
+      ["c-gray", "Reset vector", "BIOS code in flash,", "runs unchecked"],
+      ["c-stage", "POST", "inits CPU, DRAM", "and devices"],
+      ["c-stage", "Boot device", "reads sector 0 (MBR)", "to 0x7C00, real mode"],
+      ["c-stage", "MBR + VBR", "446 bytes of code,", "chain to GRUB, bootmgr"],
+      ["c-green", "Kernel", "leaves real mode;", "nothing verified it"],
+    ],
+  },
+];
+
+// Each box checks the next before it runs; anchors[i] is the key that box i is checked against.
+const rotX = (i: number) => 120 + i * 146;
+const rotRows: { name: string; sub: string; y: number; boxes: [string, string, string, string][]; anchors: Record<number, [string, string]> }[] = [
+  {
+    name: "Intel", sub: "Boot Guard", y: 40,
+    boxes: [
+      ["c-gray", "CPU", "microcode, before", "any firmware runs"],
+      ["c-stage", "Startup ACM", "signed by Intel;", "runs the checks"],
+      ["c-stage", "Key Manifest", "OEM-signed; lists", "OEM key hashes"],
+      ["c-stage", "Boot Policy", "Manifest (BPM):", "holds the IBB hash"],
+      ["c-stage", "IBB", "Initial Boot Block:", "checks the OBB hash"],
+      ["c-green", "OBB", "rest of the UEFI", "firmware"],
+    ],
+    anchors: { 1: ["Intel's key", "known to the CPU"], 2: ["OEM key hash", "chipset fuses (FPF)"] },
+  },
+  {
+    name: "AMD", sub: "PSB", y: 230,
+    boxes: [
+      ["c-teal", "ASP boot ROM", "on-chip security", "processor, runs first"],
+      ["c-stage", "ASP boot loader", "from flash; inits", "silicon and DRAM"],
+      ["c-green", "OEM BIOS", "the UEFI firmware,", "signed by the OEM"],
+    ],
+    anchors: { 2: ["OEM key", "bound by PSB fuses"] },
+  },
+  {
+    name: "Arm", sub: "TF-A", y: 410,
+    boxes: [
+      ["c-teal", "Boot ROM / BL1", "immutable,", "runs first"],
+      ["c-stage", "BL2", "inits DRAM,", "checks BL3x"],
+      ["c-green", "BL31-BL33", "secure monitor,", "OS, U-Boot or UEFI"],
+    ],
+    anchors: { 1: ["ROTPK hash", "OTP fuses"] },
+  },
+];
+
+const uefiPhases: [string, string, string][] = [
+  ["SEC", "Security", "Handles every reset, sets up temporary memory (the CPU cache used as RAM) and is the root of trust of the firmware."],
+  ["PEI", "Pre-EFI Initialization", "Small modules initialise permanent memory (DRAM) and describe it in Hand-Off Blocks for the next phase."],
+  ["DXE", "Driver Execution Environment", "Most of the work: drivers for the chipset, buses, consoles and disks, and the Boot and Runtime Services."],
+  ["BDS", "Boot Device Selection", "Applies the boot policy: reads the BootOrder variables and tries each boot option in turn."],
+  ["TSL", "Transient System Load", "The OS loader runs as an EFI application, still using the Boot Services."],
+  ["RT", "Runtime", "Once the OS takes over, only the Runtime Services remain: variables, clock, capsule firmware updates."],
+];
+
+const biosUefi: [string, string, string][] = [
+  ["CPU mode at hand-off", "16-bit real mode, 1 MiB of addressable memory", "32- or 64-bit mode (AArch64 on Arm), flat memory"],
+  ["Finds the OS by", "Loading sector 0 of the boot disk (the MBR) at 0x7C00 and jumping to it", "Running the PE/COFF .efi file named by the BootOrder variables, from a FAT EFI System Partition"],
+  ["Disk layout", "MBR: 4 primary partitions, 32-bit sector numbers, so 2 TiB with 512-byte sectors", "GPT, with 64-bit sector numbers (MBR still allowed)"],
+  ["Services to the OS", "Real-mode interrupts: INT 13h for disks, INT 10h for video", "Boot Services until the OS takes over, then Runtime Services"],
+  ["Verifies the loader", "No", "Yes, with Secure Boot: db, dbx, KEK, PK"],
+  ["Hardware root of trust", "None in the design", "Intel Boot Guard or AMD Platform Secure Boot, if the OEM fuses them"],
+];
+
+const sbKeys: [string, string, string][] = [
+  ["PK", "Platform Key", "The platform owner's key, usually the OEM's. Only it can change the KEK. Enrolling a PK moves the firmware from setup mode, where Secure Boot is off, to user mode."],
+  ["KEK", "Key Exchange Keys", "Keys of OS vendors, such as Microsoft's KEK CA. They sign updates to db and dbx."],
+  ["db", "Allowed signatures", "Certificates and hashes of allowed images. PCs ship Microsoft's Windows CA, and its UEFI CA for third-party loaders such as shim."],
+  ["dbx", "Forbidden signatures", "Revoked certificates and hashes, checked before db: a match blocks the image."],
+];
+
+const kernelSteps = [
+  {
+    n: "7",
+    title: "OS loader (EFI application)",
+    body: "BL33, or the PC's UEFI firmware, runs an EFI application from the FAT EFI System Partition: shim and GRUB, systemd-boot or the Windows Boot Manager. With Secure Boot on, the firmware checks it against db and dbx first. It loads the kernel, an initramfs and the command line. Linux can skip this stage: with the EFI stub, the kernel image is itself a PE/COFF EFI application. U-Boot can also boot the kernel directly from a signed FIT image.",
+  },
+  {
+    n: "8",
+    title: "Kernel entry",
+    body: "The loader also passes a description of the hardware: a devicetree on embedded boards, ACPI tables on PCs and Arm servers. On arm64 the kernel starts with the MMU off, the devicetree address in register x0, in non-secure EL2 (recommended, for virtualisation) or EL1. It builds its page tables, turns the MMU on, sets up memory, interrupts and the scheduler, and starts the other cores, on Arm through PSCI calls to BL31.",
+  },
+  {
+    n: "9",
+    title: "initramfs, then init",
+    body: "The kernel unpacks the initramfs, a cpio archive, into a RAM filesystem and runs its /init as PID 1. This early userspace finds the real root filesystem, possibly unlocking it with a TPM-sealed key or checking it with dm-verity, then switches to it and runs the real init, usually systemd.",
+  },
+];
+
+const kbX = (i: number) => 20 + i * 164;
+const kbBoxes: [string, string, string, string][] = [
+  ["c-teal", "Firmware", "BL33 on Arm,", "UEFI on a PC"],
+  ["c-stage", "shim", "signed by Microsoft's", "UEFI CA"],
+  ["c-stage", "GRUB", "or systemd-boot;", "loads the kernel"],
+  ["c-blue", "Kernel", "MMU on, memory,", "starts other cores"],
+  ["c-amber", "initramfs", "/init is PID 1,", "finds the real root"],
+  ["c-green", "Real root fs", "switch_root, then", "systemd"],
+];
+// Step brackets over the boxes: [step, label, first box, last box]
+const kbGroups: [string, string, number, number][] = [
+  ["7", "OS loader", 1, 2],
+  ["8", "Kernel entry", 3, 3],
+  ["9", "initramfs, then init", 4, 5],
+];
+
+const pcBreaks: { name: string; year: string; what: string; url: string }[] = [
+  { name: "BootHole", year: "2020", what: "A buffer overflow in GRUB's parser for grub.cfg, a file nobody signs, ran attacker code with Secure Boot on (CVE-2020-10713).", url: "https://eclypsium.com/research/theres-a-hole-in-the-boot/" },
+  { name: "BlackLotus", year: "2023", what: "The first bootkit seen in the wild to bypass Secure Boot on fully patched Windows 11, by bringing old, validly signed but vulnerable boot managers that dbx did not yet block (CVE-2022-21894).", url: "https://www.welivesecurity.com/2023/03/01/blacklotus-uefi-bootkit-myth-confirmed/" },
+  { name: "LogoFAIL", year: "2023", what: "Bugs in the image parsers that draw the boot logo during DXE let a crafted logo run code inside the firmware, on x86 and Arm devices.", url: "https://kb.cert.org/vuls/id/811862" },
+  { name: "PKfail", year: "2024", what: "Hundreds of PC models shipped AMI's test Platform Key, marked \"DO NOT TRUST\"; one such private key leaked, so anyone holding it could rewrite KEK and db.", url: "https://github.com/binarly-io/Vulnerability-REsearch/blob/main/PKfail/BRLY-2024-005.md" },
+];
+
 const link = "text-accent-blue underline underline-offset-2 transition-colors hover:text-accent-emerald";
 ---
 
@@ -200,8 +337,9 @@ const link = "text-accent-blue underline underline-offset-2 transition-colors ho
   <div class="mb-10 rounded-xl bg-accent-green/15 p-5 sm:p-6">
     <h2 class="mb-1 text-sm font-bold text-brand-text">What is it?</h2>
     <p class="text-sm leading-relaxed text-brand-body">
-      A cheat sheet on what an Arm chip does between power-on and the OS: the TF-A secure boot chain, the hardware it
-      relies on, and how common chips compare.
+      A cheat sheet on what a chip does between power-on and the OS: the TF-A secure boot chain on Arm, the hardware it
+      relies on and how common chips compare, how PCs do the same with BIOS and UEFI, how the kernel boots, and how
+      secure boot differs from measured boot.
     </p>
   </div>
 
@@ -417,11 +555,453 @@ const link = "text-accent-blue underline underline-offset-2 transition-colors ho
     </p>
   </section>
 
+  <!-- ====== REAL SILICON ====== -->
+  <section class="mb-14">
+    <p class="mono-eyebrow mb-2">// under the microscope</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Secure boot hardware on real dies">Secure boot hardware on real dies</h2>
+    <p class="mb-6 text-brand-body">
+      Neither chip runs TF-A, but their delayered dies show the blocks a boot relies on: boot ROM, OTP fuses and SRAM on
+      the RP2350, flash and SRAM on the STM32L431.
+    </p>
+
+    <div class="grid gap-6 lg:grid-cols-2">
+      <!-- RP2350 -->
+      <figure class="rounded-xl border border-brand-border bg-white p-4">
+        <svg viewBox="0 0 520 456" class="soc-svg block h-auto w-full rounded-md" role="img" aria-label="Delayered Raspberry Pi RP2350 die with the OTP fuse array, the two SRAM banks, the boot ROM and the PLLs outlined">
+          <a href="https://github.com/aedancullen/hacking-the-rp2350/blob/master/2_anti_fuse_fuse_club/block_04_fromgimp_scaled_4k.png" target="_blank" rel="noopener noreferrer">
+            <image href="/images/rp2350-die.jpg" x="0" y="0" width="520" height="456"/>
+          </a>
+          <g fill="none" stroke-linejoin="round">
+            <g stroke="#ffffff" stroke-width="4" opacity="0.85">
+              <rect x="41"  y="41"  width="126" height="27"  rx="3"/>
+              <rect x="40"  y="95"  width="90"  height="318" rx="3"/>
+              <rect x="301" y="258" width="178" height="157" rx="3"/>
+              <rect x="264" y="382" width="35"  height="33"  rx="3"/>
+              <rect x="129" y="396" width="55"  height="19"  rx="3"/>
+            </g>
+            <rect x="41"  y="41"  width="126" height="27"  rx="3" stroke="#993556" stroke-width="2"/>
+            <rect x="40"  y="95"  width="90"  height="318" rx="3" stroke="#0f6e56" stroke-width="2"/>
+            <rect x="301" y="258" width="178" height="157" rx="3" stroke="#0f6e56" stroke-width="2"/>
+            <rect x="264" y="382" width="35"  height="33"  rx="3" stroke="#0f6e56" stroke-width="2"/>
+            <rect x="129" y="396" width="55"  height="19"  rx="3" stroke="#5f5e5a" stroke-width="2"/>
+          </g>
+          <g class="die-pill">
+            <rect x="41"  y="72"  width="66" height="15" rx="7" fill="#993556"/><text x="74"  y="80">OTP fuses</text>
+            <rect x="46"  y="101" width="40" height="15" rx="7" fill="#0f6e56"/><text x="66"  y="109">SRAM</text>
+            <rect x="307" y="264" width="40" height="15" rx="7" fill="#0f6e56"/><text x="327" y="272">SRAM</text>
+            <rect x="202" y="391" width="56" height="15" rx="7" fill="#0f6e56"/><text x="230" y="399">Boot ROM</text>
+            <rect x="133" y="378" width="34" height="15" rx="7" fill="#5f5e5a"/><text x="150" y="386">PLLs</text>
+          </g>
+        </svg>
+        <figcaption class="mt-3 text-sm text-brand-muted">
+          <strong class="text-brand-text">Raspberry Pi RP2350</strong> (Cortex-M33). The boot ROM checks a signed image
+          from external flash against a key hash in the OTP fuses; the cores sit in the unlabelled logic. Outlines from
+          Aedan Cullen's{" "}
+          <a href="https://media.ccc.de/v/38c3-hacking-the-rp2350" target="_blank" rel="noopener noreferrer" class={link}>38C3 talk</a>{" "}
+          annotation. Photo:{" "}
+          <a href="https://github.com/aedancullen/hacking-the-rp2350" target="_blank" rel="noopener noreferrer" class={link}>Aedan Cullen</a>,{" "}
+          <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer" class={link}>CC BY 4.0</a>.
+        </figcaption>
+      </figure>
+
+      <!-- STM32L431 -->
+      <figure class="rounded-xl border border-brand-border bg-white p-4">
+        <a href="https://web.archive.org/web/20250708134934/https://serd.es/assets/stm32l431-floorplan.jpg" target="_blank" rel="noopener noreferrer" class="block">
+          <img src="/images/stm32l431-floorplan.jpg" width="1400" height="1391" loading="lazy" class="h-auto w-full rounded-md" alt="Delayered STM32L431 die with Flash 1, Flash 2, the flash high-voltage block, SRAM1, SRAM2, small SRAMs A to D and a large-cell library region outlined in red"/>
+        </a>
+        <figcaption class="mt-3 text-sm text-brand-muted">
+          <strong class="text-brand-text">ST STM32L431</strong> (Cortex-M4). No secure boot in ROM: just a factory
+          bootloader in a system-memory region inside the flash. The uniform area is the logic, the irregular south edge
+          is analog. Photo and annotations: Andrew Zonenberg's{" "}
+          <a href="https://web.archive.org/web/20250513070742/https://serd.es/2025/01/02/STM32L431-teardown.html" target="_blank" rel="noopener noreferrer" class={link}>teardown</a>{" "}
+          (archived),{" "}
+          <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer" class={link}>CC BY-SA 4.0</a>.
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ====== CHIP COMPARISON ====== -->
+  <section class="mb-14">
+    <p class="mono-eyebrow mb-2">// who verifies what</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Common chips compared">Common chips compared</h2>
+
+    <div class="mb-4 overflow-x-auto">
+      <table class="w-full min-w-[1100px] border-collapse text-sm">
+        <thead>
+          <tr class="border-b border-brand-border text-left whitespace-nowrap text-brand-text">
+            <th class="py-2 pr-4 font-semibold">Chip</th>
+            <th class="py-2 pr-4 font-semibold">Used in</th>
+            <th class="py-2 pr-4 font-semibold">CPU</th>
+            <th class="py-2 pr-4 font-semibold">Boot ROM verifies</th>
+            <th class="py-2 pr-4 font-semibold">Root key in</th>
+            <th class="py-2 pr-4 font-semibold">TrustZone</th>
+            <th class="py-2 pr-4 font-semibold">TF-A</th>
+            <th class="py-2 font-semibold">Public break</th>
+          </tr>
+        </thead>
+        <tbody class="align-top text-brand-body">
+          {chips.map((c, i) => (
+            <tr class={i < chips.length - 1 ? "border-b border-brand-border/60" : ""}>
+              <td class="py-2 pr-4">
+                <span class="font-medium text-brand-text">{c.chip}</span>
+                <span class="mt-1 block text-xs text-brand-muted">
+                  {c.src.map(([label, url], j) => (
+                    <>{j > 0 && ", "}<a href={url} target="_blank" rel="noopener noreferrer" class={link}>{label}</a></>
+                  ))}
+                </span>
+              </td>
+              <td class="py-2 pr-4">
+                {c.used.map(([text, url], j) => (
+                  <>{j > 0 && ", "}<a href={url} target="_blank" rel="noopener noreferrer" class={link}>{text}</a></>
+                ))}
+              </td>
+              <td class="py-2 pr-4">{c.cpu}</td>
+              <td class="py-2 pr-4">{c.rom}</td>
+              <td class="py-2 pr-4">{c.key}</td>
+              <td class="py-2 pr-4">{c.tz}</td>
+              <td class="py-2 pr-4">{c.tfa}</td>
+              <td class="py-2">
+                {c.brk.length === 0 ? "none" : c.brk.map(([text, url], j) => (
+                  <>{j > 0 && "; "}<a href={url} target="_blank" rel="noopener noreferrer" class={link}>{text}</a></>
+                ))}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <p class="text-sm leading-relaxed text-brand-muted">
+      Entries link to their sources; technical columns are sourced under each chip name. &ldquo;Used in&rdquo; lists
+      examples; &ldquo;none&rdquo; means none known or not applicable.
+    </p>
+  </section>
+
+  <!-- ====== BIOS AND UEFI ====== -->
+  <section class="mb-14">
+    <p class="mono-eyebrow mb-2">// BL33 --&gt; firmware you know</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="BIOS and UEFI">BIOS and UEFI</h2>
+    <p class="mb-6 text-brand-body">
+      TF-A's chain ends at BL33, which is often a UEFI firmware: the same interface a PC uses to boot. A PC has no TF-A.
+      Intel Boot Guard or AMD's Platform Secure Boot plays the boot ROM's role, and the UEFI firmware itself does BL2's
+      job. Before UEFI, PCs booted with a BIOS, which verified nothing.
+    </p>
+
+    <figure class="mb-8 overflow-x-auto rounded-xl border border-brand-border bg-white p-4 sm:p-6">
+      <svg viewBox="0 0 1000 430" class="soc-svg mx-auto block h-auto w-full max-w-[980px] min-w-[860px]" role="img" aria-labelledby="pc-title pc-desc">
+        <title id="pc-title">The same five boot roles on an Arm SoC with TF-A, a PC with UEFI, and a PC with a legacy BIOS</title>
+        <desc id="pc-desc">Three rows of five boxes. Columns: root of trust, early init and DRAM, drivers and boot menu, OS loader, kernel. Arm with TF-A: boot ROM or BL1, BL2, BL33 running UEFI or U-Boot, an OS loader, the kernel. PC with UEFI: Intel Boot Guard or AMD Platform Secure Boot, SEC and PEI, DXE and BDS, shim and GRUB or the Windows Boot Manager, the kernel. In both rows each stage verifies the next. PC with BIOS: the reset vector, POST, loading the MBR from sector 0, the MBR and volume boot record, the kernel, with nothing verified.</desc>
+        <defs>
+          <marker id="abig3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M1.5 1L8.5 5L1.5 9" fill="none" stroke="context-stroke" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+
+        {laneCols.map((c, i) => (
+          <text class="divider-label" x={laneX[i] + 75} y="50" text-anchor="middle">{c}</text>
+        ))}
+
+        {lanes.map((lane) => (
+          <g>
+            <text class="th" x="16" y={lane.y + 32} dominant-baseline="central" fill="#1e293b">{lane.name}</text>
+            <text class="ts" x="16" y={lane.y + 50} dominant-baseline="central" fill="#64748b">{lane.sub}</text>
+            {lane.boxes.map(([cls, title, l1, l2], i) => (
+              <g class={cls}>
+                <rect x={laneX[i]} y={lane.y} width="150" height="80" rx="10" stroke-width="1.2" stroke-dasharray={cls === "c-gray" ? "5 3" : undefined}/>
+                <text class="th" x={laneX[i] + 75} y={lane.y + 24} text-anchor="middle" dominant-baseline="central">{title}</text>
+                <text class="ts" x={laneX[i] + 75} y={lane.y + 46} text-anchor="middle" dominant-baseline="central">{l1}</text>
+                <text class="ts" x={laneX[i] + 75} y={lane.y + 62} text-anchor="middle" dominant-baseline="central">{l2}</text>
+              </g>
+            ))}
+            {lane.verified.map((v, i) => (
+              <line x1={laneX[i] + 151} y1={lane.y + 40} x2={laneX[i + 1] - 2} y2={lane.y + 40}
+                stroke={v ? "#a32d2d" : "#94a3b8"} stroke-width="2" stroke-dasharray={v ? undefined : "4 3"} marker-end="url(#abig3)"/>
+            ))}
+          </g>
+        ))}
+
+        <line x1="130" y1="406" x2="164" y2="406" stroke="#a32d2d" stroke-width="2" marker-end="url(#abig3)"/>
+        <text class="ts" x="174" y="406" dominant-baseline="central" fill="#475569" style="font-size:11px">checks the next stage's signature first (when enabled)</text>
+        <line x1="560" y1="406" x2="594" y2="406" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4 3" marker-end="url(#abig3)"/>
+        <text class="ts" x="604" y="406" dominant-baseline="central" fill="#475569" style="font-size:11px">loads it without any check</text>
+      </svg>
+      <figcaption class="mt-3 text-sm text-brand-muted">
+        Sources:{" "}
+        <a href="https://www.intel.com/content/www/us/en/developer/articles/technical/software-security-guidance/resources/key-usage-in-integrated-firmware-images.html" target="_blank" rel="noopener noreferrer" class={link}>Intel Boot Guard key usage</a>,{" "}
+        <a href="https://www.amd.com/content/dam/amd/en/documents/products/processors/technologies/amd-pro-technologies-security-white-paper.pdf" target="_blank" rel="noopener noreferrer" class={link}>AMD Platform Secure Boot</a>,{" "}
+        <a href="https://www.tianocore.org/tianocore-wiki.github.io/development/design-architecture/pi_boot_flow.html" target="_blank" rel="noopener noreferrer" class={link}>UEFI PI boot flow</a>,{" "}
+        <a href="https://arm-software.github.io/ebbr/" target="_blank" rel="noopener noreferrer" class={link}>Arm EBBR</a>,{" "}
+        <a href="https://wiki.osdev.org/MBR_(x86)" target="_blank" rel="noopener noreferrer" class={link}>MBR (x86)</a>.
+      </figcaption>
+    </figure>
+
+    <h3 class="mb-3 text-lg font-semibold text-brand-text">The x86 root of trust</h3>
+    <p class="mb-6 leading-relaxed text-brand-body">
+      Before any PC firmware runs, something the OEM cannot change checks it. Intel spreads the check over signed
+      manifests; AMD gives it to a separate security processor. Both are the same idea as BL1 checking BL2 against a key
+      hash in OTP.
+    </p>
+
+    <figure class="mb-8 overflow-x-auto rounded-xl border border-brand-border bg-white p-4 sm:p-6">
+      <svg viewBox="0 0 1000 620" class="soc-svg mx-auto block h-auto w-full max-w-[980px] min-w-[860px]" role="img" aria-labelledby="rot-title rot-desc">
+        <title id="rot-title">Hardware roots of trust on Intel, AMD and Arm</title>
+        <desc id="rot-desc">Three chains, each stage checking the next before it runs. Intel Boot Guard: the CPU microcode checks the Intel-signed Startup ACM; the ACM checks the OEM Key Manifest against an OEM key hash in chipset fuses, then the Boot Policy Manifest, then the Initial Boot Block against the hash in that manifest; the IBB checks the rest of the firmware. AMD Platform Secure Boot: the AMD Secure Processor boot ROM checks the ASP boot loader, which initialises silicon and DRAM and checks the OEM BIOS against an OEM key bound by fuses. Arm with TF-A: the boot ROM or BL1 checks BL2 against the ROTPK hash in OTP, and BL2 checks the BL3x images.</desc>
+        <defs>
+          <marker id="abig4" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M1.5 1L8.5 5L1.5 9" fill="none" stroke="context-stroke" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+
+        {rotRows.map((row) => (
+          <g>
+            <text class="th" x="16" y={row.y + 26} dominant-baseline="central" fill="#1e293b">{row.name}</text>
+            <text class="ts" x="16" y={row.y + 44} dominant-baseline="central" fill="#64748b" style="font-size:11px">{row.sub}</text>
+            {row.boxes.map(([cls, title, l1, l2], i) => (
+              <g class={cls}>
+                <rect x={rotX(i)} y={row.y} width="120" height="70" rx="10" stroke-width="1.2"/>
+                <text class="th" x={rotX(i) + 60} y={row.y + 20} text-anchor="middle" dominant-baseline="central" style="font-size:13px">{title}</text>
+                <text class="ts" x={rotX(i) + 60} y={row.y + 40} text-anchor="middle" dominant-baseline="central" style="font-size:10.5px">{l1}</text>
+                <text class="ts" x={rotX(i) + 60} y={row.y + 54} text-anchor="middle" dominant-baseline="central" style="font-size:10.5px">{l2}</text>
+              </g>
+            ))}
+            {row.boxes.slice(1).map((_, i) => (
+              <line x1={rotX(i) + 121} y1={row.y + 35} x2={rotX(i + 1) - 2} y2={row.y + 35} stroke="#a32d2d" stroke-width="2" marker-end="url(#abig4)"/>
+            ))}
+            {Object.entries(row.anchors).map(([k, [title, line]]) => {
+              const x = rotX(Number(k));
+              return (
+                <g>
+                  <line x1={x + 60} y1={row.y + 118} x2={x + 60} y2={row.y + 73} stroke="#993556" stroke-width="1.6" stroke-dasharray="4 3" marker-end="url(#abig4)"/>
+                  <g class="c-pink">
+                    <rect x={x} y={row.y + 118} width="120" height="44" rx="9" stroke-width="1"/>
+                    <text class="th" x={x + 60} y={row.y + 133} text-anchor="middle" dominant-baseline="central" style="font-size:12px">{title}</text>
+                    <text class="ts" x={x + 60} y={row.y + 150} text-anchor="middle" dominant-baseline="central" style="font-size:10.5px">{line}</text>
+                  </g>
+                </g>
+              );
+            })}
+          </g>
+        ))}
+
+        <line x1="120" y1="602" x2="154" y2="602" stroke="#a32d2d" stroke-width="2" marker-end="url(#abig4)"/>
+        <text class="ts" x="164" y="602" dominant-baseline="central" fill="#475569" style="font-size:11px">checks the next stage before it runs</text>
+        <line x1="420" y1="602" x2="454" y2="602" stroke="#993556" stroke-width="1.6" stroke-dasharray="4 3" marker-end="url(#abig4)"/>
+        <text class="ts" x="464" y="602" dominant-baseline="central" fill="#475569" style="font-size:11px">checked against a key the OEM cannot change later</text>
+      </svg>
+      <figcaption class="mt-3 text-sm text-brand-muted">
+        On Intel, the ACM does every check up to the IBB, then the IBB runs and checks the rest. On AMD, once Platform
+        Secure Boot is enabled, fuses bind the processor to the OEM's signing key for good. Sources:{" "}
+        <a href="https://www.intel.com/content/www/us/en/developer/articles/technical/software-security-guidance/resources/key-usage-in-integrated-firmware-images.html" target="_blank" rel="noopener noreferrer" class={link}>Intel key usage</a>,{" "}
+        <a href="https://tianocore-docs.github.io/Understanding_UEFI_Secure_Boot_Chain/draft/secure_boot_chain_in_uefi/intel_boot_guard.html" target="_blank" rel="noopener noreferrer" class={link}>Boot Guard chain</a>,{" "}
+        <a href="https://www.amd.com/content/dam/amd/en/documents/products/processors/technologies/amd-pro-technologies-security-white-paper.pdf" target="_blank" rel="noopener noreferrer" class={link}>AMD PRO security</a>.
+      </figcaption>
+    </figure>
+
+    <h3 class="mb-3 text-lg font-semibold text-brand-text">UEFI in six phases</h3>
+    <ol class="mb-4 space-y-2">
+      {uefiPhases.map(([abbr, name, body]) => (
+        <li class="flex gap-3">
+          <span class="mt-0.5 inline-flex h-6 min-w-10 shrink-0 items-center justify-center rounded-full px-1.5 font-mono text-xs font-semibold text-white" style="background:#0f6e56">{abbr}</span>
+          <p class="leading-relaxed text-brand-body"><strong class="text-brand-text">{name}.</strong> {body}</p>
+        </li>
+      ))}
+    </ol>
+    <p class="mb-8 text-sm leading-relaxed text-brand-muted">
+      On an Arm board, TF-A has already done the reset and DRAM work, and EDK2 starts as BL33. Embedded boards often run
+      U-Boot instead, which implements the subset of UEFI that Arm's{" "}
+      <a href="https://arm-software.github.io/ebbr/" target="_blank" rel="noopener noreferrer" class={link}>EBBR</a> requires. Secure Boot is optional there. Source:{" "}
+      <a href="https://www.tianocore.org/tianocore-wiki.github.io/development/design-architecture/pi_boot_flow.html" target="_blank" rel="noopener noreferrer" class={link}>TianoCore PI boot flow</a>,{" "}
+      <a href="https://docs.u-boot.org/en/latest/develop/uefi/uefi.html" target="_blank" rel="noopener noreferrer" class={link}>UEFI on U-Boot</a>.
+    </p>
+
+    <h3 class="mb-3 text-lg font-semibold text-brand-text">Legacy BIOS vs UEFI</h3>
+    <div class="mb-4 overflow-x-auto">
+      <table class="w-full min-w-[640px] border-collapse text-sm">
+        <thead>
+          <tr class="border-b border-brand-border text-left text-brand-text">
+            <th class="w-[20%] py-2 pr-4 font-semibold"></th>
+            <th class="w-[40%] py-2 pr-4 font-semibold">Legacy BIOS</th>
+            <th class="w-[40%] py-2 font-semibold">UEFI</th>
+          </tr>
+        </thead>
+        <tbody class="align-top text-brand-body">
+          {biosUefi.map(([what, bios, uefi], i) => (
+            <tr class={i < biosUefi.length - 1 ? "border-b border-brand-border/60" : ""}>
+              <td class="py-2 pr-4 font-medium text-brand-text">{what}</td>
+              <td class="py-2 pr-4">{bios}</td>
+              <td class="py-2">{uefi}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p class="text-sm text-brand-muted">
+      Sources:{" "}
+      <a href="https://wiki.osdev.org/MBR_(x86)" target="_blank" rel="noopener noreferrer" class={link}>MBR (x86)</a>,{" "}
+      <a href="https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/windows-and-gpt-faq" target="_blank" rel="noopener noreferrer" class={link}>Windows and GPT FAQ</a>,{" "}
+      <a href="https://docs.kernel.org/admin-guide/efi-stub.html" target="_blank" rel="noopener noreferrer" class={link}>EFI boot stub</a>,{" "}
+      <a href="https://www.tianocore.org/tianocore-wiki.github.io/development/design-architecture/pi_boot_flow.html" target="_blank" rel="noopener noreferrer" class={link}>PI boot flow</a>.
+    </p>
+
+    <h3 class="mb-3 mt-8 text-lg font-semibold text-brand-text">Secure Boot keys</h3>
+    <p class="mb-4 leading-relaxed text-brand-body">
+      UEFI Secure Boot continues the chain past the firmware: four key databases decide which OS loader may run.
+    </p>
+    <dl class="mb-4 grid gap-y-3 text-sm">
+      {sbKeys.map(([abbr, name, body]) => (
+        <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <dt class="w-44 shrink-0"><span class="font-mono font-semibold text-brand-text">{abbr}</span> <span class="text-brand-muted">{name}</span></dt>
+          <dd class="min-w-0 flex-1 text-brand-body">{body}</dd>
+        </div>
+      ))}
+    </dl>
+    <p class="mb-8 text-sm leading-relaxed text-brand-muted">
+      Microsoft's 2011 certificates start expiring in June 2026: PCs need the 2023 CAs to keep receiving db and dbx updates. Source:{" "}
+      <a href="https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/windows-secure-boot-key-creation-and-management-guidance" target="_blank" rel="noopener noreferrer" class={link}>Secure Boot key guidance</a>.
+    </p>
+
+    <h3 class="mb-3 text-lg font-semibold text-brand-text">Public Secure Boot breaks</h3>
+    <ul class="space-y-2">
+      {pcBreaks.map((b) => (
+        <li class="leading-relaxed text-brand-body">
+          <a href={b.url} target="_blank" rel="noopener noreferrer" class={link}>{b.name}</a>{" "}
+          <span class="font-mono text-xs text-brand-muted">({b.year})</span>: {b.what}
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <!-- ====== FIRMWARE TO KERNEL ====== -->
+  <section class="mb-14">
+    <p class="mono-eyebrow mb-2">// firmware --&gt; kernel --&gt; init</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="From the loader to the kernel">From the loader to the kernel</h2>
+    <p class="mb-6 text-brand-body">
+      Arm and PC boots meet here: BL33 or the UEFI firmware hands over to an OS loader, which starts the kernel.
+    </p>
+
+    <figure class="mb-8 overflow-x-auto rounded-xl border border-brand-border bg-white p-4 sm:p-6">
+      <svg viewBox="0 0 1000 440" class="soc-svg mx-auto block h-auto w-full max-w-[980px] min-w-[860px]" role="img" aria-labelledby="kb-title kb-desc">
+        <title id="kb-title">From the firmware to the real root filesystem, with the Secure Boot checks</title>
+        <desc id="kb-desc">A row of six stages: the firmware (BL33 on Arm, UEFI on a PC), shim, GRUB or systemd-boot, the kernel, the initramfs, and the real root filesystem running systemd. Shim and GRUB form step 7, the OS loader; the kernel is step 8; the initramfs and the real root are step 9. Red arrows show the checks: the firmware checks shim against db and dbx, shim checks GRUB against the vendor certificate or a MOK, shim checks the kernel when GRUB asks it to, and dm-verity can check the real root. A dashed path shows the firmware starting the kernel directly, through the EFI stub or U-Boot with a signed FIT image. Below, the initramfs, command line and devicetree or ACPI tables are handed to the kernel, and the kernel checks the signature of every module it loads.</desc>
+        <defs>
+          <marker id="abig5" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M1.5 1L8.5 5L1.5 9" fill="none" stroke="context-stroke" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+
+        {kbGroups.map(([n, label, a, b]) => {
+          const x1 = kbX(a) + 10, x2 = kbX(b) + 130, cx = (x1 + x2) / 2;
+          const bx = cx - label.length * 3.6 - 16;
+          return (
+            <g>
+              <path d={`M${x1} 62 L${x1} 54 L${x2} 54 L${x2} 62`} stroke="#534AB7" stroke-width="1.2" fill="none"/>
+              <g class="c-purple badge"><circle cx={bx} cy="36" r="9"/><text class="ts" x={bx} y="36" text-anchor="middle" dominant-baseline="central">{n}</text></g>
+              <text class="th" x={cx} y="36" text-anchor="middle" dominant-baseline="central" fill="#3c3489" style="font-size:12.5px">{label}</text>
+            </g>
+          );
+        })}
+
+        {kbBoxes.map(([cls, title, l1, l2], i) => (
+          <g class={cls}>
+            <rect x={kbX(i)} y="170" width="140" height="70" rx="10" stroke-width="1.2"/>
+            <text class="th" x={kbX(i) + 70} y="192" text-anchor="middle" dominant-baseline="central">{title}</text>
+            <text class="ts" x={kbX(i) + 70} y="212" text-anchor="middle" dominant-baseline="central" style="font-size:10.5px">{l1}</text>
+            <text class="ts" x={kbX(i) + 70} y="226" text-anchor="middle" dominant-baseline="central" style="font-size:10.5px">{l2}</text>
+          </g>
+        ))}
+        {kbBoxes.slice(1).map((_, i) => (
+          <line x1={kbX(i) + 141} y1="205" x2={kbX(i + 1) - 2} y2="205" stroke="#334155" stroke-width="2" marker-end="url(#abig5)"/>
+        ))}
+
+        <!-- Secure Boot checks -->
+        <path d="M125 170 L125 130 L229 130 L229 168" stroke="#a32d2d" stroke-width="1.8" fill="none" marker-end="url(#abig5)"/>
+        <text class="ts" x="177" y="118" text-anchor="middle" dominant-baseline="central" fill="#791f1f" style="font-size:11px">checks db, dbx</text>
+        <path d="M289 170 L289 130 L393 130 L393 168" stroke="#a32d2d" stroke-width="1.8" fill="none" marker-end="url(#abig5)"/>
+        <text class="ts" x="341" y="118" text-anchor="middle" dominant-baseline="central" fill="#791f1f" style="font-size:11px">vendor cert or MOK</text>
+        <path d="M254 170 L254 100 L557 100 L557 168" stroke="#a32d2d" stroke-width="1.8" fill="none" marker-end="url(#abig5)"/>
+        <text class="ts" x="405" y="88" text-anchor="middle" dominant-baseline="central" fill="#791f1f" style="font-size:11px">checks the kernel when GRUB asks</text>
+        <path d="M781 170 L781 130 L885 130 L885 168" stroke="#a32d2d" stroke-width="1.8" stroke-dasharray="5 3" fill="none" marker-end="url(#abig5)"/>
+        <text class="ts" x="833" y="118" text-anchor="middle" dominant-baseline="central" fill="#791f1f" style="font-size:11px">dm-verity, if used</text>
+
+        <!-- skipping the OS loader -->
+        <path d="M55 240 L55 266 L540 266 L540 242" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4 3" fill="none" marker-end="url(#abig5)"/>
+        <text class="ts" x="297" y="282" text-anchor="middle" dominant-baseline="central" fill="#475569" style="font-size:11px">or straight to the kernel: EFI stub, or U-Boot with a signed FIT image</text>
+
+        <!-- what the kernel receives and loads -->
+        <g class="c-stage">
+          <rect x="340" y="310" width="260" height="70" rx="10" stroke-width="1.2"/>
+          <text class="th" x="470" y="332" text-anchor="middle" dominant-baseline="central">Handed to the kernel</text>
+          <text class="ts" x="470" y="352" text-anchor="middle" dominant-baseline="central" style="font-size:10.5px">initramfs, command line,</text>
+          <text class="ts" x="470" y="366" text-anchor="middle" dominant-baseline="central" style="font-size:10.5px">devicetree (Arm) or ACPI tables (PC)</text>
+        </g>
+        <line x1="580" y1="310" x2="580" y2="242" stroke="#334155" stroke-width="2" marker-end="url(#abig5)"/>
+        <g class="c-blue">
+          <rect x="700" y="310" width="280" height="70" rx="10" stroke-width="1.2"/>
+          <text class="th" x="840" y="332" text-anchor="middle" dominant-baseline="central">Kernel modules</text>
+          <text class="ts" x="840" y="352" text-anchor="middle" dominant-baseline="central" style="font-size:10.5px">signature checked on load,</text>
+          <text class="ts" x="840" y="366" text-anchor="middle" dominant-baseline="central" style="font-size:10.5px">from the initramfs or the root fs</text>
+        </g>
+        <path d="M630 240 L630 345 L698 345" stroke="#a32d2d" stroke-width="1.8" fill="none" marker-end="url(#abig5)"/>
+
+        <!-- legend -->
+        <line x1="20" y1="420" x2="54" y2="420" stroke="#a32d2d" stroke-width="1.8" marker-end="url(#abig5)"/>
+        <text class="ts" x="64" y="420" dominant-baseline="central" fill="#475569" style="font-size:11px">checks the signature before it runs (with Secure Boot on)</text>
+        <line x1="440" y1="420" x2="474" y2="420" stroke="#a32d2d" stroke-width="1.8" stroke-dasharray="5 3" marker-end="url(#abig5)"/>
+        <text class="ts" x="484" y="420" dominant-baseline="central" fill="#475569" style="font-size:11px">optional check</text>
+        <line x1="600" y1="420" x2="634" y2="420" stroke="#334155" stroke-width="2" marker-end="url(#abig5)"/>
+        <text class="ts" x="644" y="420" dominant-baseline="central" fill="#475569" style="font-size:11px">boot order</text>
+        <line x1="740" y1="420" x2="774" y2="420" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4 3" marker-end="url(#abig5)"/>
+        <text class="ts" x="784" y="420" dominant-baseline="central" fill="#475569" style="font-size:11px">skips the OS loader</text>
+      </svg>
+      <figcaption class="mt-3 text-sm text-brand-muted">
+        A Linux distribution under Secure Boot, on a PC or an Arm board with UEFI. Windows replaces shim and GRUB with
+        its Boot Manager and winload, which check the kernel. Sources:{" "}
+        <a href="https://github.com/rhboot/shim" target="_blank" rel="noopener noreferrer" class={link}>shim</a>,{" "}
+        <a href="https://docs.kernel.org/admin-guide/efi-stub.html" target="_blank" rel="noopener noreferrer" class={link}>EFI boot stub</a>,{" "}
+        <a href="https://docs.u-boot.org/en/latest/usage/fit/signature.html" target="_blank" rel="noopener noreferrer" class={link}>U-Boot FIT signature</a>,{" "}
+        <a href="https://docs.kernel.org/admin-guide/module-signing.html" target="_blank" rel="noopener noreferrer" class={link}>module signing</a>,{" "}
+        <a href="https://www.kernel.org/doc/html/latest/admin-guide/device-mapper/verity.html" target="_blank" rel="noopener noreferrer" class={link}>dm-verity</a>.
+      </figcaption>
+    </figure>
+
+    <h3 class="mb-4 text-lg font-semibold text-brand-text">Kernel boot, step by step</h3>
+    <ol class="mb-4 space-y-3">
+      {kernelSteps.map((s) => (
+        <li class="flex gap-3">
+          <span class="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-mono text-xs font-semibold text-white" style="background:#534AB7">{s.n}</span>
+          <p class="leading-relaxed text-brand-body"><strong class="text-brand-text">{s.title}.</strong> {s.body}</p>
+        </li>
+      ))}
+    </ol>
+    <p class="mb-8 text-sm text-brand-muted">
+      Numbers continue the TF-A steps 0 to 6. Sources:{" "}
+      <a href="https://docs.kernel.org/arch/arm64/booting.html" target="_blank" rel="noopener noreferrer" class={link}>Booting AArch64 Linux</a>,{" "}
+      <a href="https://docs.kernel.org/admin-guide/efi-stub.html" target="_blank" rel="noopener noreferrer" class={link}>EFI boot stub</a>,{" "}
+      <a href="https://docs.kernel.org/filesystems/ramfs-rootfs-initramfs.html" target="_blank" rel="noopener noreferrer" class={link}>initramfs</a>.
+    </p>
+
+    <h3 class="mb-3 text-lg font-semibold text-brand-text">Linux under Secure Boot</h3>
+    <p class="leading-relaxed text-brand-body">
+      Microsoft signs{" "}
+      <a href="https://github.com/rhboot/shim" target="_blank" rel="noopener noreferrer" class={link}>shim</a>, a small
+      first-stage loader, with its UEFI CA. shim carries the distribution's certificate and checks GRUB and the kernel
+      against it, or against a Machine Owner Key (MOK) that the user enrolls. GRUB's config file is not signed, which is
+      what BootHole exploited. Since then, shim checks{" "}
+      <a href="https://github.com/rhboot/shim/blob/main/SBAT.md" target="_blank" rel="noopener noreferrer" class={link}>SBAT</a>{" "}
+      generation numbers in signed metadata, so a vulnerable version can be revoked by number instead of filling dbx
+      with hashes. With{" "}
+      <a href="https://man7.org/linux/man-pages/man7/kernel_lockdown.7.html" target="_blank" rel="noopener noreferrer" class={link}>kernel lockdown</a>{" "}
+      on, which distributions usually enable under Secure Boot, the kernel loads only signed modules and also refuses /dev/mem, kexec of unsigned kernels and unencrypted hibernation.
+    </p>
+  </section>
+
+  <!-- ====== SECURE VS MEASURED ====== -->
   <section class="mb-14">
     <p class="mono-eyebrow mb-2">// verify vs record</p>
     <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Secure boot vs measured boot">Secure boot vs measured boot</h2>
     <p class="mb-6 text-brand-body">
-      Two mechanisms run on the same chain. Secure boot (then trusted boot, in Windows terms) verifies each stage and
+      Two mechanisms run along the whole chain, from the root of trust to the kernel, on Arm and PCs alike. Secure boot (then trusted boot, in Windows terms) verifies each stage and
       stops on a bad signature. Measured boot hashes each stage into a TPM and never blocks, so a key store or a remote
       server can tell what actually ran.
     </p>
@@ -562,129 +1142,6 @@ const link = "text-accent-blue underline underline-offset-2 transition-colors ho
       Sources:{" "}
       <a href="https://tf-a.docs.trustedfirmware.org/en/latest/design_documents/measured_boot.html" target="_blank" rel="noopener noreferrer" class={link}>TF-A Measured Boot design</a>,{" "}
       <a href="https://learn.microsoft.com/en-us/windows/security/operating-system-security/system-security/secure-the-windows-10-boot-process" target="_blank" rel="noopener noreferrer" class={link}>Windows boot process</a>.
-    </p>
-  </section>
-
-  <!-- ====== REAL SILICON ====== -->
-  <section class="mb-14">
-    <p class="mono-eyebrow mb-2">// under the microscope</p>
-    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Secure boot hardware on real dies">Secure boot hardware on real dies</h2>
-    <p class="mb-6 text-brand-body">
-      Neither chip runs TF-A, but their delayered dies show the blocks a boot relies on: boot ROM, OTP fuses and SRAM on
-      the RP2350, flash and SRAM on the STM32L431.
-    </p>
-
-    <div class="grid gap-6 lg:grid-cols-2">
-      <!-- RP2350 -->
-      <figure class="rounded-xl border border-brand-border bg-white p-4">
-        <svg viewBox="0 0 520 456" class="soc-svg block h-auto w-full rounded-md" role="img" aria-label="Delayered Raspberry Pi RP2350 die with the OTP fuse array, the two SRAM banks, the boot ROM and the PLLs outlined">
-          <a href="https://github.com/aedancullen/hacking-the-rp2350/blob/master/2_anti_fuse_fuse_club/block_04_fromgimp_scaled_4k.png" target="_blank" rel="noopener noreferrer">
-            <image href="/images/rp2350-die.jpg" x="0" y="0" width="520" height="456"/>
-          </a>
-          <g fill="none" stroke-linejoin="round">
-            <g stroke="#ffffff" stroke-width="4" opacity="0.85">
-              <rect x="41"  y="41"  width="126" height="27"  rx="3"/>
-              <rect x="40"  y="95"  width="90"  height="318" rx="3"/>
-              <rect x="301" y="258" width="178" height="157" rx="3"/>
-              <rect x="264" y="382" width="35"  height="33"  rx="3"/>
-              <rect x="129" y="396" width="55"  height="19"  rx="3"/>
-            </g>
-            <rect x="41"  y="41"  width="126" height="27"  rx="3" stroke="#993556" stroke-width="2"/>
-            <rect x="40"  y="95"  width="90"  height="318" rx="3" stroke="#0f6e56" stroke-width="2"/>
-            <rect x="301" y="258" width="178" height="157" rx="3" stroke="#0f6e56" stroke-width="2"/>
-            <rect x="264" y="382" width="35"  height="33"  rx="3" stroke="#0f6e56" stroke-width="2"/>
-            <rect x="129" y="396" width="55"  height="19"  rx="3" stroke="#5f5e5a" stroke-width="2"/>
-          </g>
-          <g class="die-pill">
-            <rect x="41"  y="72"  width="66" height="15" rx="7" fill="#993556"/><text x="74"  y="80">OTP fuses</text>
-            <rect x="46"  y="101" width="40" height="15" rx="7" fill="#0f6e56"/><text x="66"  y="109">SRAM</text>
-            <rect x="307" y="264" width="40" height="15" rx="7" fill="#0f6e56"/><text x="327" y="272">SRAM</text>
-            <rect x="202" y="391" width="56" height="15" rx="7" fill="#0f6e56"/><text x="230" y="399">Boot ROM</text>
-            <rect x="133" y="378" width="34" height="15" rx="7" fill="#5f5e5a"/><text x="150" y="386">PLLs</text>
-          </g>
-        </svg>
-        <figcaption class="mt-3 text-sm text-brand-muted">
-          <strong class="text-brand-text">Raspberry Pi RP2350</strong> (Cortex-M33). The boot ROM checks a signed image
-          from external flash against a key hash in the OTP fuses; the cores sit in the unlabelled logic. Outlines from
-          Aedan Cullen's{" "}
-          <a href="https://media.ccc.de/v/38c3-hacking-the-rp2350" target="_blank" rel="noopener noreferrer" class={link}>38C3 talk</a>{" "}
-          annotation. Photo:{" "}
-          <a href="https://github.com/aedancullen/hacking-the-rp2350" target="_blank" rel="noopener noreferrer" class={link}>Aedan Cullen</a>,{" "}
-          <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer" class={link}>CC BY 4.0</a>.
-        </figcaption>
-      </figure>
-
-      <!-- STM32L431 -->
-      <figure class="rounded-xl border border-brand-border bg-white p-4">
-        <a href="https://web.archive.org/web/20250708134934/https://serd.es/assets/stm32l431-floorplan.jpg" target="_blank" rel="noopener noreferrer" class="block">
-          <img src="/images/stm32l431-floorplan.jpg" width="1400" height="1391" loading="lazy" class="h-auto w-full rounded-md" alt="Delayered STM32L431 die with Flash 1, Flash 2, the flash high-voltage block, SRAM1, SRAM2, small SRAMs A to D and a large-cell library region outlined in red"/>
-        </a>
-        <figcaption class="mt-3 text-sm text-brand-muted">
-          <strong class="text-brand-text">ST STM32L431</strong> (Cortex-M4). No secure boot in ROM: just a factory
-          bootloader in a system-memory region inside the flash. The uniform area is the logic, the irregular south edge
-          is analog. Photo and annotations: Andrew Zonenberg's{" "}
-          <a href="https://web.archive.org/web/20250513070742/https://serd.es/2025/01/02/STM32L431-teardown.html" target="_blank" rel="noopener noreferrer" class={link}>teardown</a>{" "}
-          (archived),{" "}
-          <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer" class={link}>CC BY-SA 4.0</a>.
-        </figcaption>
-      </figure>
-    </div>
-  </section>
-
-  <!-- ====== CHIP COMPARISON ====== -->
-  <section class="mb-14">
-    <p class="mono-eyebrow mb-2">// who verifies what</p>
-    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Common chips compared">Common chips compared</h2>
-
-    <div class="mb-4 overflow-x-auto">
-      <table class="w-full min-w-[1100px] border-collapse text-sm">
-        <thead>
-          <tr class="border-b border-brand-border text-left whitespace-nowrap text-brand-text">
-            <th class="py-2 pr-4 font-semibold">Chip</th>
-            <th class="py-2 pr-4 font-semibold">Used in</th>
-            <th class="py-2 pr-4 font-semibold">CPU</th>
-            <th class="py-2 pr-4 font-semibold">Boot ROM verifies</th>
-            <th class="py-2 pr-4 font-semibold">Root key in</th>
-            <th class="py-2 pr-4 font-semibold">TrustZone</th>
-            <th class="py-2 pr-4 font-semibold">TF-A</th>
-            <th class="py-2 font-semibold">Public break</th>
-          </tr>
-        </thead>
-        <tbody class="align-top text-brand-body">
-          {chips.map((c, i) => (
-            <tr class={i < chips.length - 1 ? "border-b border-brand-border/60" : ""}>
-              <td class="py-2 pr-4">
-                <span class="font-medium text-brand-text">{c.chip}</span>
-                <span class="mt-1 block text-xs text-brand-muted">
-                  {c.src.map(([label, url], j) => (
-                    <>{j > 0 && ", "}<a href={url} target="_blank" rel="noopener noreferrer" class={link}>{label}</a></>
-                  ))}
-                </span>
-              </td>
-              <td class="py-2 pr-4">
-                {c.used.map(([text, url], j) => (
-                  <>{j > 0 && ", "}<a href={url} target="_blank" rel="noopener noreferrer" class={link}>{text}</a></>
-                ))}
-              </td>
-              <td class="py-2 pr-4">{c.cpu}</td>
-              <td class="py-2 pr-4">{c.rom}</td>
-              <td class="py-2 pr-4">{c.key}</td>
-              <td class="py-2 pr-4">{c.tz}</td>
-              <td class="py-2 pr-4">{c.tfa}</td>
-              <td class="py-2">
-                {c.brk.length === 0 ? "—" : c.brk.map(([text, url], j) => (
-                  <>{j > 0 && "; "}<a href={url} target="_blank" rel="noopener noreferrer" class={link}>{text}</a></>
-                ))}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-
-    <p class="text-sm leading-relaxed text-brand-muted">
-      Entries link to their sources; technical columns are sourced under each chip name. &ldquo;Used in&rdquo; lists
-      examples; &ldquo;—&rdquo; means none known or not applicable.
     </p>
   </section>
 </BaseLayout>
