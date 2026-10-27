@@ -97,6 +97,15 @@ const blOverview = "https://learn.microsoft.com/en-us/windows/security/operating
 const tfaLoad = "https://github.com/ARM-software/arm-trusted-firmware/blob/master/common/bl_common.c";
 const tfaAuth = "https://github.com/ARM-software/arm-trusted-firmware/blob/master/drivers/auth/auth_mod.c";
 const tfaEnc = "https://github.com/ARM-software/arm-trusted-firmware/blob/master/drivers/io/io_encrypted.c";
+const intelBg = "https://www.intel.com/content/www/us/en/developer/articles/technical/software-security-guidance/resources/key-usage-in-integrated-firmware-images.html";
+const tianoBg = "https://tianocore-docs.github.io/Understanding_UEFI_Secure_Boot_Chain/draft/secure_boot_chain_in_uefi/intel_boot_guard.html";
+const amdPsb = "https://www.amd.com/content/dam/amd/en/documents/products/processors/technologies/amd-pro-technologies-security-white-paper.pdf";
+const ubootUefi = "https://docs.u-boot.org/en/latest/develop/uefi/uefi.html";
+const shim = "https://github.com/rhboot/shim";
+const sbat = "https://github.com/rhboot/shim/blob/main/SBAT.md";
+const modSign = "https://docs.kernel.org/admin-guide/module-signing.html";
+const lockdown = "https://man7.org/linux/man-pages/man7/kernel_lockdown.7.html";
+const pcrRegistry = "https://uapi-group.org/specifications/specs/linux_tpm_pcr_registry/";
 
 const groups: { name: string; blurb: string; rows: Row[] }[] = [
   {
@@ -182,6 +191,47 @@ const groups: { name: string; blurb: string; rows: Row[] }[] = [
         src: [["U-Boot FIT", ubootFit], ["Secure Boot keys", msKeys]],
       },
       {
+        title: "PC firmware verifies itself",
+        sub: "Intel Boot Guard, AMD Platform Secure Boot",
+        auth: [],
+        sig: [
+          "Intel: the CPU checks Intel's signature on the ACM. The ACM checks the OEM Key Manifest against the OEM key hash fused in the chipset, then the Boot Policy Manifest",
+          "AMD: the PSP boot ROM checks the PSP firmware, which checks the OEM-signed BIOS; fuses bind the CPU to the OEM key",
+        ],
+        hash: [
+          "The Boot Policy Manifest holds the hash of the Initial Boot Block (IBB), compared with the IBB in flash",
+          "The IBB then compares the hash of the rest of the firmware (OBB)",
+        ],
+        cipher: [],
+        tags: ["auth", "int"],
+        src: [["Intel key usage", intelBg], ["Boot Guard chain", tianoBg], ["AMD PSB", amdPsb]],
+      },
+      {
+        title: "Updating the Secure Boot keys",
+        sub: "UEFI authenticated variables: PK, KEK, db, dbx",
+        auth: [],
+        sig: ["Each update is a signed variable: the PK signs KEK changes, a KEK signs db and dbx changes. RSA-2048 with SHA-256 is the recommended minimum"],
+        hash: ["db and dbx can list SHA-256 digests of single binaries, not only certificates"],
+        cipher: [],
+        tags: ["auth", "int"],
+        src: [["Secure Boot keys", msKeys], ["UEFI on U-Boot", ubootUefi]],
+      },
+      {
+        n: "7",
+        title: "shim verifies GRUB and the kernel",
+        sub: "Linux on a Secure Boot PC",
+        auth: [],
+        sig: [
+          "Firmware checks shim against Microsoft's UEFI CA in db",
+          "shim checks GRUB and the kernel against its built-in distribution certificate, or an enrolled Machine Owner Key (MOK)",
+          "SBAT: generation numbers in signed metadata revoke old versions without growing dbx",
+        ],
+        hash: ["Authenticode digest of each PE image, also checked against dbx and the MOK deny list"],
+        cipher: [],
+        tags: ["auth", "int"],
+        src: [["shim", shim], ["SBAT", sbat]],
+      },
+      {
         title: "Boot loader and kernel verify the OS",
         sub: "Windows trusted boot",
         auth: [],
@@ -192,6 +242,21 @@ const groups: { name: string; blurb: string; rows: Row[] }[] = [
         src: [["Windows boot process", msBoot]],
       },
       {
+        n: "8",
+        title: "Kernel verifies its modules",
+        sub: "Linux module signing, lockdown",
+        auth: [],
+        sig: [
+          "Signature appended to each module: RSA, NIST P-384 ECDSA or ML-DSA, checked against the kernel's built-in trusted keys",
+          "With lockdown on, unsigned modules and unsigned kexec images are refused",
+        ],
+        hash: ["SHA-2 or SHA-3 (256, 384 or 512 bits) of the module, chosen by the signature"],
+        cipher: [],
+        tags: ["auth", "int"],
+        src: [["module signing", modSign], ["kernel_lockdown(7)", lockdown]],
+      },
+      {
+        n: "9",
         title: "Kernel verifies the root filesystem",
         sub: "dm-verity (Linux, Android)",
         auth: [],
@@ -222,6 +287,20 @@ const groups: { name: string; blurb: string; rows: Row[] }[] = [
         cipher: [],
         tags: ["int"],
         src: [["TF-A measured boot", mboot], ["bl_common.c", tfaLoad], ["TPM 2.0 Part 1", tpmSpec]],
+      },
+      {
+        title: "UEFI firmware and Linux measure",
+        sub: "PC: fixed PCR numbers per component",
+        auth: [],
+        sig: [],
+        hash: [
+          "Firmware code into PCR 0, option ROMs into PCR 2, boot loaders (and a kernel run as an EFI binary) into PCR 4",
+          "Secure Boot state and the PK, KEK, db, dbx contents into PCR 7",
+          "Linux: IMA measures files into PCR 10; systemd-stub measures unified kernel images into PCR 11",
+        ],
+        cipher: [],
+        tags: ["int"],
+        src: [["Linux TPM PCR registry", pcrRegistry]],
       },
       {
         title: "Talking to the TPM",
