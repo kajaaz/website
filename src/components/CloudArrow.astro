@@ -1,0 +1,32 @@
+---
+// One arrow of the Cloud Backend diagrams, with an optional step badge and label.
+export interface Props {
+  d: string;
+  color: string;
+  marker: string;
+  dashed?: boolean;
+  n?: string;
+  badge?: [number, number];
+  label?: [number, number, string, "start" | "middle" | "end"];
+  muted?: boolean;
+}
+
+const { d, color, marker, dashed, n, badge, label, muted } = Astro.props;
+---
+
+<g>
+  <path d={d} stroke={color} stroke-width="2" fill="none" stroke-dasharray={dashed ? "5 3" : undefined} marker-end={`url(#${marker})`} />
+  {
+    label && (
+      <text class="ts" x={label[0]} y={label[1]} text-anchor={label[3]} dominant-baseline="central" fill={muted ? "#475569" : color} style="font-size:11px">{label[2]}</text>
+    )
+  }
+  {
+    badge && (
+      <g>
+        <circle cx={badge[0]} cy={badge[1]} r="9" fill={color} stroke="#ffffff" stroke-width="2" />
+        <text x={badge[0]} y={badge[1]} text-anchor="middle" dominant-baseline="central" class="badge-n">{n}</text>
+      </g>
+    )
+  }
+</g>
