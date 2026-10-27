@@ -1,0 +1,704 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+type Tag = "auth" | "int" | "conf" | "fresh" | "bind";
+type Ref = [string, string];
+type Row = {
+  n?: string;
+  title: string;
+  sub: string;
+  auth: string[];
+  sig: string[];
+  hash: string[];
+  cipher: string[];
+  tags: Tag[];
+  src: Ref[];
+};
+
+const tagLabel: Record<Tag, string> = {
+  auth: "Authenticity",
+  int: "Integrity",
+  conf: "Confidentiality",
+  fresh: "Freshness",
+  bind: "Binding",
+};
+
+const tagDef: [Tag, string][] = [
+  ["auth", "who produced it"],
+  ["int", "it was not modified"],
+  ["conf", "unreadable without the key"],
+  ["fresh", "not a replay or a rollback"],
+  ["bind", "tied to one device or one boot state"],
+];
+
+const families: { name: string; ask: string; algos: string }[] = [
+  {
+    name: "Hash",
+    ask: "Has it changed?",
+    algos: "SHA-256, SHA-384, SHA-512",
+  },
+  {
+    name: "Authentication",
+    ask: "Does the sender hold our secret key?",
+    algos: "HMAC, AES-GCM and AES-CCM tags. Key from ECDH or ECDHE, or a hardware key (HUK).",
+  },
+  {
+    name: "Signature",
+    ask: "Did the key owner produce it?",
+    algos: "RSA (PSS or PKCS#1 v1.5), ECDSA",
+  },
+];
+
+// One image load in TF-A, in the order the code runs it (common/bl_common.c, drivers/auth/auth_mod.c, drivers/io/io_encrypted.c).
+const HASH = "#0f766e";
+const SIG = "#a32d2d";
+const CIPHER = "#6d28d9";
+const MEASURE = "#3730a3";
+const RESULT = "#334155";
+type Box = { x: number; y: number; w: number; h: number; color: string; kind: string; title: string; lines: string[] };
+const BW = 190;
+const BH = 130;
+const TRUST_Y = 40;
+const DATA_Y = 215;
+const boxes: Box[] = [
+  { x: 10, y: TRUST_Y, w: BW, h: BH, color: RESULT, kind: "Fuses (OTP)", title: "ROTPK hash", lines: ["Hash of the vendor root key,", "burned at manufacturing.", "Cannot be rewritten."] },
+  { x: 275, y: TRUST_Y, w: BW, h: BH, color: HASH, kind: "1 Hash", title: "Anchor the root key", lines: ["SHA-256 of the public key in", "the root certificate must", "equal the ROTPK hash."] },
+  { x: 540, y: TRUST_Y, w: BW, h: BH, color: SIG, kind: "2 Signature", title: "Check the certificates", lines: ["RSA or ECDSA, each cert with", "its parent's key. The content", "cert carries the signed", "image hash H."] },
+  { x: 10, y: DATA_Y, w: BW, h: BH, color: RESULT, kind: "Flash (untrusted)", title: "Encrypted image", lines: ["Ciphertext, plus a header", "with the IV and the tag."] },
+  { x: 275, y: DATA_Y, w: BW, h: BH, color: CIPHER, kind: "3 Cipher", title: "Decrypt", lines: ["AES-GCM, in place, with the", "platform key. The tag is", "checked during decryption:", "a modified image fails."] },
+  { x: 540, y: DATA_Y, w: BW, h: BH, color: HASH, kind: "4 Hash", title: "Hash the plaintext", lines: ["SHA-256 of the decrypted", "image gives the digest D."] },
+  { x: 805, y: 90, w: 185, h: 205, color: MEASURE, kind: "5 Compare", title: "D equals H?", lines: ["Equal: measure the image", "into a PCR, then run it.", "", "Different: halt or recover."] },
+  { x: 275, y: 365, w: BW, h: 128, color: RESULT, kind: "Platform secret", title: "SSK or BSSK", lines: ["Ideally kept in the crypto", "engine, not in flash.", "SSK: shared by a device class.", "BSSK: unique per device."] },
+];
+const arrowsH: { x1: number; x2: number; y: number; label?: string }[] = [
+  { x1: 203, x2: 272, y: TRUST_Y + 65 },
+  { x1: 468, x2: 537, y: TRUST_Y + 65, label: "root key" },
+  { x1: 733, x2: 802, y: TRUST_Y + 65, label: "hash H" },
+  { x1: 203, x2: 272, y: DATA_Y + 65, label: "ciphertext" },
+  { x1: 468, x2: 537, y: DATA_Y + 65, label: "plaintext" },
+  { x1: 733, x2: 802, y: DATA_Y + 65, label: "digest D" },
+];
+
+const tbb = "https://trustedfirmware-a.readthedocs.io/en/latest/design/trusted-board-boot.html";
+const buildOpts = "https://trustedfirmware-a.readthedocs.io/en/latest/getting_started/build-options.html";
+const authFw = "https://trustedfirmware-a.readthedocs.io/en/latest/design/auth-framework.html";
+const mboot = "https://tf-a.docs.trustedfirmware.org/en/latest/design_documents/measured_boot.html";
+const opteeStorage = "https://optee.readthedocs.io/en/latest/architecture/secure_storage.html";
+const opteeTa = "https://optee.readthedocs.io/en/stable/architecture/trusted_applications.html";
+const ubootFit = "https://docs.u-boot.org/en/latest/usage/fit/signature.html";
+const msKeys = "https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/windows-secure-boot-key-creation-and-management-guidance";
+const msBoot = "https://learn.microsoft.com/en-us/windows/security/operating-system-security/system-security/secure-the-windows-10-boot-process";
+const verity = "https://www.kernel.org/doc/html/latest/admin-guide/device-mapper/verity.html";
+const tpmSpec = "https://trustedcomputinggroup.org/wp-content/uploads/TPM-2.0-1.83-Part-1-Architecture.pdf";
+const rfc9683 = "https://www.rfc-editor.org/rfc/rfc9683.pdf";
+const rfc8446 = "https://datatracker.ietf.org/doc/html/rfc8446";
+const blFaq = "https://learn.microsoft.com/en-us/windows/security/operating-system-security/data-protection/bitlocker/faq";
+const blOverview = "https://learn.microsoft.com/en-us/windows/security/operating-system-security/data-protection/bitlocker/";
+const tfaLoad = "https://github.com/ARM-software/arm-trusted-firmware/blob/master/common/bl_common.c";
+const tfaAuth = "https://github.com/ARM-software/arm-trusted-firmware/blob/master/drivers/auth/auth_mod.c";
+const tfaEnc = "https://github.com/ARM-software/arm-trusted-firmware/blob/master/drivers/io/io_encrypted.c";
+
+const groups: { name: string; blurb: string; rows: Row[] }[] = [
+  {
+    name: "Secure boot",
+    blurb: "verify: may this code run?",
+    rows: [
+      {
+        n: "2",
+        title: "BL1 verifies BL2",
+        sub: "Boot ROM, the root of trust",
+        auth: [],
+        sig: ["RSA (PKCS#1 v2.1, 2048-bit default) or ECDSA P-256 / P-384, on an X.509 certificate with an NV counter against rollback"],
+        hash: [
+          "SHA-256 by default. The hash of the certificate's public key is compared with the ROTPK hash in OTP",
+          "The hash of the loaded BL2 image is compared with the hash inside the signed certificate",
+        ],
+        cipher: [],
+        tags: ["auth", "int", "fresh"],
+        src: [["TF-A TBB", tbb], ["build options", buildOpts], ["auth_mod.c", tfaAuth]],
+      },
+      {
+        n: "3",
+        title: "BL2 verifies BL31, BL32, BL33",
+        sub: "One key per level of the certificate chain",
+        auth: [],
+        sig: ["Same RSA or ECDSA: ROT key, then trusted-world and non-trusted-world keys, then one key per image"],
+        hash: ["The hash of each loaded image and config file is compared with the hash inside its signed content certificate"],
+        cipher: [],
+        tags: ["auth", "int", "fresh"],
+        src: [["TF-A TBB", tbb], ["auth framework", authFw]],
+      },
+      {
+        n: "3",
+        title: "BL2 decrypts BL31, BL32, BL33",
+        sub: "Optional encrypted firmware, off by default",
+        auth: ["AES-GCM or AES-CCM tag stored in the image header, verified during decryption"],
+        sig: [],
+        hash: [],
+        cipher: [
+          "AES-256 decrypts the image in place, right after it is read from flash",
+          "Key from the platform: SSK shared by a device class, or BSSK unique per device. IV and tag come from the image header",
+        ],
+        tags: ["conf", "int"],
+        src: [["build options", buildOpts], ["io_encrypted.c", tfaEnc]],
+      },
+      {
+        n: "4",
+        title: "BL31 runs",
+        sub: "EL3 runtime",
+        auth: [],
+        sig: [],
+        hash: [],
+        cipher: [],
+        tags: [],
+        src: [["TF-A measured boot", mboot]],
+      },
+      {
+        n: "5",
+        title: "BL32 loads trusted applications",
+        sub: "OP-TEE",
+        auth: [],
+        sig: ["RSA on a signed header: PKCS#1 v1.5 with SHA-256 by default, PSS also accepted; subkeys can delegate signing"],
+        hash: ["SHA-256 typical. The TA is hashed and compared with the hash in the signed header"],
+        cipher: ["Optional encrypted TAs: AES-GCM by default, with a device-specific or class-wide key"],
+        tags: ["auth", "int", "conf"],
+        src: [["OP-TEE TAs", opteeTa]],
+      },
+      {
+        n: "6",
+        title: "BL33 loads the OS",
+        sub: "U-Boot FIT or UEFI Secure Boot",
+        auth: [],
+        sig: [
+          "U-Boot: signed FIT hash, for example sha256 with rsa2048, or sha512 with ecdsa256",
+          "UEFI: Authenticode (PKCS#7) checked against db; RSA-2048 with SHA-256 is the usual choice",
+        ],
+        hash: [
+          "U-Boot hashes each FIT image and compares it with the hash covered by the signature",
+          "UEFI: the Authenticode digest of the binary is what gets signed; dbx can also ban specific digests",
+        ],
+        cipher: [],
+        tags: ["auth", "int"],
+        src: [["U-Boot FIT", ubootFit], ["Secure Boot keys", msKeys]],
+      },
+      {
+        title: "Boot loader and kernel verify the OS",
+        sub: "Windows trusted boot",
+        auth: [],
+        sig: ["Digital signatures (Authenticode): the boot loader checks the kernel, then the kernel checks the boot drivers, startup files and the ELAM driver"],
+        hash: ["The loader hashes each kernel or driver file (Authenticode digest) and checks it against the signature"],
+        cipher: [],
+        tags: ["auth", "int"],
+        src: [["Windows boot process", msBoot]],
+      },
+      {
+        title: "Kernel verifies the root filesystem",
+        sub: "dm-verity (Linux, Android)",
+        auth: [],
+        sig: ["Optional PKCS#7 signature on the root hash, checked against the kernel keyring"],
+        hash: ["Each disk block is hashed when read. The hashes form a Merkle tree whose root hash must match (SHA-256 for example)"],
+        cipher: [],
+        tags: ["int", "auth"],
+        src: [["dm-verity", verity]],
+      },
+    ],
+  },
+  {
+    name: "Measured boot",
+    blurb: "record: what code did run?",
+    rows: [
+      {
+        n: "2, 3",
+        title: "BL1 and BL2 measure what they load",
+        sub: "Extend a PCR in a TPM or RSE, or write the event log",
+        auth: [],
+        sig: [],
+        hash: [
+          "The loaded image is hashed (SHA-256 or SHA-384)",
+          "The digest is extended: PCRnew = H(PCRold || digest), one-way and extend-only",
+          "Verified public keys can be measured too",
+          "The event log is plain data: replaying it must give the PCR value",
+        ],
+        cipher: [],
+        tags: ["int"],
+        src: [["TF-A measured boot", mboot], ["bl_common.c", tfaLoad], ["TPM 2.0 Part 1", tpmSpec]],
+      },
+      {
+        title: "Talking to the TPM",
+        sub: "Firmware or OS sends commands",
+        auth: [
+          "HMAC session: an HMAC over each command and response, with nonces",
+          "Salted session: the salt is encrypted to a TPM key, often the EK or SRK, with RSA-OAEP or ECDH",
+        ],
+        sig: [],
+        hash: [],
+        cipher: ["AES-CFB encrypts sensitive command parameters, such as new authorization values. The key comes from the session"],
+        tags: ["auth", "int", "conf", "fresh"],
+        src: [["TPM 2.0 Part 1", tpmSpec]],
+      },
+      {
+        title: "Sealing a key to the boot state",
+        sub: "The TPM releases it only if the PCRs match",
+        auth: [
+          "Policy session on the PCRs; optional PIN as authValue",
+          "A blob stored outside the TPM carries an HMAC integrity value",
+        ],
+        sig: ["Optional PolicyAuthorize: an authority, often the OS vendor, signs the allowed PCR policies, so firmware updates do not lock you out"],
+        hash: [
+          "The selected PCR values are hashed into a policy digest. The TPM releases the key only if it matches",
+          "BitLocker: SHA-256 of the PIN, first 160 bits used as the authorization value",
+        ],
+        cipher: ["AES-CFB encrypts the sealed blob stored outside the TPM, under a key derived from the TPM storage parent"],
+        tags: ["conf", "int", "bind"],
+        src: [["TPM 2.0 Part 1", tpmSpec], ["BitLocker FAQ", blFaq]],
+      },
+      {
+        title: "Quote: evidence for a verifier",
+        sub: "The TPM signs selected PCRs and a nonce",
+        auth: ["AK enrolment: the CA wraps a secret to the EK (RSA-OAEP or ECDH), so only that TPM can recover it"],
+        sig: ["Attestation key (a restricted signing key) signs the quote: RSA or ECDSA"],
+        hash: [
+          "The selected PCRs are hashed into one digest, placed in the quote with the verifier's nonce",
+          "The quote is hashed and that hash is signed",
+        ],
+        cipher: [],
+        tags: ["auth", "int", "fresh"],
+        src: [["TPM 2.0 Part 1", tpmSpec], ["RFC 9683", rfc9683]],
+      },
+      {
+        title: "Channel to the verifier",
+        sub: "Usually TLS; the quote is signed either way",
+        auth: [
+          "TLS 1.3: ECDHE key exchange sets up the keys, and the GCM tag authenticates every record",
+          "TLS_AES_128_GCM_SHA256 is the mandatory-to-implement suite",
+        ],
+        sig: ["Certificate signatures in the handshake (ECDSA or RSA-PSS)"],
+        hash: ["The handshake transcript is hashed (SHA-256) and fed to HKDF, which derives the traffic keys"],
+        cipher: ["AES-128-GCM encrypts every record after the ServerHello, including the rest of the handshake"],
+        tags: ["auth", "int", "conf"],
+        src: [["RFC 8446", rfc8446]],
+      },
+    ],
+  },
+  {
+    name: "Runtime and OS",
+    blurb: "keep data safe after boot",
+    rows: [
+      {
+        n: "5",
+        title: "OP-TEE secure storage",
+        sub: "Trusted storage on the REE file system, or on RPMB",
+        auth: [
+          "REE FS: AES-GCM tag on each block, plus a hash tree",
+          "Key chain: HMAC-SHA256(HUK, chip ID || string) gives the SSK, HMAC-SHA256(SSK, TA UUID) gives the TSK",
+          "RPMB: HMAC-SHA256 on every eMMC frame, with a write counter. This is what gives rollback protection: REE FS alone has none",
+        ],
+        sig: [],
+        hash: [
+          "SHA-256 hash tree over the blocks: any change shows up in the root",
+          "RPMB: SHA-256 of the file key seeds the ESSIV",
+        ],
+        cipher: [
+          "AES-GCM encrypts file blocks and metadata (REE FS); AES-CBC with ESSIV in RPMB",
+          "A random file key (FEK) per file is encrypted with the TA storage key (TSK)",
+        ],
+        tags: ["conf", "int", "bind", "fresh"],
+        src: [["OP-TEE secure storage", opteeStorage]],
+      },
+      {
+        title: "Full-disk encryption",
+        sub: "BitLocker OS volume",
+        auth: [],
+        sig: [],
+        hash: [],
+        cipher: [
+          "XTS-AES encrypts every sector with the FVEK (128-bit by default); XTS adds no authentication tag",
+          "The FVEK is wrapped by the VMK; with Secure Boot set up, the TPM seals the VMK to PCR 7 and 11 by default",
+        ],
+        tags: ["conf", "bind"],
+        src: [["BitLocker", blOverview], ["BitLocker FAQ", blFaq]],
+      },
+    ],
+  },
+];
+
+const options: { opt: string; values: string; use: string }[] = [
+  { opt: "KEY_ALG", values: "rsa (default), rsa_1_5, ecdsa, ecdsa-brainpool-regular, ecdsa-brainpool-twisted", use: "Certificate signatures. rsa_1_5 is legacy and not TBBR compliant." },
+  { opt: "KEY_SIZE", values: "rsa: 1024, 2048 (default), 3072, 4096. ecdsa: 256 (default), 384", use: "Key size for the chosen algorithm." },
+  { opt: "HASH_ALG", values: "sha256 (default), sha384, sha512", use: "Image and key hashes in the certificates." },
+  { opt: "MBOOT_TPM_HASH_ALG", values: "sha256, sha384", use: "Digests extended into the TPM by measured boot." },
+  { opt: "DECRYPTION_SUPPORT", values: "none (default), aes_gcm, aes_ccm", use: "Authenticated decryption of encrypted firmware." },
+  { opt: "ENC_KEY, ENC_NONCE", values: "256-bit key, 96-bit nonce", use: "Encrypt firmware at build time. The nonce is stored in clear in the image header: it must be unique, not secret." },
+];
+
+const rfc2104 = "https://datatracker.ietf.org/doc/html/rfc2104";
+const nistGcm = "https://csrc.nist.gov/pubs/sp/800/38/d/final";
+const nistCcm = "https://csrc.nist.gov/pubs/sp/800/38/c/upd1/final";
+const rfc3610 = "https://datatracker.ietf.org/doc/html/rfc3610";
+
+const aead: { what: string; gcm: string; ccm: string }[] = [
+  {
+    what: "Tag",
+    gcm: "GHASH: a polynomial over the ciphertext, evaluated in GF(2^128) at a key H = AES(K, 0). Encrypt, then authenticate.",
+    ccm: "CBC-MAC: AES chained over the plaintext, then the tag itself is encrypted. Authenticate, then encrypt.",
+  },
+  {
+    what: "Cost",
+    gcm: "One AES call per block, parallel. Fast with carry-less multiply instructions (x86 PCLMULQDQ, Arm PMULL).",
+    ccm: "Two AES calls per block, and the CBC-MAC part is sequential.",
+  },
+  {
+    what: "Streaming",
+    gcm: "Yes: the message length is only needed at the end.",
+    ccm: "No: the message length goes into the first CBC-MAC block, so it must be known before starting.",
+  },
+  {
+    what: "Hardware",
+    gcm: "An AES core plus a GF(2^128) multiplier.",
+    ccm: "Only an AES encryption core, which is why small microcontrollers like it.",
+  },
+  {
+    what: "Nonce and tag",
+    gcm: "96-bit nonce recommended; 128-bit tag typical.",
+    ccm: "7 to 13-byte nonce (a longer nonce caps the message length); 4 to 16-byte tag.",
+  },
+  {
+    what: "Nonce reused",
+    gcm: "Leaks the XOR of the two plaintexts and lets an attacker recover H, then forge tags.",
+    ccm: "Leaks the XOR of the two plaintexts.",
+  },
+  {
+    what: "Seen in",
+    gcm: "TLS 1.3, TF-A encrypted firmware (aes_gcm), OP-TEE REE FS and encrypted TAs.",
+    ccm: "Wi-Fi WPA2 (CCMP), Bluetooth LE, Zigbee and IEEE 802.15.4, TF-A (aes_ccm).",
+  },
+];
+
+const link = "text-accent-blue underline underline-offset-2 transition-colors hover:text-accent-emerald";
+---
+
+<BaseLayout title="Cryptography" toc>
+  <p class="mono-eyebrow mb-1"><span class="text-accent-blue">$</span> openssl list -digest-algorithms</p>
+  <h1 class="glitch is-intro mb-4 text-3xl font-bold tracking-tight text-brand-text" data-text="Cryptography">Cryptography</h1>
+
+  <!-- What is it? -->
+  <div class="mb-10 rounded-xl bg-accent-green/15 p-5 sm:p-6">
+    <h2 class="mb-1 text-sm font-bold text-brand-text">What is it?</h2>
+    <p class="text-sm leading-relaxed text-brand-body">
+      The cryptography used at each step of the{" "}
+      <a href="/hardware" class={link}>Hardware</a> page: authentication, signature, hash and cipher, and what each
+      guarantees.
+    </p>
+  </div>
+
+  <!-- ====== PRIMER ====== -->
+  <section class="mb-14">
+    <p class="mono-eyebrow mb-2">// three questions</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Hash, authentication, signature">Hash, authentication, signature</h2>
+
+    <div class="mb-6 grid gap-4 md:grid-cols-3">
+      {families.map((f) => (
+        <div class="rounded-xl border border-brand-border p-4">
+          <h3 class="font-semibold text-brand-text">{f.name}</h3>
+          <p class="mb-2 text-sm italic text-brand-muted">{f.ask}</p>
+          <p class="text-sm leading-relaxed text-brand-body">{f.algos}</p>
+        </div>
+      ))}
+    </div>
+
+    <h3 class="mb-3 text-sm font-semibold text-brand-text">What each step can guarantee</h3>
+    <dl class="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+      {tagDef.map(([t, d]) => (
+        <div class="flex items-baseline gap-2">
+          <dt><span class={`tag t-${t}`}>{tagLabel[t]}</span></dt>
+          <dd class="text-brand-body">{d}</dd>
+        </div>
+      ))}
+    </dl>
+  </section>
+
+  <!-- ====== HMAC, GCM, CCM ====== -->
+  <section class="mb-14">
+    <p class="mono-eyebrow mb-2">// shared-secret tags</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="HMAC, AES-GCM and AES-CCM">HMAC, AES-GCM and AES-CCM</h2>
+    <p class="mb-6 text-brand-body">
+      All three produce a <strong class="text-brand-text">tag</strong>: a short value that only a holder of the secret
+      key can compute. The receiver recomputes it and compares. A match proves the data was not modified and that the
+      sender holds the key, but not which key holder sent it.
+    </p>
+
+    <h3 class="mb-2 font-semibold text-brand-text">HMAC: a tag from a hash</h3>
+    <p class="mb-3 text-brand-body">
+      <code class="font-mono text-sm text-brand-text">HMAC(K, m) = H((K ⊕ opad) || H((K ⊕ ipad) || m))</code>, where
+      opad and ipad are two fixed padding constants and H is a hash such as SHA-256.
+    </p>
+    <p class="mb-8 text-brand-body">
+      The double hash is what makes it safe. With the naive <code class="font-mono text-sm text-brand-text">H(K || m)</code>,
+      an attacker who sees one tag can append data to a SHA-256 message and compute a valid tag without the key (a
+      length-extension attack). HMAC only authenticates: the data stays readable. On this page it authenticates TPM session
+      commands and RPMB frames, and serves as a key derivation function (OP-TEE's SSK and TSK, the HKDF of TLS 1.3).
+    </p>
+
+    <h3 class="mb-2 font-semibold text-brand-text">AES-GCM and AES-CCM: encrypt and tag in one mode</h3>
+    <p class="mb-4 text-brand-body">
+      Both are authenticated encryption (AEAD). AES in counter mode (CTR) encrypts, and the tag covers the ciphertext
+      plus optional header data that stays in clear. They differ in how the tag is computed:
+    </p>
+
+    <div class="mb-4 overflow-x-auto">
+      <table class="w-full min-w-[640px] border-collapse text-sm">
+        <thead>
+          <tr class="border-b border-brand-border text-left text-brand-text">
+            <th class="w-[16%] py-2 pr-4 font-semibold"></th>
+            <th class="w-[42%] py-2 pr-4 font-semibold">AES-GCM<span class="block text-xs font-normal text-brand-muted">Galois/Counter Mode</span></th>
+            <th class="w-[42%] py-2 font-semibold">AES-CCM<span class="block text-xs font-normal text-brand-muted">Counter with CBC-MAC</span></th>
+          </tr>
+        </thead>
+        <tbody class="align-top text-brand-body">
+          {aead.map((row, i) => (
+            <tr class={i < aead.length - 1 ? "border-b border-brand-border/60" : ""}>
+              <td class="py-2 pr-4 font-medium text-brand-text">{row.what}</td>
+              <td class="py-2 pr-4">{row.gcm}</td>
+              <td class="py-2">{row.ccm}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p class="text-sm text-brand-muted">
+      Sources:{" "}
+      <a href={rfc2104} target="_blank" rel="noopener noreferrer" class={link}>RFC 2104</a> (HMAC),{" "}
+      <a href={nistGcm} target="_blank" rel="noopener noreferrer" class={link}>NIST SP 800-38D</a> (GCM),{" "}
+      <a href={nistCcm} target="_blank" rel="noopener noreferrer" class={link}>NIST SP 800-38C</a> and{" "}
+      <a href={rfc3610} target="_blank" rel="noopener noreferrer" class={link}>RFC 3610</a> (CCM).
+    </p>
+  </section>
+
+  <!-- ====== ONE STEP ====== -->
+  <section class="mb-14">
+    <p class="mono-eyebrow mb-2">// how they work together</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="One step: loading an encrypted image">One step: loading an encrypted image</h2>
+    <p class="mb-6 text-brand-body">
+      <strong class="text-brand-text">The cipher gives confidentiality only.</strong> The image sits in flash as
+      ciphertext; hash and signature decide whether it may run. BL2 loading an encrypted BL31 in TF-A:
+    </p>
+
+    <figure class="mb-4 overflow-x-auto rounded-xl border border-brand-border bg-white p-4 sm:p-6">
+      <svg viewBox="0 0 1000 530" class="mx-auto block h-auto w-full max-w-[980px] min-w-[800px]" role="img" aria-labelledby="load-title load-desc" style="font-family: Inter, system-ui, sans-serif">
+        <title id="load-title">How hash, signature and cipher work together when loading one encrypted image</title>
+        <desc id="load-desc">Two paths meet in a comparison. Trust path: the hash of the root certificate public key is compared with the ROTPK hash in fuses, then RSA or ECDSA signatures verify the certificate chain, which yields the trusted image hash H. Data path: the encrypted image and its header come from flash, AES-GCM decrypts it with a platform key and checks the tag, then SHA-256 of the plaintext gives the digest D. If D equals H, the image is measured and run, otherwise the boot halts.</desc>
+        <defs>
+          <marker id="load-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M1.5 1L8.5 5L1.5 9" fill="none" stroke="context-stroke" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+
+        <g font-size="11" font-weight="700" fill="#64748b" letter-spacing="0.6">
+          <text x="10" y="24" dominant-baseline="central">TRUST PATH: may this image run?</text>
+          <text x="10" y="199" dominant-baseline="central">DATA PATH: the firmware itself</text>
+        </g>
+
+        {boxes.map((b) => {
+          const r = 8;
+          return (
+            <g>
+              <rect x={b.x} y={b.y} width={b.w} height={b.h} rx={r} fill="#ffffff" stroke={b.color} stroke-width="1.4" />
+              <path d={`M${b.x} ${b.y + 26} L${b.x} ${b.y + r} Q${b.x} ${b.y} ${b.x + r} ${b.y} L${b.x + b.w - r} ${b.y} Q${b.x + b.w} ${b.y} ${b.x + b.w} ${b.y + r} L${b.x + b.w} ${b.y + 26} Z`} fill={b.color} />
+              <text x={b.x + 10} y={b.y + 13} dominant-baseline="central" fill="#ffffff" font-size="12" font-weight="700">{b.kind}</text>
+              <text x={b.x + 10} y={b.y + 46} dominant-baseline="central" fill="#0f172a" font-size="13" font-weight="700">{b.title}</text>
+              {b.lines.map((line, j) => (
+                <text x={b.x + 10} y={b.y + 68 + j * 16} dominant-baseline="central" fill="#334155" font-size="11.5">{line}</text>
+              ))}
+            </g>
+          );
+        })}
+
+        {arrowsH.map((a) => (
+          <g>
+            <line x1={a.x1} y1={a.y} x2={a.x2} y2={a.y} stroke="#334155" stroke-width="2" marker-end="url(#load-arrow)" />
+            {a.label && (
+              <text x={(a.x1 + a.x2) / 2} y={a.y - 9} text-anchor="middle" dominant-baseline="central" fill="#475569" font-size="10.5">{a.label}</text>
+            )}
+          </g>
+        ))}
+        <line x1="370" y1="362" x2="370" y2="349" stroke="#334155" stroke-width="2" marker-end="url(#load-arrow)" />
+        <text x="381" y="355" dominant-baseline="central" fill="#475569" font-size="10.5">key</text>
+
+        <g font-size="11.5" fill="#475569">
+          <rect x="10" y="507" width="12" height="12" rx="3" fill={HASH} />
+          <text x="28" y="513" dominant-baseline="central">hash and compare</text>
+          <rect x="190" y="507" width="12" height="12" rx="3" fill={SIG} />
+          <text x="208" y="513" dominant-baseline="central">signature check</text>
+          <rect x="360" y="507" width="12" height="12" rx="3" fill={CIPHER} />
+          <text x="378" y="513" dominant-baseline="central">cipher</text>
+          <rect x="460" y="507" width="12" height="12" rx="3" fill={MEASURE} />
+          <text x="478" y="513" dominant-baseline="central">decision, then measured boot</text>
+        </g>
+      </svg>
+      <figcaption class="mt-3 text-sm text-brand-muted">
+        Sources:{" "}
+        <a href={tfaLoad} target="_blank" rel="noopener noreferrer" class={link}>bl_common.c</a>,{" "}
+        <a href={tfaAuth} target="_blank" rel="noopener noreferrer" class={link}>auth_mod.c</a>,{" "}
+        <a href={tfaEnc} target="_blank" rel="noopener noreferrer" class={link}>io_encrypted.c</a>.
+      </figcaption>
+    </figure>
+
+    <h3 class="mb-3 text-sm font-semibold text-brand-text">What each one gives</h3>
+    <dl class="grid gap-y-3 text-sm">
+      <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <dt class="w-40"><span class="tag t-auth">Signature</span></dt>
+        <dd class="min-w-0 flex-1 text-brand-body">Authenticity: only the vendor's private key can make the certificate that carries H.</dd>
+      </div>
+      <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <dt class="w-40"><span class="tag t-int">Hash</span></dt>
+        <dd class="min-w-0 flex-1 text-brand-body">Integrity: D equal to H ties the decrypted bytes to the signed value.</dd>
+      </div>
+      <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <dt class="w-40"><span class="tag t-conf">Cipher</span></dt>
+        <dd class="min-w-0 flex-1 text-brand-body">Confidentiality: flash content is unreadable without the key. The GCM tag detects modified ciphertext but does not prove who built it.</dd>
+      </div>
+    </dl>
+  </section>
+
+  <!-- ====== PER STEP ====== -->
+  <section class="mb-14">
+    <p class="mono-eyebrow mb-2">// per boot step</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Cryptography at each boot step">Cryptography at each boot step</h2>
+    <p class="mb-6 text-brand-body">
+      Badges match the steps on the{" "}
+      <a href="/hardware" class={link}>Hardware</a> page. An empty cell means none.
+    </p>
+
+    <div class="mb-6 overflow-x-auto">
+      <table class="w-full min-w-[1100px] border-collapse text-sm">
+        <thead>
+          <tr class="border-b border-brand-border text-left text-brand-text">
+            <th class="w-[19%] py-2 pr-4 font-semibold">Step</th>
+            <th class="w-[17%] py-2 pr-4 font-semibold">Authentication<span class="block text-xs font-normal text-brand-muted">shared secret</span></th>
+            <th class="w-[16%] py-2 pr-4 font-semibold">Signature<span class="block text-xs font-normal text-brand-muted">key pair</span></th>
+            <th class="w-[18%] py-2 pr-4 font-semibold">Hash<span class="block text-xs font-normal text-brand-muted">what, compared with what</span></th>
+            <th class="w-[16%] py-2 pr-4 font-semibold">Cipher<span class="block text-xs font-normal text-brand-muted">what, with which key</span></th>
+            <th class="w-[14%] py-2 pr-1 font-semibold">Guarantees</th>
+          </tr>
+        </thead>
+        <tbody class="align-top text-brand-body">
+          {groups.map((g) => (
+            <>
+              <tr>
+                <th colspan="6" class="bg-brand-text/5 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-brand-text">
+                  {g.name}
+                  <span class="ml-2 font-normal normal-case tracking-normal text-brand-muted">{g.blurb}</span>
+                </th>
+              </tr>
+              {g.rows.map((r) => (
+                <tr class="border-b border-brand-border/60">
+                  <td class="py-3 pr-4">
+                    <div class="flex items-start gap-2">
+                      <span class="flex w-10 shrink-0 justify-start">
+                        {r.n && (
+                          <span class="mt-0.5 inline-flex h-6 min-w-6 items-center justify-center whitespace-nowrap rounded-full px-1.5 font-mono text-xs font-semibold text-white" style="background:#534AB7">{r.n}</span>
+                        )}
+                      </span>
+                      <div>
+                        <span class="font-medium text-brand-text">{r.title}</span>
+                        <span class="block text-xs text-brand-muted">{r.sub}</span>
+                        <span class="mt-1 block text-xs text-brand-muted">
+                          {r.src.map(([label, url], j) => (
+                            <>{j > 0 && ", "}<a href={url} target="_blank" rel="noopener noreferrer" class={link}>{label}</a></>
+                          ))}
+                        </span>
+                      </div>
+                    </div>
+                  </td>
+                  {[r.auth, r.sig, r.hash, r.cipher].map((cell) => (
+                    <td class="py-3 pr-4">
+                      {cell.length ? (
+                        <ul class="space-y-1.5">
+                          {cell.map((item) => <li>{item}</li>)}
+                        </ul>
+                      ) : (
+                        <span class="text-brand-muted/70">none</span>
+                      )}
+                    </td>
+                  ))}
+                  <td class="py-3">
+                    <div class="flex flex-wrap gap-1">
+                      {r.tags.length ? (
+                        r.tags.map((t) => <span class={`tag t-${t}`}>{tagLabel[t]}</span>)
+                      ) : (
+                        <span class="text-brand-muted/70">none</span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <p class="rounded-lg border border-brand-border bg-brand-bg px-4 py-3 text-sm leading-relaxed text-brand-muted">
+      <strong class="text-brand-text">Common mix-up.</strong> AES-GCM is not part of measured boot, which only hashes
+      into a PCR. It appears next to it: encrypted firmware, OP-TEE secure storage, TLS to the verifier.
+    </p>
+  </section>
+
+  <!-- ====== TF-A OPTIONS ====== -->
+  <section class="mb-14">
+    <p class="mono-eyebrow mb-2">// build options</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="TF-A options that choose the algorithms">TF-A options that choose the algorithms</h2>
+
+    <div class="mb-4 overflow-x-auto">
+      <table class="w-full min-w-[640px] border-collapse text-sm">
+        <thead>
+          <tr class="border-b border-brand-border text-left text-brand-text">
+            <th class="py-2 pr-4 font-semibold">Option</th>
+            <th class="py-2 pr-4 font-semibold">Values</th>
+            <th class="py-2 font-semibold">Used for</th>
+          </tr>
+        </thead>
+        <tbody class="align-top text-brand-body">
+          {options.map((o, i) => (
+            <tr class={i < options.length - 1 ? "border-b border-brand-border/60" : ""}>
+              <td class="py-2 pr-4 font-mono text-xs text-brand-text">{o.opt}</td>
+              <td class="py-2 pr-4">{o.values}</td>
+              <td class="py-2">{o.use}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p class="text-sm text-brand-muted">
+      Source:{" "}
+      <a href={buildOpts} target="_blank" rel="noopener noreferrer" class={link}>TF-A build options</a>.
+    </p>
+  </section>
+</BaseLayout>
+
+<style>
+  .tag {
+    --c: #10b981;
+    display: inline-block;
+    border-radius: 9999px;
+    border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+    background: color-mix(in srgb, var(--c) 16%, transparent);
+    color: var(--c);
+    padding: 1px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.5;
+    white-space: nowrap;
+  }
+  .t-auth { --c: #10b981; }
+  .t-int { --c: #3b82f6; }
+  .t-conf { --c: #a78bfa; }
+  .t-fresh { --c: #f59e0b; }
+  .t-bind { --c: #fb7185; }
+
+  :global(html.light) .t-auth { --c: #047857; }
+  :global(html.light) .t-int { --c: #1d4ed8; }
+  :global(html.light) .t-conf { --c: #6d28d9; }
+  :global(html.light) .t-fresh { --c: #b45309; }
+  :global(html.light) .t-bind { --c: #be123c; }
+</style>
