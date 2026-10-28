@@ -46,22 +46,22 @@ const ovBoxes: Box[] = [
   { x: 540, y: 430, w: 150, h: 70, cls: "c-teal", title: "Visitors", logo: "visitors.svg", lines: ["browsers loading", "the public website"] },
   { x: 730, y: 430, w: 180, h: 70, cls: "c-teal", title: "Cloudflare", logo: "cloudflare.svg", lines: ["DNS, CDN, WAF,", "DDoS protection"] },
   // in each cloud
-  { x: 40, y: 600, w: 210, h: 160, cls: "c-green", title: "VMs", lines: ["EC2 / Azure VMs:", "Jenkins controller, agents,", "OpenVPN server,", "Teleport SSH service;", "EDR sensor, syslog out"] },
+  { x: 40, y: 600, w: 210, h: 160, cls: "c-green", title: "VMs", lines: ["EC2 / Azure VMs:", "Jenkins controller", "and agents;", "SSH only via SSM / Bastion;", "EDR sensor, syslog out"] },
   { x: 280, y: 600, w: 210, h: 70, cls: "c-green", title: "Registry", lines: ["ECR / ACR:", "container images"] },
   { x: 520, y: 600, w: 210, h: 70, cls: "c-green", title: "Secrets and keys", logo: ["amazonwebservices.svg", "keyvault.svg"], lines: ["Secrets Manager, Key Vault;", "KMS keys that sign images"] },
   { x: 300, y: 735, w: 280, h: 100, cls: "c-stage", title: "Apps", logo: "helm.svg", lines: ["Helm releases, one per", "service; they emit OTLP"] },
   { x: 640, y: 735, w: 170, h: 100, cls: "c-teal", title: "Envoy Gateway", logo: "envoy.svg", lines: ["Gateway API ingress;", "access logs, traces"] },
   { x: 840, y: 735, w: 115, h: 100, cls: "c-stage", title: "Website", lines: ["the site's", "pods"] },
-  { x: 520, y: 965, w: 210, h: 60, cls: "c-amber", title: "S3 log archive", logo: "bucket.svg", lines: ["every log, in one place"] },
+  { x: 520, y: 965, w: 210, h: 60, cls: "c-amber", title: "Collector gateway", logo: "opentelemetry.svg", lines: ["one per cloud, routes signals"] },
   // SaaS: observe and secure
   { x: 40, y: 1080, w: 210, h: 80, cls: "c-amber", title: "Datadog / Prometheus", logo: ["datadog.svg", "prometheus.svg"], lines: ["dashboards, APM, monitors", "for apps, Argo CD, JFrog"] },
   { x: 280, y: 1080, w: 210, h: 80, cls: "c-amber", title: "Wiz", logo: "wiz.png", lines: ["reads both clouds by API,", "scans disk snapshots"] },
-  { x: 520, y: 1080, w: 210, h: 80, cls: "c-amber", title: "SIEM", logo: "splunk.svg", lines: ["indexes the S3 archive,", "correlates EDR and Wiz"] },
+  { x: 520, y: 1080, w: 210, h: 80, cls: "c-amber", title: "SIEM", logo: "siem.svg", lines: ["security and audit logs,", "EDR and Wiz findings"] },
   { x: 760, y: 1080, w: 210, h: 80, cls: "c-amber", title: "EDR console", logo: "edr.svg", lines: ["detections from laptops,", "VMs and cluster nodes"] },
   // people and access
   { x: 40, y: 1220, w: 210, h: 80, cls: "c-stage", title: "On-call engineer", lines: ["laptop with EDR agent;", "gets paged, logs in"] },
-  { x: 280, y: 1220, w: 240, h: 80, cls: "c-coral", title: "OpenVPN / Client VPN", logo: ["openvpn.svg", "amazonwebservices.svg"], lines: ["VPN to private subnets:", "Jenkins, Argo CD UIs"] },
-  { x: 760, y: 1220, w: 210, h: 80, cls: "c-coral", title: "Teleport", logo: "teleport.svg", lines: ["SSO, short-lived certs,", "kubectl and ssh, audit log"] },
+  { x: 280, y: 1220, w: 240, h: 80, cls: "c-coral", title: "Zero Trust / VPN", logo: ["cloudflare.svg", "openvpn.svg"], lines: ["Cloudflare Access for the UIs,", "WARP to private endpoints"] },
+  { x: 760, y: 1220, w: 210, h: 80, cls: "c-coral", title: "Cloud IAM", logo: ["amazonwebservices.svg", "entra.svg"], lines: ["short-lived kubectl tokens;", "SSM and Bastion shells"] },
 ];
 
 // Add-ons drawn as pills in the strip under the clusters: [label, logo, x, y]
@@ -70,7 +70,7 @@ const addons: [string, string, number, number][] = [
   ["Datadog Agent", "datadog.svg", 514, 875],
   ["OTel Collector", "opentelemetry.svg", 628, 875],
   ["EDR sensor", "edr.svg", 742, 875],
-  ["Teleport agent", "teleport.svg", 856, 875],
+  ["cloudflared", "cloudflare.svg", 856, 875],
   ["Kyverno", "kyverno.svg", 400, 905],
   ["External Secrets", "externalsecrets.svg", 514, 905],
 ];
@@ -95,8 +95,8 @@ const ovArrows: Arrow[] = [
   { d: "M812 785 L838 785", color: flow.traffic },
   { d: "M683 937 L683 963", color: flow.logs, n: "13", badge: [664, 950] },
   { d: "M200 762 L200 900 L278 900", color: flow.logs, n: "14", badge: [200, 860], label: [212, 860, "syslog", "start"] },
-  { d: "M625 1027 L625 1078", color: flow.logs, n: "15", badge: [625, 1059], label: [637, 1059, "SQS-based S3 input", "start"] },
-  { d: "M518 1000 L145 1000 L145 1078", color: flow.logs, n: "16", badge: [330, 1000], label: [330, 1018, "Datadog Forwarder", "middle"] },
+  { d: "M625 1027 L625 1078", color: flow.logs, n: "15", badge: [625, 1059], label: [637, 1059, "security logs only", "start"] },
+  { d: "M518 1000 L145 1000 L145 1078", color: flow.logs, n: "16", badge: [330, 1000], label: [330, 1018, "logs, metrics, traces", "middle"] },
   { d: "M470 1078 L470 1042", color: flow.logs, n: "17", badge: [470, 1060], label: [458, 1060, "agentless scans", "end"] },
   { d: "M492 1120 L518 1120", color: flow.logs },
   { d: "M758 1120 L732 1120", color: flow.logs },
@@ -104,7 +104,7 @@ const ovArrows: Arrow[] = [
   { d: "M145 1162 L145 1218", color: flow.ops, n: "19", badge: [145, 1190], label: [157, 1190, "pages on-call", "start"] },
   { d: "M252 1260 L278 1260", color: flow.ops },
   { d: "M300 1218 L300 1200 L265 1200 L265 1042", color: flow.ops, n: "20", badge: [265, 1130], label: [259, 1060, "into the VPCs", "end"] },
-  { d: "M145 1302 L145 1322 L865 1322 L865 1302", color: flow.ops, n: "21", badge: [505, 1322], label: [505, 1340, "tsh login with SSO", "middle"] },
+  { d: "M145 1302 L145 1322 L865 1322 L865 1302", color: flow.ops, n: "21", badge: [505, 1322], label: [505, 1340, "aws sso login, az login", "middle"] },
   { d: "M972 1260 L990 1260 L990 885 L968 885", color: flow.ops, n: "22", badge: [990, 1130], label: [978, 1180, "kubectl", "end"] },
 ];
 
@@ -127,7 +127,7 @@ const stepGroups: { title: string; steps: { n: string; color: string; title: str
       { n: "3", color: flow.app, title: "Build and publish", body: "Jenkins agents build the image with Podman, rootless and without a daemon, run the tests, scan the image with Trivy, sign it with Cosign, push it to ECR and ACR, and publish the Helm chart to JFrog Artifactory. Builds fetch their npm, PyPI and Maven dependencies through Artifactory's remote repositories, a cached proxy of the public registries that JFrog Curation filters. The supply chain section below shows each gate." },
       { n: "4", color: flow.app, title: "Bump the tag", body: "After a merge to main, Jenkins commits the new image tag to the Helm values in the gitops repo. Nobody deploys by hand: a deployment is a commit." },
       { n: "5", color: flow.app, title: "Detect", body: "Argo CD polls the gitops repo, every three minutes by default, or gets a webhook, and compares what Git describes with what runs in each cluster." },
-      { n: "6", color: flow.app, title: "Sync", body: "Argo CD pulls the chart from Artifactory, renders it with the values from the gitops repo and applies it to every cluster: the app clusters on EKS and AKS, and the website's own EKS cluster. The same mechanism installs the add-ons each cluster runs: Prometheus, the Datadog Agent, the OpenTelemetry Collector, the EDR sensor, the Teleport agent, Kyverno and the External Secrets Operator. Kyverno admits a pod only if its image carries a valid signature." },
+      { n: "6", color: flow.app, title: "Sync", body: "Argo CD pulls the chart from Artifactory, renders it with the values from the gitops repo and applies it to every cluster: the app clusters on EKS and AKS, and the website's own EKS cluster. The same mechanism installs the add-ons each cluster runs: Prometheus, the Datadog Agent, the OpenTelemetry Collector, the EDR sensor, cloudflared, Kyverno and the External Secrets Operator. Kyverno admits a pod only if its image carries a valid signature." },
       { n: "7", color: flow.app, title: "Pull", body: "Each cluster pulls the image from the registry of its own cloud. The External Secrets Operator copies the app's passwords and API keys from Secrets Manager or Key Vault into Kubernetes Secrets, so they never sit in Git." },
     ],
   },
@@ -135,8 +135,8 @@ const stepGroups: { title: string; steps: { n: string; color: string; title: str
     title: "Change the infrastructure",
     steps: [
       { n: "8", color: flow.infra, title: "Plan", body: "Infrastructure changes are pull requests to the infra repo. Atlantis receives the webhook, runs terraform plan, checks the plan against Conftest policies and posts both results as comments on the PR." },
-      { n: "9", color: flow.infra, title: "Apply", body: "Once the PR is approved, commenting atlantis apply runs terraform apply: networks, identities, clusters, registries, VMs and the S3 log archive. The Terraform state lives in S3 or Azure Blob Storage, with locking, so two applies never race." },
-      { n: "10", color: flow.infra, title: "Configure", body: "Ansible configures what is not in Kubernetes: the VMs for the Jenkins controller and agents, the OpenVPN server and the Teleport SSH service, including their EDR sensor and syslog forwarding. Its inventory plugins list the VMs from the AWS and Azure APIs, and its roles are first tested on the laptop, on Vagrant VMs, through Vagrant's Ansible provisioner." },
+      { n: "9", color: flow.infra, title: "Apply", body: "Once the PR is approved, commenting atlantis apply runs terraform apply: networks, identities, clusters, registries and VMs. The Terraform state lives in S3 or Azure Blob Storage, with locking, so two applies never race." },
+      { n: "10", color: flow.infra, title: "Configure", body: "Ansible configures what is not in Kubernetes: the VMs for the Jenkins controller and agents, including their EDR sensor and syslog forwarding. Its inventory plugins list the VMs from the AWS and Azure APIs, and its roles are first tested on the laptop, on Vagrant VMs, through Vagrant's Ansible provisioner." },
     ],
   },
   {
@@ -149,21 +149,21 @@ const stepGroups: { title: string; steps: { n: string; color: string; title: str
   {
     title: "Collect logs, detect threats",
     steps: [
-      { n: "13", color: flow.logs, title: "Collect", body: "Apps and Envoy send traces, metrics and logs in OTLP, OpenTelemetry's protocol, to the Collector in their cluster. The Collector writes logs to the S3 archive, metrics to Prometheus, and traces and metrics to Datadog." },
-      { n: "14", color: flow.logs, title: "Archive", body: "VMs and the OpenVPN server send syslog over the private network, through an internal load balancer, to the Collector's syslog receiver, which archives it in S3 too. Cloudflare writes its logs to the same archive with Logpush, and AWS writes CloudTrail and VPC flow logs there." },
-      { n: "15", color: flow.logs, title: "Index", body: "Splunk, the SIEM, reads the archive through the AWS add-on's SQS-based S3 input: S3 announces each new object on a queue, and Splunk fetches and indexes it." },
-      { n: "16", color: flow.logs, title: "Analyse", body: "The Datadog Forwarder, a Lambda function triggered by new objects, ships the same logs into Datadog, next to the metrics and traces. Datadog also watches Argo CD through its Agent check, and JFrog Artifactory Cloud through its integration." },
-      { n: "17", color: flow.logs, title: "Scan", body: "Wiz connects to both clouds with read-only roles, plus permission to snapshot disks, and scans those snapshots instead of running agents, then reports misconfigurations and vulnerabilities. Its findings reach Splunk through the Wiz add-on." },
-      { n: "18", color: flow.logs, title: "Detect", body: "The EDR sensor on laptops, VMs and cluster nodes streams process, file and network events to the EDR console, which detects attacks and can isolate a machine. Its detections are forwarded to Splunk, where they meet the cloud logs." },
+      { n: "13", color: flow.logs, title: "Collect", body: "Apps and Envoy send traces, metrics and logs in OTLP, OpenTelemetry's protocol, to the Collector agent in their cluster. The agent keeps metrics in the cluster's Prometheus and forwards everything to the Collector gateway of its cloud." },
+      { n: "14", color: flow.logs, title: "Syslog", body: "VMs send syslog over the private network, through an internal load balancer, to the Collector's syslog receiver. Cloudflare pushes its HTTP, firewall and DNS logs straight to Datadog with Logpush." },
+      { n: "15", color: flow.logs, title: "Route", body: "The gateway sends every log, metric and trace to Datadog, and only the security-relevant logs, such as sign-ins, Kubernetes audit events and network denials, to the SIEM, which bills by volume. The SIEM reads the cloud audit logs, CloudTrail and the Azure Activity Log, through its own cloud connectors." },
+      { n: "16", color: flow.logs, title: "Analyse", body: "Datadog keeps the logs next to the metrics and traces, and also watches Argo CD through its Agent check, and JFrog Artifactory Cloud through its integration." },
+      { n: "17", color: flow.logs, title: "Scan", body: "Wiz connects to both clouds with read-only roles, plus permission to snapshot disks, and scans those snapshots instead of running agents, then reports misconfigurations and vulnerabilities. Its findings go to the SIEM." },
+      { n: "18", color: flow.logs, title: "Detect", body: "The EDR sensor on laptops, VMs and cluster nodes streams process, file and network events to the EDR console, which detects attacks and can isolate a machine. Its detections are forwarded to the SIEM, where they meet the security logs." },
     ],
   },
   {
     title: "Operate",
     steps: [
-      { n: "19", color: flow.ops, title: "Page", body: "Datadog monitors page the on-call engineer, and so does Alertmanager for the Prometheus rules. Splunk alerts go to the security team." },
-      { n: "20", color: flow.ops, title: "VPN", body: "The internal UIs of Jenkins, Argo CD and Atlantis are not open to the internet: the engineer reaches them with OpenVPN, through the server in each cloud's network. Only the webhook endpoints that Azure DevOps calls are exposed, limited to its IP ranges." },
-      { n: "21", color: flow.ops, title: "Log in", body: "For production, the engineer runs tsh login, signs in through Entra ID and gets short-lived certificates instead of long-lived SSH keys or kubeconfigs." },
-      { n: "22", color: flow.ops, title: "Access", body: "Teleport's proxy forwards kubectl to the agent in each cluster and ssh to the VMs. Agents dial out to the proxy through reverse tunnels, so clusters and VMs need no open inbound port, and every session is recorded." },
+      { n: "19", color: flow.ops, title: "Page", body: "Datadog monitors page the on-call engineer, and so does Alertmanager for the Prometheus rules. SIEM alerts go to the security team." },
+      { n: "20", color: flow.ops, title: "Zero Trust", body: "Nothing internal has a public address. cloudflared, in each cloud, opens outbound tunnels to Cloudflare. Cloudflare Access puts an Entra ID login and a per-app rule in front of the Jenkins, Argo CD and Atlantis UIs, and the WARP client on the laptop reaches private endpoints, such as the cluster APIs, through the same tunnels. Only the webhook endpoints that Azure DevOps calls are exposed, limited to its IP ranges." },
+      { n: "21", color: flow.ops, title: "Log in", body: "For production, the engineer runs aws sso login or az login, signs in through Entra ID and gets credentials that expire within hours, instead of long-lived keys or kubeconfigs." },
+      { n: "22", color: flow.ops, title: "Access", body: "kubectl turns those credentials into short-lived tokens: EKS access entries map IAM Identity Center roles to Kubernetes permissions, and AKS accepts Entra ID tokens through kubelogin. Shells on VMs go through SSM Session Manager on AWS and Azure Bastion on Azure, so no VM listens for SSH. Cluster audit logs and session logs reach the SIEM." },
     ],
   },
 ];
@@ -175,68 +175,63 @@ const taLanes: { name: string; sub: string; y: number; color: string; boxes: Omi
     name: "Public", sub: "the website", y: 40, color: flow.traffic,
     boxes: [
       { cls: "c-teal", title: "Visitors", logo: "visitors.svg", lines: ["browsers, from", "anywhere"] },
-      { cls: "c-teal", title: "Cloudflare", logo: "cloudflare.svg", lines: ["DNS, CDN cache, WAF,", "DDoS; Logpush to S3"] },
+      { cls: "c-teal", title: "Cloudflare", logo: "cloudflare.svg", lines: ["DNS, CDN cache, WAF,", "DDoS protection"] },
       { cls: "c-teal", title: "Envoy Gateway", logo: "envoy.svg", lines: ["behind an AWS NLB;", "accepts Cloudflare only"] },
       { cls: "c-stage", title: "Website pods", logo: "kubernetes.svg", lines: ["EKS website cluster;", "OTLP to the Collector"] },
     ],
   },
   {
-    name: "Internal tools", sub: "OpenVPN", y: 160, color: flow.ops,
+    name: "Internal tools", sub: "Cloudflare Access", y: 160, color: flow.ops,
     boxes: [
-      { cls: "c-stage", title: "Engineer's laptop", lines: ["EDR agent,", "OpenVPN client"] },
-      { cls: "c-coral", title: "OpenVPN tunnel", logo: "openvpn.svg", lines: ["encrypted, UDP 1194,", "per-user certificate"] },
-      { cls: "c-coral", title: "OpenVPN server", logo: "openvpn.svg", lines: ["on a VM in each", "cloud's VPC / VNet"] },
-      { cls: "c-stage", title: "Internal UIs", lines: ["Jenkins, Argo CD, Atlantis:", "UIs only on the VPN"] },
+      { cls: "c-stage", title: "Engineer's laptop", lines: ["EDR agent,", "a browser"] },
+      { cls: "c-coral", title: "Cloudflare Access", logo: "cloudflare.svg", lines: ["Entra ID login,", "a rule per app"] },
+      { cls: "c-coral", title: "cloudflared", logo: "cloudflare.svg", lines: ["outbound tunnel from", "each VPC / VNet"] },
+      { cls: "c-stage", title: "Internal UIs", lines: ["Jenkins, Argo CD, Atlantis:", "no public address"] },
     ],
   },
   {
-    name: "Production", sub: "Teleport", y: 280, color: flow.ops,
+    name: "Production", sub: "WARP, cloud IAM", y: 280, color: flow.ops,
     boxes: [
-      { cls: "c-stage", title: "Engineer's laptop", lines: ["tsh login,", "SSO in the browser"] },
-      { cls: "c-coral", title: "Teleport proxy", logo: "teleport.svg", lines: ["short-lived certificates,", "records every session"] },
-      { cls: "c-coral", title: "Teleport agents", logo: "teleport.svg", lines: ["dial out: reverse", "tunnels, no open port"] },
-      { cls: "c-green", title: "Clusters and VMs", logo: "kubernetes.svg", lines: ["kubectl to EKS / AKS,", "ssh to the VMs"] },
+      { cls: "c-stage", title: "Engineer's laptop", lines: ["WARP client,", "aws sso login, az login"] },
+      { cls: "c-coral", title: "Cloudflare WARP", logo: "cloudflare.svg", lines: ["private routes through", "the same tunnels"] },
+      { cls: "c-coral", title: "Cloud IAM", logo: ["amazonwebservices.svg", "entra.svg"], lines: ["EKS access entries, AKS", "Entra ID; SSM, Bastion"] },
+      { cls: "c-green", title: "Clusters and VMs", logo: "kubernetes.svg", lines: ["kubectl to EKS / AKS,", "shells on the VMs"] },
     ],
   },
 ];
 
 // ---------- logs, metrics and security ----------
-const lgY = (i: number) => 50 + i * 70;
+const lgY = (i: number) => 50 + i * 70 + (i >= 3 ? 40 : 0);
 const lgBoxes: Box[] = [
   // sources
-  { x: 20, y: lgY(0), w: 200, h: 56, cls: "c-stage", title: "Argo CD, JFrog", logo: ["argocd.svg", "jfrog.svg"], lines: ["metrics and logs"] },
+  { x: 20, y: lgY(0), w: 200, h: 56, cls: "c-stage", title: "Tools, edge", logo: ["argocd.svg", "jfrog.svg", "cloudflare.svg"], lines: ["Argo CD, JFrog, Cloudflare"] },
   { x: 20, y: lgY(1), w: 200, h: 56, cls: "c-stage", title: "Apps, Envoy", logo: "envoy.svg", lines: ["OTLP: traces, metrics, logs"] },
-  { x: 20, y: lgY(2), w: 200, h: 56, cls: "c-stage", title: "VMs, OpenVPN", logo: ["syslog.svg", "openvpn.svg"], lines: ["syslog (RFC 5424)"] },
-  { x: 20, y: lgY(3), w: 200, h: 56, cls: "c-stage", title: "Cloudflare", logo: "cloudflare.svg", lines: ["HTTP, WAF and DNS logs"] },
-  { x: 20, y: lgY(4), w: 200, h: 56, cls: "c-stage", title: "CloudTrail, flow logs", logo: "amazonwebservices.svg", lines: ["written to S3 by AWS"] },
-  { x: 20, y: lgY(5), w: 200, h: 56, cls: "c-stage", title: "Laptops, VMs, nodes", logo: "edr.svg", lines: ["EDR sensors"] },
-  { x: 20, y: lgY(6), w: 200, h: 56, cls: "c-stage", title: "Cloud accounts", logo: ["amazonwebservices.svg", "azure.svg"], lines: ["APIs, disk snapshots"] },
+  { x: 20, y: lgY(2), w: 200, h: 56, cls: "c-stage", title: "VMs", logo: "syslog.svg", lines: ["syslog (RFC 5424)"] },
+  { x: 20, y: lgY(3), w: 200, h: 56, cls: "c-stage", title: "Cloud audit logs", logo: ["amazonwebservices.svg", "azure.svg"], lines: ["CloudTrail, Activity Log"] },
+  { x: 20, y: lgY(4), w: 200, h: 56, cls: "c-stage", title: "Laptops, VMs, nodes", logo: "edr.svg", lines: ["EDR sensors"] },
+  { x: 20, y: lgY(5), w: 200, h: 56, cls: "c-stage", title: "Cloud accounts", logo: ["amazonwebservices.svg", "azure.svg"], lines: ["APIs, disk snapshots"] },
   // collect
-  { x: 260, y: lgY(1), w: 180, h: 126, cls: "c-amber", title: "OTel Collector", logo: "opentelemetry.svg", lines: ["receivers: OTLP, syslog", "exporters: S3,", "Prometheus, Datadog"] },
-  { x: 260, y: lgY(5), w: 180, h: 56, cls: "c-amber", title: "EDR console", logo: "edr.svg", lines: ["detects, isolates a host"] },
-  { x: 260, y: lgY(6), w: 180, h: 56, cls: "c-amber", title: "Wiz", logo: "wiz.png", lines: ["agentless: read roles, snapshots"] },
+  { x: 260, y: lgY(1), w: 180, h: 126, cls: "c-amber", title: "OTel Collectors", logo: "opentelemetry.svg", lines: ["agents in each cluster,", "a gateway per cloud", "that routes each signal"] },
+  { x: 260, y: lgY(4), w: 180, h: 56, cls: "c-amber", title: "EDR console", logo: "edr.svg", lines: ["detects, isolates a host"] },
+  { x: 260, y: lgY(5), w: 180, h: 56, cls: "c-amber", title: "Wiz", logo: "wiz.png", lines: ["agentless: read roles, snapshots"] },
   // store
   { x: 480, y: lgY(1), w: 160, h: 56, cls: "c-coral", title: "Prometheus", logo: "prometheus.svg", lines: ["Alertmanager pages"] },
-  { x: 480, y: lgY(3), w: 160, h: 126, cls: "c-amber", title: "S3 log archive", logo: "bucket.svg", lines: ["one prefix per source,", "Object Lock: write once,", "lifecycle to Glacier"] },
   // use
-  { x: 690, y: lgY(0), w: 290, h: 266, center: true, cls: "c-amber", title: "Datadog", logo: "datadog.svg", lines: ["metrics and traces from the Collector,", "logs from S3 through the Forwarder,", "Argo CD and JFrog through", "their integrations;", "dashboards, APM, monitors", "that page on-call"] },
-  { x: 690, y: lgY(4), w: 290, h: 196, center: true, cls: "c-amber", title: "SIEM", logo: "splunk.svg", lines: ["indexes the S3 archive through", "an SQS-based S3 input,", "correlates EDR and Wiz findings;", "alerts go to the security team"] },
+  { x: 690, y: lgY(0), w: 290, h: 196, center: true, cls: "c-amber", title: "Datadog", logo: "datadog.svg", lines: ["Argo CD and JFrog through", "their integrations,", "Cloudflare logs by Logpush,", "logs, metrics and traces", "from the Collectors;", "dashboards, APM, monitors"] },
+  { x: 690, y: lgY(3), w: 290, h: 196, center: true, cls: "c-amber", title: "SIEM", logo: "siem.svg", lines: ["security logs from the gateway,", "cloud audit logs by connector,", "EDR detections, Wiz findings;", "alerts go to the security team"] },
 ];
 const lgArrows: Arrow[] = [
-  { d: "M222 78 L688 78", color: flow.metrics, label: [455, 68, "Datadog integrations", "middle"] },
+  { d: "M222 78 L688 78", color: flow.logs, label: [455, 68, "integrations, Logpush", "middle"] },
   { d: "M222 148 L258 148", color: flow.metrics },
   { d: "M222 218 L258 218", color: flow.logs },
   { d: "M442 148 L478 148", color: flow.metrics },
-  { d: "M442 218 L688 218", color: flow.metrics, label: [560, 208, "traces, metrics (OTLP)", "middle"] },
-  { d: "M442 236 L560 236 L560 258", color: flow.logs },
-  { d: "M222 288 L478 288", color: flow.logs, label: [350, 278, "Logpush", "middle"] },
-  { d: "M222 358 L478 358", color: flow.logs, label: [350, 348, "written by AWS", "middle"] },
-  { d: "M642 290 L688 290", color: flow.logs },
-  { d: "M642 360 L688 360", color: flow.logs },
-  { d: "M222 428 L258 428", color: flow.security },
-  { d: "M442 428 L688 428", color: flow.security, label: [565, 418, "detections", "middle"] },
-  { d: "M222 498 L258 498", color: flow.security },
-  { d: "M442 498 L688 498", color: flow.security, label: [565, 488, "findings", "middle"] },
+  { d: "M442 218 L688 218", color: flow.metrics, label: [565, 208, "logs, metrics, traces", "middle"] },
+  { d: "M350 248 L350 273 L800 273 L800 298", color: flow.security, label: [575, 263, "security logs only", "middle"] },
+  { d: "M222 328 L688 328", color: flow.security, label: [455, 318, "cloud connectors", "middle"] },
+  { d: "M222 398 L258 398", color: flow.security },
+  { d: "M442 398 L688 398", color: flow.security, label: [565, 388, "detections", "middle"] },
+  { d: "M222 468 L258 468", color: flow.security },
+  { d: "M442 468 L688 468", color: flow.security, label: [565, 458, "findings", "middle"] },
 ];
 
 type Lane = { name: string; sub: string; y: number; color: string; boxes: Omit<Box, "x" | "y" | "w" | "h">[] };
@@ -248,7 +243,7 @@ const idLanes: Lane[] = [
     boxes: [
       { cls: "c-stage", title: "Engineer's laptop", lines: ["one account with MFA,", "no cloud keys on disk"] },
       { cls: "c-coral", title: "Entra ID", logo: "entra.svg", lines: ["MFA, Conditional Access;", "groups decide roles"] },
-      { cls: "c-coral", title: "Short-lived access", lines: ["IAM Identity Center, az login,", "Teleport certificates"] },
+      { cls: "c-coral", title: "Short-lived access", lines: ["IAM Identity Center,", "az login, kubelogin"] },
       { cls: "c-green", title: "Clouds, clusters", logo: ["amazonwebservices.svg", "azure.svg"], lines: ["consoles and APIs,", "kubectl and ssh"] },
     ],
   },
@@ -278,7 +273,7 @@ const ssoTools: [string, string | undefined][] = [
   ["Jenkins", "jenkins.svg"],
   ["JFrog", "jfrog.svg"],
   ["Datadog", "datadog.svg"],
-  ["Splunk", undefined],
+  ["Cloudflare Access", "cloudflare.svg"],
   ["Wiz", "wiz.png"],
 ];
 const ssoW = ssoTools.map(([label, logo]) => Math.round((logo ? 32 : 18) + label.length * 6));
@@ -316,6 +311,8 @@ type Comparison = {
   options: { name: string; logo: string | string[] }[];
   rows: [string, ...string[]][];
   note?: string;
+  // no column is the one the steps describe
+  neutral?: boolean;
   sources: [string, string][];
 };
 const comparisons: Comparison[] = [
@@ -387,33 +384,68 @@ const comparisons: Comparison[] = [
     ],
   },
   {
-    title: "VPN: OpenVPN, AWS Client VPN and others",
-    intro: "The VPN only opens the internal UIs; production goes through Teleport. A self-run server works the same in both clouds, while the managed options trade that for one service per cloud.",
+    title: "Private access: Cloudflare Zero Trust, a VPN or Teleport",
+    intro: "Internal UIs and private APIs need a way in that is not the open internet. This model uses Cloudflare Zero Trust because Cloudflare already sits at the edge and its tunnels are outbound only. A VPN puts the laptop on the network; an access proxy decides app by app.",
     options: [
+      { name: "Cloudflare Zero Trust", logo: "cloudflare.svg" },
       { name: "OpenVPN", logo: "openvpn.svg" },
       { name: "AWS Client VPN", logo: "amazonwebservices.svg" },
-      { name: "Azure VPN Gateway", logo: "azurevpn.svg" },
-      { name: "WireGuard", logo: "wireguard.svg" },
+      { name: "Teleport", logo: "teleport.svg" },
     ],
     rows: [
-      ["Who runs it", "You, on a VM in each cloud", "AWS, as a managed endpoint", "Azure, as a gateway in the VNet", "You, on a VM in each cloud"],
-      ["Protocol", "OpenVPN, over TLS", "OpenVPN-based, over TLS", "OpenVPN, IKEv2 or SSTP", "WireGuard, over UDP"],
-      ["Sign-in", "Certificates, plus plugins for LDAP or RADIUS", "Certificates, Active Directory, or SAML with Entra ID", "Certificates, RADIUS, or Entra ID through the Azure VPN Client (Windows, macOS)", "One key pair per device; no users or SSO"],
-      ["Reach", "Both clouds, one server each", "AWS VPCs only", "Azure VNets only", "Both clouds, one server each"],
-      ["Price", "The VM", "Per endpoint-hour plus per connection-hour", "Per gateway-hour, by SKU", "The VM"],
-      ["Logs", "syslog to the Collector", "Connection logs to CloudWatch Logs", "Diagnostic logs to Azure Monitor", "Almost none, by design"],
+      ["Who runs it", "Cloudflare; you run cloudflared in each VPC / VNet", "You, on a VM in each cloud", "AWS, as a managed endpoint", "You, or Teleport as a cloud service"],
+      ["How it connects", "Outbound tunnels from cloudflared; a browser or the WARP client on the laptop", "A TLS tunnel from the client to the server", "An OpenVPN-based tunnel into one VPC", "Agents dial out to the proxy; tsh or a browser on the laptop"],
+      ["Sign-in", "Entra ID or another identity provider, plus device posture rules", "Certificates, plus plugins for LDAP or RADIUS", "Certificates, Active Directory, or SAML with Entra ID", "GitHub on Community; Entra ID, OIDC and SAML on Enterprise"],
+      ["Scope", "Per app, hostname or private IP range", "The networks the server routes", "The networks its authorization rules allow", "Per cluster, server, database or app"],
+      ["Audit", "Access and gateway logs; Logpush on contract plans", "Connection logs, sent as syslog", "Connection logs to CloudWatch Logs", "Audit log and recorded sessions"],
+      ["Price", "Free up to 50 users, then per user", "The VM", "Per endpoint-hour plus per connection-hour", "Community is free under 100 employees and US$10M revenue; Enterprise is quoted"],
     ],
-    note: "Tailscale and NetBird add users, SSO and access rules on top of WireGuard. Zero-trust proxies such as Cloudflare Access or Teleport's application access can replace the VPN entirely, by putting each internal UI behind a login.",
+    note: "Tailscale and NetBird add SSO and access rules on top of WireGuard. AWS Verified Access and Microsoft Entra Private Access are the clouds' own identity-aware proxies.",
     sources: [
+      ["Cloudflare Tunnel", "https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/"],
+      ["private networks", "https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/private-net/cloudflared/"],
+      ["Access with Entra ID", "https://developers.cloudflare.com/cloudflare-one/identity/idp-integration/entra-id/"],
+      ["Zero Trust plans", "https://www.cloudflare.com/plans/zero-trust-services/"],
       ["OpenVPN manual", "https://openvpn.net/community-resources/reference-manual-for-openvpn-2-6/"],
       ["Client VPN authentication", "https://docs.aws.amazon.com/vpn/latest/clientvpn-admin/client-authentication.html"],
+      ["Client VPN authorization rules", "https://docs.aws.amazon.com/vpn/latest/clientvpn-admin/cvpn-working-rules.html"],
       ["Client VPN pricing", "https://aws.amazon.com/vpn/pricing/"],
-      ["Client VPN logging", "https://docs.aws.amazon.com/vpn/latest/clientvpn-admin/connection-logging.html"],
-      ["Azure point-to-site VPN", "https://learn.microsoft.com/en-us/azure/vpn-gateway/point-to-site-about"],
-      ["WireGuard", "https://www.wireguard.com/"],
+      ["Teleport editions", "https://goteleport.com/docs/feature-matrix/"],
       ["Tailscale", "https://tailscale.com/kb/1151/what-is-tailscale"],
-      ["Cloudflare Access", "https://developers.cloudflare.com/cloudflare-one/applications/"],
-      ["Teleport application access", "https://goteleport.com/docs/enroll-resources/application-access/introduction/"],
+      ["AWS Verified Access", "https://docs.aws.amazon.com/verified-access/latest/ug/what-is-verified-access.html"],
+      ["Entra Private Access", "https://learn.microsoft.com/en-us/entra/global-secure-access/concept-private-access"],
+    ],
+  },
+  {
+    title: "SIEM: four common choices",
+    neutral: true,
+    intro: "The model leaves the SIEM unnamed. It receives security logs from the Collector gateways, cloud audit logs through its own connectors, and EDR and Wiz findings, and any of these can play that part. They differ in who hosts them, how you query them and how they bill.",
+    options: [
+      { name: "Splunk", logo: "splunk.svg" },
+      { name: "Microsoft Sentinel", logo: "sentinel.svg" },
+      { name: "Elastic Security", logo: "elastic.svg" },
+      { name: "Google SecOps", logo: "googlecloud.svg" },
+    ],
+    rows: [
+      ["Hosting", "Splunk Cloud Platform, or Splunk Enterprise on your own machines", "A cloud service only, on a Log Analytics workspace", "Elastic Cloud, hosted or Serverless, or self-managed", "A cloud service only, on Google's infrastructure"],
+      ["Query language", "SPL", "KQL", "ES|QL, KQL or EQL", "UDM search; YARA-L for detection rules"],
+      ["Billing", "By ingest, workload or activity", "Per GB ingested, pay-as-you-go or commitment tiers from 100 GB a day", "Serverless: per GB ingested and retained; hosted: by resources", "By ingestion, in packages that include 12 months of retention"],
+      ["Response", "SOAR in the Premier edition, or Splunk SOAR", "Automation rules and playbooks on Logic Apps", "Rule actions, cases and Workflows", "SOAR and case management in every package"],
+      ["Cloud logs", "Splunk Add-on for AWS, and one for Microsoft cloud services", "Native for Azure and Entra ID; an S3 connector for AWS", "Elastic Agent integrations for AWS and Azure", "Cloud feeds, forwarders and OpenTelemetry collectors"],
+    ],
+    note: "Sentinel moves fully into the Microsoft Defender portal after 31 March 2027. Because the gateway already filters and routes, switching SIEM changes one exporter, not every source.",
+    sources: [
+      ["Splunk pricing", "https://www.splunk.com/en_us/products/pricing/platform-pricing.html"],
+      ["Splunk Add-on for AWS", "https://splunk.github.io/splunk-add-on-for-amazon-web-services/"],
+      ["SPL", "https://help.splunk.com/en/splunk-enterprise/search/spl-search-reference"],
+      ["Sentinel billing", "https://learn.microsoft.com/en-us/azure/sentinel/billing"],
+      ["Sentinel for AWS", "https://learn.microsoft.com/en-us/azure/sentinel/connect-aws"],
+      ["Sentinel playbooks", "https://learn.microsoft.com/en-us/azure/sentinel/automation/automate-responses-with-playbooks"],
+      ["Elastic Security pricing", "https://www.elastic.co/pricing/serverless-security"],
+      ["Elastic query languages", "https://www.elastic.co/docs/explore-analyze/query-filter/languages"],
+      ["Google SecOps", "https://cloud.google.com/chronicle/docs/secops/secops-overview"],
+      ["SecOps packages", "https://cloud.google.com/security/products/security-operations"],
+      ["YARA-L", "https://cloud.google.com/chronicle/docs/detection/yara-l-2-0-overview"],
     ],
   },
 ];
@@ -421,7 +453,7 @@ const comparisons: Comparison[] = [
 // ---------- Kubernetes vocabulary ----------
 const k8sArrow = "#475569";
 const k8sControl: Box[] = [
-  { x: 250, y: 20, w: 240, h: 70, cls: "c-stage", title: "kubectl, Argo CD", lines: ["engineers through Teleport,", "Argo CD applying Git"] },
+  { x: 250, y: 20, w: 240, h: 70, cls: "c-stage", title: "kubectl, Argo CD", lines: ["engineers over WARP,", "Argo CD applying Git"] },
   { x: 40, y: 140, w: 170, h: 180, center: true, cls: "c-purple", title: "etcd", lines: ["key-value store", "of every object:", "what you asked for", "and what runs"] },
   { x: 250, y: 140, w: 240, h: 180, center: true, cls: "c-blue", title: "kube-apiserver", logo: "kubernetes.svg", lines: ["the only door, a REST API:", "authenticates, authorizes,", "runs admission webhooks", "such as Kyverno,", "saves objects in etcd"] },
   { x: 540, y: 140, w: 420, h: 56, cls: "c-stage", title: "kube-scheduler", lines: ["picks a node for each new pod, by requests, affinity and taints"] },
@@ -480,12 +512,12 @@ const k8sTerms: [string, string, string][] = [
   ["Gateway, HTTPRoute", "Gateway API objects: a Gateway opens a listener, HTTPRoutes send hosts and paths to Services. They succeed Ingress, which is frozen.", "Envoy Gateway in the website cluster."],
   ["HorizontalPodAutoscaler", "Changes a Deployment's replica count from CPU, memory or custom metrics.", "Scales the website pods with CPU load or request rate."],
   ["Job, CronJob", "Pods that run to completion, once or on a schedule.", "Not used in this model; typical for database migrations and nightly reports."],
-  ["kube-apiserver", "The REST API in front of the cluster; every component and every client goes through it.", "kubectl reaches it through Teleport; Argo CD applies Git through it."],
+  ["kube-apiserver", "The REST API in front of the cluster; every component and every client goes through it.", "kubectl reaches its private endpoint over WARP; Argo CD applies Git through it."],
   ["kube-controller-manager", "Control loops that turn objects into more objects: a Deployment into ReplicaSets, a ReplicaSet into Pods.", "Run by EKS and AKS."],
   ["kube-proxy", "Programs each node so that a Service IP reaches one of its pods, with iptables rules by default.", "A DaemonSet on EKS and AKS nodes."],
   ["kube-scheduler", "Picks a node for each new pod, from its resource requests, affinity rules and taints.", "Run by EKS and AKS."],
-  ["kubeconfig", "A file with the API server address and the credentials that kubectl uses.", "tsh kube login writes one with short-lived certificates."],
-  ["kubectl", "The command-line client of the API.", "Engineers, through Teleport."],
+  ["kubeconfig", "A file with the API server address and the credentials that kubectl uses.", "aws eks update-kubeconfig and az aks get-credentials write one; the tokens come from IAM or kubelogin."],
+  ["kubectl", "The command-line client of the API.", "Engineers, over WARP, with cloud IAM tokens."],
   ["kubelet", "The agent on each node: registers it, starts its pods through the runtime, reports their health.", "On every EKS and AKS node."],
   ["Label, selector", "Key-value tags on objects, and the queries that match them.", "app=web ties the website's Service and ReplicaSet to its pods."],
   ["Namespace", "A folder for objects, with its own access rules and quotas.", "One per app, and one per add-on."],
@@ -493,7 +525,7 @@ const k8sTerms: [string, string, string][] = [
   ["Operator", "A controller and its custom resources, that runs a piece of software for you.", "The External Secrets Operator; Argo CD works the same way."],
   ["PersistentVolume, PVC", "A PersistentVolumeClaim asks for storage; the cluster binds it to a PersistentVolume that its StorageClass creates.", "EBS volumes on EKS and Azure Disks on AKS, through their CSI drivers."],
   ["Pod", "The smallest unit: one or more containers sharing an IP, volumes and a lifecycle.", "Every app instance, the website, every add-on."],
-  ["RBAC", "Roles and ClusterRoles list allowed actions; RoleBindings grant them to users, groups or ServiceAccounts.", "Teleport maps Entra ID groups to Kubernetes groups."],
+  ["RBAC", "Roles and ClusterRoles list allowed actions; RoleBindings grant them to users, groups or ServiceAccounts.", "EKS access entries and AKS Entra ID groups map people to roles."],
   ["ReplicaSet", "Keeps a fixed number of identical pods running; a Deployment creates one per version.", "Created by Deployments, never by hand."],
   ["Secret", "A ConfigMap for sensitive values. Base64 is only an encoding: the protection comes from RBAC and etcd encryption.", "Written by External Secrets from Secrets Manager and Key Vault."],
   ["Service", "A stable virtual IP and DNS name in front of a set of pods. Types: ClusterIP, NodePort, LoadBalancer.", "One per app; the website's HTTPRoute points to its Service."],
@@ -507,16 +539,16 @@ const tools: [string, string, string, string, string][] = [
   ["Ansible", "ansible.svg", "https://docs.ansible.com/ansible/latest/collections/amazon/aws/aws_ec2_inventory.html", "Configures the VMs that are not in Kubernetes.", "VMs, Vagrant"],
   ["Argo CD", "argocd.svg", "https://argo-cd.readthedocs.io/en/stable/user-guide/helm/", "CD: keeps every cluster equal to the gitops repo.", "Azure Repos, JFrog, Kubernetes"],
   ["Atlantis", "atlantis.png", "https://www.runatlantis.io/docs/autoplanning.html", "Runs Terraform from pull requests, so every infrastructure change is reviewed with its plan.", "Azure Repos, Terraform"],
-  ["AWS", "amazonwebservices.svg", "https://docs.aws.amazon.com/eks/latest/userguide/what-is-eks.html", "Runs one copy of the platform (EKS, ECR, EC2, VPC, IAM), the website's own EKS cluster and the S3 log archive.", "Terraform, Argo CD, Wiz"],
+  ["AWS", "amazonwebservices.svg", "https://docs.aws.amazon.com/eks/latest/userguide/what-is-eks.html", "Runs one copy of the platform (EKS, ECR, EC2, VPC, IAM) and the website's own EKS cluster.", "Terraform, Argo CD, Wiz"],
   ["Azure", "azure.svg", "https://learn.microsoft.com/en-us/azure/aks/what-is-aks", "Runs the other copy: AKS, ACR, Azure VMs, VNet and Entra ID.", "Terraform, Argo CD, Wiz"],
   ["Azure DevOps", "azuredevops.svg", "https://learn.microsoft.com/en-us/azure/devops/repos/git/branch-policies", "Hosts the three Git repos behind branch policies and push protection, and Boards for work items.", "Jenkins, Atlantis, Argo CD"],
-  ["Cloudflare", "cloudflare.svg", "https://developers.cloudflare.com/waf/", "DNS, CDN, WAF and DDoS protection in front of the website; pushes its logs to S3.", "visitors, Envoy, S3"],
+  ["Cloudflare", "cloudflare.svg", "https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/", "DNS, CDN, WAF and DDoS protection in front of the website; Zero Trust in front of the internal tools: Access, WARP and cloudflared tunnels.", "visitors, Envoy, Entra ID, Datadog"],
   ["Conftest", "opa.svg", "https://www.runatlantis.io/docs/policy-checking.html", "Checks every Terraform plan against Rego policies before Atlantis may apply it.", "Atlantis"],
   ["Cosign", "cosign.svg", "https://docs.sigstore.dev/cosign/key_management/overview/", "Signs each image and attests its SBOM with a key kept in AWS KMS or Key Vault.", "Jenkins, ECR, ACR, Kyverno"],
-  ["Datadog", "datadog.svg", "https://docs.datadoghq.com/opentelemetry/", "Dashboards, APM and monitors for the apps, Argo CD and JFrog.", "the Collector, S3, on-call"],
+  ["Datadog", "datadog.svg", "https://docs.datadoghq.com/opentelemetry/", "Dashboards, APM and monitors for the apps, Argo CD and JFrog; Cloudflare's logs too.", "the Collector gateway, Cloudflare, on-call"],
   ["Docker", "docker.svg", "https://docs.docker.com/get-started/docker-overview/", "Builds and runs images on the laptop.", "nothing in production"],
-  ["EDR", "edr.svg", "https://csrc.nist.gov/glossary/term/endpoint_detection_and_response", "Sensors on laptops, VMs and nodes that detect and contain attacks on the machine.", "EDR console, Splunk"],
-  ["Entra ID", "entra.svg", "https://learn.microsoft.com/en-us/entra/fundamentals/whatis", "The one login for people: MFA and Conditional Access, single sign-on into the clouds and tools, groups mapped to roles.", "AWS, Teleport, the web tools"],
+  ["EDR", "edr.svg", "https://csrc.nist.gov/glossary/term/endpoint_detection_and_response", "Sensors on laptops, VMs and nodes that detect and contain attacks on the machine.", "EDR console, the SIEM"],
+  ["Entra ID", "entra.svg", "https://learn.microsoft.com/en-us/entra/fundamentals/whatis", "The one login for people: MFA and Conditional Access, single sign-on into the clouds and tools, groups mapped to roles.", "AWS, AKS, Cloudflare Access, the web tools"],
   ["Envoy", "envoy.svg", "https://gateway.envoyproxy.io/docs/", "Envoy Gateway is the website cluster's ingress; it sends access logs and traces in OTLP.", "Cloudflare, the Collector"],
   ["External Secrets", "externalsecrets.svg", "https://external-secrets.io/latest/provider/aws-secrets-manager/", "Copies secrets from the cloud stores into Kubernetes Secrets, using the pod identity of its cloud.", "Secrets Manager, Key Vault"],
   ["Helm", "helm.svg", "https://helm.sh/docs/", "Packages each app and each add-on as a chart, with values per environment.", "Argo CD, JFrog"],
@@ -524,18 +556,17 @@ const tools: [string, string, string, string, string][] = [
   ["JFrog", "jfrog.svg", "https://jfrog.com/help/r/jfrog-artifactory-documentation/helm-chart-repositories", "Artifactory hosts the Helm charts and proxies npm, PyPI and Maven; Curation blocks risky packages, Xray scans what is stored.", "Jenkins, Argo CD, Datadog"],
   ["Kubernetes", "kubernetes.svg", "https://kubernetes.io/docs/concepts/overview/", "Runs the apps, the website and the add-ons, on EKS and AKS.", "Argo CD, the registries"],
   ["Kyverno", "kyverno.svg", "https://kyverno.io/docs/policy-types/cluster-policy/verify-images/sigstore/", "Admission policies in every cluster: only signed images from our registries may run.", "Kubernetes, Cosign"],
-  ["OpenTelemetry", "opentelemetry.svg", "https://opentelemetry.io/docs/collector/", "One protocol, OTLP, and one Collector per cluster for traces, metrics and logs.", "apps, Envoy, S3, Datadog"],
-  ["OpenVPN", "openvpn.svg", "https://openvpn.net/community/", "VPN from engineers' laptops to the private subnets that hold the internal UIs.", "laptops, VMs"],
+  ["OpenTelemetry", "opentelemetry.svg", "https://opentelemetry.io/docs/collector/deployment/gateway/", "One protocol, OTLP; a Collector agent per cluster and a gateway per cloud that routes traces, metrics and logs.", "apps, Envoy, Datadog, the SIEM"],
   ["Podman", "podman.svg", "https://docs.podman.io/en/latest/", "Builds images on the Jenkins agents, rootless and without a daemon.", "Jenkins, ECR, ACR"],
   ["Prometheus", "prometheus.svg", "https://prometheus.io/docs/introduction/overview/", "Stores cluster metrics and evaluates alert rules; Alertmanager pages on-call.", "the Collector"],
   ["Secret stores", "keyvault.svg", "https://learn.microsoft.com/en-us/azure/key-vault/general/overview", "AWS Secrets Manager and Azure Key Vault hold passwords, API keys and the signing keys.", "External Secrets, Cosign"],
-  ["Splunk", "splunk.svg", "https://splunk.github.io/splunk-add-on-for-amazon-web-services/SQS-basedS3/", "SIEM: indexes the S3 archive and correlates it with EDR and Wiz findings.", "S3, EDR, Wiz"],
-  ["syslog", "syslog.svg", "https://datatracker.ietf.org/doc/html/rfc5424", "The standard log protocol of VMs and network appliances such as the VPN server.", "the Collector"],
-  ["Teleport", "teleport.svg", "https://goteleport.com/docs/reference/architecture/agents/", "The one way into production: SSO, short-lived certificates, kubectl and ssh, recorded sessions.", "clusters, VMs, engineers"],
+  ["Session Manager, Bastion", "amazonwebservices.svg", "https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager.html", "Shells on the VMs without an open SSH port: SSM Session Manager on AWS, Azure Bastion on Azure; every session is logged.", "VMs, Entra ID, the SIEM"],
+  ["SIEM", "siem.svg", "https://csrc.nist.gov/glossary/term/security_information_and_event_management", "Collects security logs, cloud audit logs, EDR detections and Wiz findings, and alerts the security team; candidates are compared below.", "the Collector gateway, EDR, Wiz"],
+  ["syslog", "syslog.svg", "https://datatracker.ietf.org/doc/html/rfc5424", "The standard log protocol of VMs and network appliances.", "the Collector"],
   ["Terraform", "terraform.svg", "https://developer.hashicorp.com/terraform/language/backend/s3", "Declares the resources in both clouds; keeps state in S3 or Blob Storage.", "AWS, Azure"],
   ["Trivy", "trivy.svg", "https://trivy.dev/latest/docs/supply-chain/sbom/", "Scans each image for known vulnerabilities in Jenkins and writes its SBOM.", "Jenkins, Cosign"],
   ["Vagrant", "vagrant.svg", "https://developer.hashicorp.com/vagrant/docs/provisioning/ansible", "Local VMs to test Ansible roles before they reach the cloud.", "Ansible"],
-  ["Wiz", "wiz.png", "https://www.wiz.io/academy/agentless-scanning", "Agentless cloud security: scans both clouds for misconfigurations and vulnerabilities.", "AWS, Azure, Splunk"],
+  ["Wiz", "wiz.png", "https://www.wiz.io/academy/agentless-scanning", "Agentless cloud security: scans both clouds for misconfigurations and vulnerabilities.", "AWS, Azure, the SIEM"],
 ];
 ---
 
@@ -549,8 +580,8 @@ const tools: [string, string, string, string, string][] = [
     <p class="text-sm leading-relaxed text-brand-body">
       One example backend where common cloud, DevOps and security tools each have a single job: code reaches two clouds
       through Git only, infrastructure changes go through reviewed pull requests, the website sits behind Cloudflare,
-      every log lands in one S3 archive, people sign in once and reach production through audited doors, no cloud
-      access key lives longer than a few hours, and clusters run only images that CI signed.
+      each signal goes only to the tools that need it, people sign in once and reach internal tools without a VPN, no
+      cloud access key lives longer than a few hours, and clusters run only images that CI signed.
     </p>
   </div>
 
@@ -567,7 +598,7 @@ const tools: [string, string, string, string, string][] = [
     <figure class="mb-8 overflow-x-auto rounded-xl border border-brand-border bg-white p-4 sm:p-6">
       <svg viewBox="0 0 1000 1375" class="cloud-svg mx-auto block h-auto w-full max-w-[980px] min-w-[860px]" role="img" aria-labelledby="ov-title ov-desc">
         <title id="ov-title">Overview of the example cloud backend across AWS and Azure</title>
-        <desc id="ov-desc">At the top, an engineer's laptop with Docker, Vagrant and an EDR agent, and Azure DevOps with the infra, app and gitops repos and Boards. Below, Ansible, Atlantis with Terraform, Jenkins with Podman, JFrog Artifactory and Argo CD with Helm, and Entra ID for every login. Visitors reach Cloudflare, which forwards to Envoy Gateway in the website's EKS cluster. In AWS and Azure: VMs, the ECR and ACR registries, the secret stores and signing keys, the app clusters, the website cluster, and add-ons in every cluster: Prometheus, the Datadog Agent, the OpenTelemetry Collector, the EDR sensor, the Teleport agent, Kyverno and the External Secrets Operator. The Collector and the VMs' syslog feed an S3 log archive, read by Splunk and by Datadog. Wiz scans both clouds, the EDR console receives sensor telemetry, and both report to Splunk. Datadog pages the on-call engineer, who reaches internal tools through OpenVPN and production through Teleport.</desc>
+        <desc id="ov-desc">At the top, an engineer's laptop with Docker, Vagrant and an EDR agent, and Azure DevOps with the infra, app and gitops repos and Boards. Below, Ansible, Atlantis with Terraform, Jenkins with Podman, JFrog Artifactory and Argo CD with Helm, and Entra ID for every login. Visitors reach Cloudflare, which forwards to Envoy Gateway in the website's EKS cluster. In AWS and Azure: VMs, the ECR and ACR registries, the secret stores and signing keys, the app clusters, the website cluster, and add-ons in every cluster: Prometheus, the Datadog Agent, the OpenTelemetry Collector, the EDR sensor, cloudflared, Kyverno and the External Secrets Operator. The Collectors and the VMs' syslog feed a Collector gateway in each cloud, which sends everything to Datadog and only security logs to the SIEM. Wiz scans both clouds, the EDR console receives sensor telemetry, and both report to the SIEM. Datadog pages the on-call engineer, who reaches internal tools through Cloudflare Zero Trust and production with short-lived cloud IAM credentials.</desc>
         <defs>
           <marker id="ov" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M1.5 1L8.5 5L1.5 9" fill="none" stroke="context-stroke" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
@@ -612,8 +643,8 @@ const tools: [string, string, string, string, string][] = [
         ))}
       </svg>
       <figcaption class="mt-3 text-sm text-brand-muted">
-        The cloud box is drawn once: AWS and Azure each run the same pieces, named AWS / Azure; the website cluster and
-        the log archive live in AWS only. Argo CD, Atlantis and Jenkins are drawn apart from the clusters but often run
+        The cloud box is drawn once: AWS and Azure each run the same pieces, named AWS / Azure; the website cluster lives
+        in AWS only. Argo CD, Atlantis and Jenkins are drawn apart from the clusters but often run
         inside one.
       </figcaption>
     </figure>
@@ -638,14 +669,14 @@ const tools: [string, string, string, string, string][] = [
     <p class="mono-eyebrow mb-2">// who gets in, and how</p>
     <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Traffic and access">Traffic and access</h2>
     <p class="mb-6 text-brand-body">
-      Three doors, one per audience. Visitors only ever reach Cloudflare; engineers use OpenVPN for internal tools and
-      Teleport for production, so nothing else listens on the internet.
+      Three doors, one per audience. Visitors only ever reach Cloudflare; engineers reach internal tools through
+      Cloudflare Access and production over WARP with cloud IAM credentials, so nothing else listens on the internet.
     </p>
 
     <figure class="mb-8 overflow-x-auto rounded-xl border border-brand-border bg-white p-4 sm:p-6">
       <svg viewBox="0 0 1000 380" class="cloud-svg mx-auto block h-auto w-full max-w-[980px] min-w-[860px]" role="img" aria-labelledby="ta-title ta-desc">
         <title id="ta-title">Three ways in: the public website, internal tools and production</title>
-        <desc id="ta-desc">Public: visitors reach Cloudflare, which forwards through an AWS network load balancer to Envoy Gateway, which routes to the website pods. Internal tools: an engineer's laptop opens an OpenVPN tunnel to the OpenVPN server in the cloud network, which reaches the internal UIs of Jenkins, Argo CD and Atlantis. Production: the engineer logs in to the Teleport proxy, which reaches Teleport agents over reverse tunnels, which give kubectl access to the clusters and ssh access to the VMs.</desc>
+        <desc id="ta-desc">Public: visitors reach Cloudflare, which forwards through an AWS network load balancer to Envoy Gateway, which routes to the website pods. Internal tools: an engineer's browser signs in to Cloudflare Access with Entra ID, which reaches the internal UIs of Jenkins, Argo CD and Atlantis through outbound cloudflared tunnels. Production: the WARP client reaches the private cluster endpoints through the same tunnels, cloud IAM issues short-lived kubectl tokens through EKS access entries and AKS Entra ID, and shells on VMs go through SSM Session Manager and Azure Bastion.</desc>
         <defs>
           <marker id="ta" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M1.5 1L8.5 5L1.5 9" fill="none" stroke="context-stroke" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
@@ -667,26 +698,32 @@ const tools: [string, string, string, string, string][] = [
         <a href="https://developers.cloudflare.com/ssl/origin-configuration/authenticated-origin-pull/" target="_blank" rel="noopener noreferrer" class={link}>authenticated origin pulls</a>,{" "}
         <a href="https://docs.aws.amazon.com/elasticloadbalancing/latest/network/introduction.html" target="_blank" rel="noopener noreferrer" class={link}>AWS NLB</a>,{" "}
         <a href="https://gateway.envoyproxy.io/docs/" target="_blank" rel="noopener noreferrer" class={link}>Envoy Gateway</a>,{" "}
-        <a href="https://openvpn.net/community/" target="_blank" rel="noopener noreferrer" class={link}>OpenVPN</a>,{" "}
-        <a href="https://docs.aws.amazon.com/vpn/latest/clientvpn-admin/what-is.html" target="_blank" rel="noopener noreferrer" class={link}>AWS Client VPN (OpenVPN-based)</a>,{" "}
-        <a href="https://goteleport.com/docs/reference/architecture/agents/" target="_blank" rel="noopener noreferrer" class={link}>Teleport agents</a>.
+        <a href="https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/" target="_blank" rel="noopener noreferrer" class={link}>Cloudflare Tunnel</a>,{" "}
+        <a href="https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/private-net/cloudflared/" target="_blank" rel="noopener noreferrer" class={link}>WARP to private networks</a>,{" "}
+        <a href="https://docs.aws.amazon.com/eks/latest/userguide/access-entries.html" target="_blank" rel="noopener noreferrer" class={link}>EKS access entries</a>,{" "}
+        <a href="https://docs.aws.amazon.com/eks/latest/userguide/cluster-endpoint.html" target="_blank" rel="noopener noreferrer" class={link}>EKS private endpoint</a>,{" "}
+        <a href="https://learn.microsoft.com/en-us/azure/aks/enable-authentication-microsoft-entra-id" target="_blank" rel="noopener noreferrer" class={link}>AKS with Entra ID</a>,{" "}
+        <a href="https://azure.github.io/kubelogin/" target="_blank" rel="noopener noreferrer" class={link}>kubelogin</a>,{" "}
+        <a href="https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager.html" target="_blank" rel="noopener noreferrer" class={link}>SSM Session Manager</a>,{" "}
+        <a href="https://learn.microsoft.com/en-us/azure/bastion/bastion-overview" target="_blank" rel="noopener noreferrer" class={link}>Azure Bastion</a>.
       </figcaption>
     </figure>
   </section>
 
   <!-- ====== LOGS ====== -->
   <section class="mb-14">
-    <p class="mono-eyebrow mb-2">// everything lands in S3</p>
+    <p class="mono-eyebrow mb-2">// route by signal</p>
     <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Logs, metrics and security">Logs, metrics and security</h2>
     <p class="mb-6 text-brand-body">
-      Logs go to one S3 archive first, and the monitoring tools read from it, so no tool owns the only copy and a new tool
-      can replay history. Metrics and traces go straight to the tools that graph them, and security findings to the SIEM.
+      An OpenTelemetry Collector agent in each cluster forwards everything to a gateway in its cloud, and the gateway
+      routes each signal: all of it to Datadog, and only security events to the SIEM, so the tool that costs most per
+      gigabyte sees the least data. Cloud audit logs and security findings reach the SIEM directly.
     </p>
 
     <figure class="mb-8 overflow-x-auto rounded-xl border border-brand-border bg-white p-4 sm:p-6">
-      <svg viewBox="0 0 1000 580" class="cloud-svg mx-auto block h-auto w-full max-w-[980px] min-w-[860px]" role="img" aria-labelledby="lg-title lg-desc">
+      <svg viewBox="0 0 1000 560" class="cloud-svg mx-auto block h-auto w-full max-w-[980px] min-w-[860px]" role="img" aria-labelledby="lg-title lg-desc">
         <title id="lg-title">Where logs, metrics and security findings go</title>
-        <desc id="lg-desc">Four columns: sources, collect, store and use. Argo CD and JFrog report to Datadog through its integrations. Apps and Envoy send OTLP, and VMs and the OpenVPN server send syslog, to the OpenTelemetry Collector, which sends metrics to Prometheus, traces and metrics to Datadog, and logs to the S3 log archive. Cloudflare writes to S3 with Logpush, and AWS writes CloudTrail and VPC flow logs there. Datadog and Splunk both read the archive. EDR sensors on laptops, VMs and nodes report to the EDR console, and Wiz scans the cloud accounts; both send their findings to Splunk.</desc>
+        <desc id="lg-desc">Four columns: sources, collect, store and use. Argo CD and JFrog report to Datadog through its integrations, and Cloudflare pushes its logs there with Logpush. Apps and Envoy send OTLP, and VMs send syslog, to the OpenTelemetry Collectors, which keep metrics in Prometheus, send logs, metrics and traces to Datadog, and only security logs to the SIEM. The SIEM reads CloudTrail and the Azure Activity Log through its cloud connectors. EDR sensors on laptops, VMs and nodes report to the EDR console, and Wiz scans the cloud accounts; both send their findings to the SIEM.</desc>
         <defs>
           <marker id="lg" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M1.5 1L8.5 5L1.5 9" fill="none" stroke="context-stroke" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
@@ -700,30 +737,28 @@ const tools: [string, string, string, string, string][] = [
         {lgBoxes.map((b) => <CloudBox {...b} />)}
         {lgArrows.map((a) => <CloudArrow {...a} marker="lg" />)}
 
-        <line x1="20" y1="560" x2="54" y2="560" stroke={flow.logs} stroke-width="2" marker-end="url(#lg)"/>
-        <text class="ts" x="64" y="560" dominant-baseline="central" fill="#475569" style="font-size:11px">logs</text>
-        <line x1="160" y1="560" x2="194" y2="560" stroke={flow.metrics} stroke-width="2" marker-end="url(#lg)"/>
-        <text class="ts" x="204" y="560" dominant-baseline="central" fill="#475569" style="font-size:11px">metrics and traces</text>
-        <line x1="360" y1="560" x2="394" y2="560" stroke={flow.security} stroke-width="2" marker-end="url(#lg)"/>
-        <text class="ts" x="404" y="560" dominant-baseline="central" fill="#475569" style="font-size:11px">security events and findings</text>
+        <line x1="20" y1="540" x2="54" y2="540" stroke={flow.logs} stroke-width="2" marker-end="url(#lg)"/>
+        <text class="ts" x="64" y="540" dominant-baseline="central" fill="#475569" style="font-size:11px">logs</text>
+        <line x1="160" y1="540" x2="194" y2="540" stroke={flow.metrics} stroke-width="2" marker-end="url(#lg)"/>
+        <text class="ts" x="204" y="540" dominant-baseline="central" fill="#475569" style="font-size:11px">metrics and traces</text>
+        <line x1="360" y1="540" x2="394" y2="540" stroke={flow.security} stroke-width="2" marker-end="url(#lg)"/>
+        <text class="ts" x="404" y="540" dominant-baseline="central" fill="#475569" style="font-size:11px">security events and findings</text>
       </svg>
       <figcaption class="mt-3 text-sm text-brand-muted">
-        Azure's logs reach the same archive through the Collector. Sources:{" "}
+        Azure runs the same Collectors and its own gateway. Sources:{" "}
         <a href="https://opentelemetry.io/docs/specs/otlp/" target="_blank" rel="noopener noreferrer" class={link}>OTLP</a>,{" "}
+        <a href="https://opentelemetry.io/docs/collector/deployment/gateway/" target="_blank" rel="noopener noreferrer" class={link}>gateway deployment</a>,{" "}
+        <a href="https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/connector/routingconnector" target="_blank" rel="noopener noreferrer" class={link}>routing connector</a>,{" "}
+        <a href="https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor" target="_blank" rel="noopener noreferrer" class={link}>filter processor</a>,{" "}
         <a href="https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/syslogreceiver" target="_blank" rel="noopener noreferrer" class={link}>syslog receiver</a>,{" "}
-        <a href="https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/awss3exporter" target="_blank" rel="noopener noreferrer" class={link}>S3 exporter</a>,{" "}
         <a href="https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/datadogexporter" target="_blank" rel="noopener noreferrer" class={link}>Datadog exporter</a>,{" "}
         <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/trace/v3/opentelemetry.proto" target="_blank" rel="noopener noreferrer" class={link}>Envoy OpenTelemetry tracer</a>,{" "}
-        <a href="https://developers.cloudflare.com/logs/logpush/logpush-job/enable-destinations/aws-s3/" target="_blank" rel="noopener noreferrer" class={link}>Logpush to S3</a>,{" "}
+        <a href="https://developers.cloudflare.com/logs/logpush/logpush-job/enable-destinations/datadog/" target="_blank" rel="noopener noreferrer" class={link}>Logpush to Datadog</a>,{" "}
         <a href="https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-user-guide.html" target="_blank" rel="noopener noreferrer" class={link}>CloudTrail</a>,{" "}
-        <a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lock.html" target="_blank" rel="noopener noreferrer" class={link}>S3 Object Lock</a>,{" "}
-        <a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lifecycle-mgmt.html" target="_blank" rel="noopener noreferrer" class={link}>S3 lifecycle</a>,{" "}
-        <a href="https://splunk.github.io/splunk-add-on-for-amazon-web-services/SQS-basedS3/" target="_blank" rel="noopener noreferrer" class={link}>Splunk SQS-based S3 input</a>,{" "}
-        <a href="https://docs.datadoghq.com/logs/guide/forwarder/" target="_blank" rel="noopener noreferrer" class={link}>Datadog Forwarder</a>,{" "}
+        <a href="https://docs.aws.amazon.com/eks/latest/userguide/control-plane-logs.html" target="_blank" rel="noopener noreferrer" class={link}>EKS control plane logs</a>,{" "}
         <a href="https://docs.datadoghq.com/integrations/argocd/" target="_blank" rel="noopener noreferrer" class={link}>Datadog for Argo CD</a>,{" "}
         <a href="https://docs.datadoghq.com/integrations/jfrog-platform-cloud/" target="_blank" rel="noopener noreferrer" class={link}>Datadog for JFrog Cloud</a>,{" "}
-        <a href="https://www.wiz.io/academy/agentless-scanning" target="_blank" rel="noopener noreferrer" class={link}>agentless scanning</a>,{" "}
-        <a href="https://splunkbase.splunk.com/app/6676" target="_blank" rel="noopener noreferrer" class={link}>Wiz Add-on for Splunk</a>.
+        <a href="https://www.wiz.io/academy/agentless-scanning" target="_blank" rel="noopener noreferrer" class={link}>agentless scanning</a>.
       </figcaption>
     </figure>
   </section>
@@ -741,7 +776,7 @@ const tools: [string, string, string, string, string][] = [
     <figure class="mb-8 overflow-x-auto rounded-xl border border-brand-border bg-white p-4 sm:p-6">
       <svg viewBox="0 0 1000 420" class="cloud-svg mx-auto block h-auto w-full max-w-[980px] min-w-[860px]" role="img" aria-labelledby="id-title id-desc">
         <title id="id-title">How people, pods and pipelines get credentials</title>
-        <desc id="id-desc">People: an engineer signs in to Entra ID with MFA, which hands out short-lived access through IAM Identity Center, az login and Teleport certificates to the clouds and clusters; Azure DevOps, Argo CD, Jenkins, JFrog, Datadog, Splunk and Wiz use the same Entra ID login. Workloads: the External Secrets Operator reads Secrets Manager and Key Vault with EKS Pod Identity or AKS Workload ID and writes Kubernetes Secrets that the app pods read. Pipelines: Jenkins and Atlantis run on VMs whose instance profile or managed identity yields short-lived tokens for the cloud APIs.</desc>
+        <desc id="id-desc">People: an engineer signs in to Entra ID with MFA, which hands out short-lived access through IAM Identity Center, az login and kubelogin to the clouds and clusters; Azure DevOps, Argo CD, Jenkins, JFrog, Datadog, Cloudflare Access and Wiz use the same Entra ID login. Workloads: the External Secrets Operator reads Secrets Manager and Key Vault with EKS Pod Identity or AKS Workload ID and writes Kubernetes Secrets that the app pods read. Pipelines: Jenkins and Atlantis run on VMs whose instance profile or managed identity yields short-lived tokens for the cloud APIs.</desc>
         <defs>
           <marker id="id" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M1.5 1L8.5 5L1.5 9" fill="none" stroke="context-stroke" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
@@ -763,11 +798,10 @@ const tools: [string, string, string, string, string][] = [
         {ssoTools.map(([label, logo], i) => <CloudPill x={ssoX[i]} y={147} w={ssoW[i]} label={label} logo={logo} color={flow.ops} />)}
       </svg>
       <figcaption class="mt-3 text-sm text-brand-muted">
-        Teleport needs its Enterprise edition to sign in through Entra ID; the Community Edition only offers GitHub.
-        Pods that call cloud APIs themselves, such as an app writing to S3, use the same pod identity without going
+        Cloudflare Access puts the same login in front of tools that have none of their own. Pods that call cloud APIs themselves, such as an app writing to S3, use the same pod identity without going
         through a Secret. Sources:{" "}
         <a href="https://docs.aws.amazon.com/singlesignon/latest/userguide/idp-microsoft-entra.html" target="_blank" rel="noopener noreferrer" class={link}>Entra ID with IAM Identity Center</a>,{" "}
-        <a href="https://goteleport.com/docs/zero-trust-access/sso/azuread/" target="_blank" rel="noopener noreferrer" class={link}>Teleport with Entra ID</a>,{" "}
+        <a href="https://developers.cloudflare.com/cloudflare-one/identity/idp-integration/entra-id/" target="_blank" rel="noopener noreferrer" class={link}>Cloudflare Access with Entra ID</a>,{" "}
         <a href="https://argo-cd.readthedocs.io/en/stable/operator-manual/user-management/microsoft/" target="_blank" rel="noopener noreferrer" class={link}>Argo CD with Entra ID</a>,{" "}
         <a href="https://plugins.jenkins.io/azure-ad/" target="_blank" rel="noopener noreferrer" class={link}>Jenkins Entra ID plugin</a>,{" "}
         <a href="https://external-secrets.io/latest/provider/aws-secrets-manager/" target="_blank" rel="noopener noreferrer" class={link}>External Secrets for AWS</a>,{" "}
@@ -853,7 +887,7 @@ const tools: [string, string, string, string, string][] = [
 
     <p class="rounded-lg border border-brand-border bg-brand-bg px-4 py-3 text-sm leading-relaxed text-brand-muted">
       <strong class="text-brand-text">Other choices.</strong> This is one coherent model, not the only one. The
-      comparisons below cover the Git host, CI, monitoring and VPN. Docker and Podman build the same OCI images, so the
+      comparisons below cover the Git host, CI, monitoring, private access and the SIEM. Docker and Podman build the same OCI images, so the
       laptop and CI can differ. EDR is a category:
       CrowdStrike Falcon, Microsoft Defender for Endpoint and SentinelOne all fit that box. HashiCorp Vault could
       replace both cloud secret stores with one, and issue database passwords on demand. gitleaks in a pre-commit hook
@@ -865,7 +899,7 @@ const tools: [string, string, string, string, string][] = [
       <a href="https://jfrog.com/help/r/jfrog-artifactory-documentation/remote-repositories" target="_blank" rel="noopener noreferrer" class={link}>Artifactory remote repositories</a>,{" "}
       <a href="https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack" target="_blank" rel="noopener noreferrer" class={link}>kube-prometheus-stack</a>,{" "}
       <a href="https://prometheus.io/docs/alerting/latest/alertmanager/" target="_blank" rel="noopener noreferrer" class={link}>Alertmanager</a>,{" "}
-      <a href="https://goteleport.com/docs/reference/helm-reference/teleport-kube-agent/" target="_blank" rel="noopener noreferrer" class={link}>teleport-kube-agent</a>,{" "}
+      <a href="https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/deployment-guides/kubernetes/" target="_blank" rel="noopener noreferrer" class={link}>cloudflared in Kubernetes</a>,{" "}
       <a href="https://developer.hashicorp.com/terraform/language/backend/azurerm" target="_blank" rel="noopener noreferrer" class={link}>azurerm backend</a>,{" "}
       <a href="https://docs.ansible.com/ansible/latest/collections/azure/azcollection/azure_rm_inventory.html" target="_blank" rel="noopener noreferrer" class={link}>Azure inventory</a>,{" "}
       <a href="https://developer.hashicorp.com/vault/docs/secrets/databases" target="_blank" rel="noopener noreferrer" class={link}>Vault database secrets</a>,{" "}
@@ -879,7 +913,8 @@ const tools: [string, string, string, string, string][] = [
     <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Interchangeable pieces">Interchangeable pieces</h2>
     <p class="mb-6 text-brand-body">
       Four places in the overview carry a slash: either tool fits there, and the rest of the model stays the same.
-      The first column is the one the steps above describe; for monitoring they use both.
+      The first column is the one the steps above describe; for monitoring they use both. The SIEM has no name in the
+      overview, so its table compares four common choices.
     </p>
 
     {comparisons.map((c) => (
@@ -893,7 +928,7 @@ const tools: [string, string, string, string, string][] = [
                 <th class="w-[16%] py-2 pr-4 font-semibold"></th>
                 {c.options.map((o, i) => (
                   <th class="py-2 pr-4 align-bottom" style={`width:${84 / c.options.length}%`}>
-                    <span class={`inline-flex items-center gap-2 ${i === 0 ? "font-bold" : "font-medium"}`}>
+                    <span class={`inline-flex items-center gap-2 ${i === 0 && !c.neutral ? "font-bold" : "font-medium"}`}>
                       {(Array.isArray(o.logo) ? o.logo : [o.logo]).map((l) => (
                         <img src={`/logos/${l}`} alt="" width="18" height="18" class="h-[18px] w-[18px] shrink-0 rounded-sm bg-white object-contain p-px" loading="lazy"/>
                       ))}
