@@ -28,6 +28,7 @@ const LANG_LIST: BundledLanguage[] = [
   "lua",
   "r",
   "bash",
+  "asm",
 ];
 
 function getHighlighter(): Promise<Highlighter> {

@@ -4,6 +4,7 @@ import { highlightCode } from "../lib/highlight";
 import RuntimeCompare from "../components/RuntimeCompare.svelte";
 import FutureCompare from "../components/FutureCompare.svelte";
 import RustFuturesQuiz from "../components/RustFuturesQuiz.svelte";
+import AsyncObfuscationQuiz from "../components/AsyncObfuscationQuiz.svelte";
 
 const runtimeSnippets = [
   {
@@ -501,6 +502,177 @@ enum Handle {
 // future, and either advances to the next state, returns
 // Poll::Pending (saving where it stopped), or Poll::Ready(n).`;
 const stateMachineHtml = await highlightCode("rust", stateMachineSource);
+
+// Obfuscation angle: the same lowering that makes async stackless also
+// flattens control flow, the way an obfuscator would. Readable source...
+const obfuscateSource = `// What you write: ordinary, structured control flow.
+async fn checkout(cart: Cart) -> Receipt {
+    let user = authenticate(&cart).await;   // await #1
+    let paid = charge(&user, &cart).await;  // await #2
+    if paid.ok {
+        ship(&cart).await                   // await #3
+    } else {
+        Receipt::declined()
+    }
+}`;
+// ...and the flattened state machine it lowers to.
+const obfuscatedSource = `// What the compiler emits (shape): a flattened state machine.
+enum Checkout { S0 { .. }, S1 { .. }, S2 { .. }, Done }
+
+fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Receipt> {
+    loop {
+        // The if/else and the call order are gone. Flow is now a
+        // dispatch on a discriminant, re-entered via the executor.
+        match self.state {
+            S0 => { /* drive authenticate; on Ready -> S1 */ }
+            S1 => { /* drive charge; branch paid.ok -> S2 or Done */ }
+            S2 => { /* drive ship; on Ready -> Done */ }
+            Done => return Poll::Ready(receipt),
+        }
+    }
+}`;
+const obfuscateHtml = await highlightCode("rust", obfuscateSource);
+const obfuscatedHtml = await highlightCode("rust", obfuscatedSource);
+
+// Reverse-engineering walkthrough. The assembly below is REAL objdump output
+// (rustc 1.90, -C opt-level=2 -C panic=abort, x86-64, Intel syntax) for the
+// two functions here; labels and comments were added by hand, and calls are
+// shown by symbol name. In this build poll() was inlined into the driver loop,
+// so the state byte lives in cl and the saved locals in registers.
+const reSyncSrc = `fn checkout_sync(cart: u32) -> u32 {
+    let user = authenticate(cart);
+    let paid = charge(user);
+    if paid { ship(cart); return 1; }
+    0
+}`;
+const reAsyncSrc = `async fn checkout(cart: u32) -> u32 {
+    let user = authenticate(cart);
+    yield_now().await;               // await #1 (stands in for I/O)
+    let paid = charge(user);
+    yield_now().await;               // await #2
+    if paid { ship(cart); return 1; }
+    0
+}`;
+const reSyncAsm = `checkout_sync:
+    push   rbx
+    mov    ebx, edi
+    call   authenticate
+    mov    edi, eax
+    call   charge
+    mov    ecx, eax
+    xor    eax, eax
+    test   cl, cl
+    je     .ret
+    mov    edi, ebx
+    call   ship
+    mov    eax, 1
+.ret:
+    pop    rbx
+    ret`;
+const reAsyncAsm = `; prologue, jump table and panic stubs omitted
+.done:
+    mov    cl, 1                  ; state = 1
+.check:
+    test   r13b, 1                ; Ready?
+    je     .return
+.dispatch:
+    movzx  eax, cl                ; cl = state
+    movsxd rax, [r15+rax*4]       ; 5-entry jump table
+    add    rax, r15
+    jmp    rax                    ; switch (state)
+.state0:
+    mov    edi, ebx
+    call   authenticate
+    mov    ebp, eax               ; user saved
+    mov    r13d, 1                ; Pending
+    jmp    .suspend1
+.state4:
+    xor    r13d, r13d             ; Ready
+    mov    eax, 0
+    test   r14b, 1                ; paid?
+    je     .done
+    mov    edi, ebx
+    call   ship
+    mov    eax, 1
+    jmp    .done
+.state3:
+    mov    r13d, 1
+    test   r14b, 1
+    je     .suspend1
+    mov    edi, ebp
+    call   charge
+    mov    r14d, eax              ; paid saved
+    mov    cl, 4                  ; state = 4
+    jmp    .check
+.suspend1:
+    mov    r14b, 1
+    mov    cl, 3                  ; state = 3
+    jmp    .check`;
+const reSyncSrcHtml = await highlightCode("rust", reSyncSrc);
+const reAsyncSrcHtml = await highlightCode("rust", reAsyncSrc);
+const reSyncAsmHtml = await highlightCode("asm", reSyncAsm);
+const reAsyncAsmHtml = await highlightCode("asm", reAsyncAsm);
+
+// Hands-on Ghidra lab: public/downloads/checkout.rs compiled with rustc 1.99.1
+// (-C opt-level=2 -C panic=abort). Listings are REAL Ghidra 11.4.2 output for
+// that binary (default auto-analysis), trimmed; comments added by hand.
+const ghMain = `// checkout::main, last lines (the argument parsing above them is skipped)
+puVar6 = (ulong *)__rustc::__rust_alloc(0x28,8);   // the future, on the heap
+*puVar6 = uVar12;                                  // +0x00 = key (the parsed argument)
+*(undefined1 *)((long)puVar6 + 0x11) = 0;          // +0x11 = state 0
+local_60 = block_on<u64>(puVar6);                  // run it to completion
+if (local_60 == 0) puVar8 = &DAT_00106547;         // "access denied"
+else               puVar8 = &DAT_00106555;         // "ACCESS GRANTED  receipt=..."`;
+const ghBlockOn = `// checkout::block_on<u64>: the executor
+do {
+  auVar1 = checkout::{closure#0}(param_1,&local_30);   // poll(future, cx)
+} while ((auVar1 & (undefined1  [16])0x1) != (undefined1  [16])0x0);   // 1 = Pending
+...
+return auVar1._8_8_;                                    // the Ready value`;
+const ghBefore = `/* checkout::checkout::{closure#0} */
+
+void __rustcall checkout::checkout::_closure_0_(long param_1)
+
+{
+                    /* WARNING: Could not recover jumptable at 0x00114c7c. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  (*(code *)(&DAT_00104ec0 + *(int *)(&DAT_00104ec0 + (ulong)*(byte *)(param_1 + 0x11) * 4)))();
+  return;
+}`;
+const ghTable = `; 00104ec0  int[6]      target = 0x104ec0 + entry
+[0] FDBEh  -> 00114c7e   ; state 0  Unresumed: the first poll
+[1] FE5Dh  -> 00114d1d   ; state 1  Returned: panics if polled again
+[2] FE6Ah  -> 00114d2a   ; state 2  Panicked: ud2
+[3] FE08h  -> 00114cc8   ; state 3  resumed after await #1
+[4] FDD8h  -> 00114c98   ; state 4  resumed after await #2
+[5] FDCCh  -> 00114c8c   ; state 5  resumed after await #3`;
+const ghCheck = `; state 4. RBX = the future, R14 = cx (set at 00114c64 / 00114c67)
+00114c98  CMP   byte ptr [RBX + 0x18],0x0   ; awaited YieldOnce done?
+00114c9c  JZ    LAB_00114cda                ;   no: pause again
+00114c9e  CMP   byte ptr [RBX + 0x10],0x1   ; paid == 1 ?
+00114ca2  JNZ   LAB_00114d13                ;   no: finish with 0
+00114ca4  MOV   RDI,qword ptr [RBX + 0x8]   ; user
+00114ca8  CALL  ship
+00114cad  MOV   qword ptr [RBX + 0x20],RAX  ; receipt -> +0x20, then pause -> 5
+
+LAB_00114d13:
+00114d13  XOR   EDX,EDX                     ; returned value = 0
+00114d15  MOV   byte ptr [RBX + 0x11],0x1   ; state = 1 (done)
+00114d19  XOR   EAX,EAX                     ; 0 = Poll::Ready`;
+const ghRecovered = `let user = authenticate(key);   // state 0
+.await;                         //   pause -> 3
+let paid = charge(user);        // state 3
+.await;                         //   pause -> 4
+if !paid { return 0; }          // state 4: "access denied"
+let receipt = ship(user);
+.await;                         //   pause -> 5
+receipt                         // state 5: "ACCESS GRANTED"`;
+const ghMainHtml = await highlightCode("c", ghMain);
+const ghBlockOnHtml = await highlightCode("c", ghBlockOn);
+const ghBeforeHtml = await highlightCode("c", ghBefore);
+const ghTableHtml = await highlightCode("asm", ghTable);
+const ghCheckHtml = await highlightCode("asm", ghCheck);
+const ghRecoveredHtml = await highlightCode("rust", ghRecovered);
 
 // Control flow: `return` inside an async block resolves the block's Future,
 // not the enclosing function. Proof that an async block is a value.
@@ -1419,7 +1591,7 @@ const comparisonTable = [
 
     <!-- State machine figure (the future + its executor) -->
     <figure class="mb-4 overflow-x-auto rounded-xl border border-brand-border bg-white p-4 sm:p-6">
-      <svg viewBox="0 0 820 300" class="h-auto w-full min-w-[560px] sm:min-w-0" role="img" aria-label="The whole enum is the future; an executor repeatedly calls poll on it. Inside, the current variant marks where execution is paused: Start, two await states that keep returning Pending until ready, then Done with Ready(n).">
+      <svg viewBox="0 0 820 300" class="h-auto w-full min-w-[560px] sm:min-w-0" role="img" aria-label="The whole enum is the future; an executor calls poll on it, passing a Context that carries a Waker. Inside, the current variant marks where execution is paused: Start, two await states that return Pending until ready, then Done with Ready(n). On Pending the future hands the waker to the resource it waits on (a socket or timer); when the resource is ready it calls wake(), and the executor polls the future again.">
         <defs>
           <marker id="sm-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" fill="#71717A" />
@@ -1427,16 +1599,32 @@ const comparisonTable = [
           <marker id="sm-arrow-pink" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" fill="#be185d" />
           </marker>
+          <marker id="sm-arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#16653a" />
+          </marker>
         </defs>
         <g font-family="Inter, sans-serif">
           <!-- Executor -->
           <rect x="24" y="20" width="200" height="54" rx="10" fill="rgba(217,119,6,0.10)" stroke="#D97706" stroke-width="1.5"/>
           <text x="124" y="43" font-size="13" font-weight="700" fill="#18181B" text-anchor="middle">Executor</text>
-          <text x="124" y="61" font-size="10" fill="#71717A" text-anchor="middle">calls future.poll(cx) repeatedly</text>
+          <text x="124" y="61" font-size="10" fill="#71717A" text-anchor="middle">polls once, then only when woken</text>
+
+          <!-- Resource that holds the waker -->
+          <rect x="560" y="20" width="230" height="54" rx="10" fill="rgba(22,101,58,0.08)" stroke="#16653a" stroke-width="1.5"/>
+          <text x="675" y="43" font-size="12" font-weight="700" fill="#18181B" text-anchor="middle">Resource (socket, timer)</text>
+          <text x="675" y="61" font-size="10" fill="#71717A" text-anchor="middle">keeps the Waker until it is ready</text>
+
+          <!-- Pending: the future hands its waker to the resource -->
+          <line x1="640" y1="111" x2="640" y2="76" stroke="#be185d" stroke-width="1.3" marker-end="url(#sm-arrow-pink)"/>
+          <text x="634" y="97" font-size="10" fill="#be185d" text-anchor="end">on Pending: hand over cx.waker()</text>
+
+          <!-- Ready: the resource wakes the executor -->
+          <line x1="558" y1="47" x2="226" y2="47" stroke="#16653a" stroke-width="1.3" marker-end="url(#sm-arrow-green)"/>
+          <text x="392" y="40" font-size="10" fill="#16653a" text-anchor="middle">when ready: waker.wake() --&gt; poll again</text>
 
           <!-- poll / return arrows between executor and the future -->
           <line x1="104" y1="74" x2="104" y2="110" stroke="#71717A" stroke-width="1.3" marker-end="url(#sm-arrow)"/>
-          <text x="98" y="96" font-size="10" fill="#52525B" text-anchor="end">poll()</text>
+          <text x="98" y="96" font-size="10" fill="#52525B" text-anchor="end">poll(cx)</text>
           <line x1="150" y1="110" x2="150" y2="74" stroke="#71717A" stroke-width="1.3" marker-end="url(#sm-arrow)"/>
           <text x="156" y="96" font-size="10" fill="#52525B" text-anchor="start">Pending / Ready(n)</text>
 
@@ -1479,6 +1667,7 @@ const comparisonTable = [
       </svg>
       <figcaption class="mt-3 text-sm text-brand-muted">
         Now with the future itself in view. The whole <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">enum Handle</code> is the future: one value the <strong class="text-brand-text">executor</strong> drives by calling <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">poll()</code>. Its current variant is the state, and each <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">.await</code> is a state it can rest in: while the resource is not ready, <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">poll</code> returns <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Pending</code> (the pink loops); when it becomes ready the machine advances one state, until <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Done</code> returns <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Ready(n)</code>.
+        The executor does not re-poll blindly. Every <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">poll</code> receives a <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">cx</code> that carries a <strong class="text-brand-text">Waker</strong>. Before returning <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Pending</code>, the future hands that waker to whatever it is waiting on (pink, top right). When the socket has data or the timer fires, the resource calls <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">wake()</code> (green), and only then does the executor poll the future again.
       </figcaption>
     </figure>
 
@@ -2239,6 +2428,279 @@ const comparisonTable = [
     </p>
 
     <RustFuturesQuiz client:visible />
+  </section>
+
+  <!-- ====== ASYNC AS OBFUSCATION ====== -->
+  <section class="mb-14">
+    <p class="mono-eyebrow mb-2">// rustc --emit obj | strings | despair</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Obfuscating a binary with async">Obfuscating a binary with async <span class="text-brand-muted">(control-flow flattening, for free)</span></h2>
+    <p class="mb-6 text-brand-body">
+      The same lowering that makes a future stackless also reshapes the compiled binary in ways a reverse engineer has to undo. An <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">async fn</code> compiles to a <strong class="text-brand-text">state machine</strong>: each <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">.await</code> is a resume point, and <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">poll</code> becomes a dispatch on a discriminant that advances from one state to the next. The original ordering and branching no longer appear as nested blocks; they are reconstructed at runtime from the state field. That is structurally the same transform obfuscators like OLLVM apply deliberately as <strong class="text-brand-text">control-flow flattening</strong>, except here <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">rustc</code> does it as a side effect of lowering async.
+    </p>
+
+    <div class="mb-8 grid gap-4 md:grid-cols-2">
+      <div>
+        <p class="mb-1.5 flex items-center gap-2 text-xs font-semibold text-brand-body">
+          <span class="inline-block h-2 w-2 rounded-sm" style="background:#16653a"></span>
+          Source <span class="font-normal text-brand-muted">: structured, readable</span>
+        </p>
+        <div class="overflow-x-auto rounded-lg text-[11px] [&>pre]:!rounded-lg [&>pre]:!p-3" set:html={obfuscateHtml} />
+      </div>
+      <div>
+        <p class="mb-1.5 flex items-center gap-2 text-xs font-semibold text-brand-body">
+          <span class="inline-block h-2 w-2 rounded-sm" style="background:#D97706"></span>
+          Compiled shape <span class="font-normal text-brand-muted">: a switch on a state field</span>
+        </p>
+        <div class="overflow-x-auto rounded-lg text-[11px] [&>pre]:!rounded-lg [&>pre]:!p-3" set:html={obfuscatedHtml} />
+      </div>
+    </div>
+
+    <figure class="mb-8 overflow-x-auto rounded-xl border border-brand-border bg-white p-4 sm:p-6">
+      <svg viewBox="0 0 860 376" class="h-auto w-full min-w-[640px] sm:min-w-0" role="img" aria-labelledby="obf-fig-title obf-fig-desc">
+        <title id="obf-fig-title">How async lowering flattens control flow</title>
+        <desc id="obf-fig-desc">On the left, the source control-flow graph: authenticate, charge and a paid.ok branch to ship or declined, all flowing into Receipt through direct edges between blocks. The three awaits carry numbered badges 1 to 3. An arrow labelled rustc lowers points to the right, where the same logic is a hub-and-spoke state machine: states S0 to S2 carry the same badges because each is the state the future is parked in at that await, plus a Done state. All four connect only to a central poll() dispatch that chooses the next state from a discriminant, with the executor re-entering poll() and the future returning Pending.</desc>
+        <defs>
+          <marker id="obf-a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#71717A" />
+          </marker>
+          <marker id="obf-a-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#DC2626" />
+          </marker>
+        </defs>
+        <g font-family="Inter, sans-serif">
+          <!-- ===== Left: source control-flow graph ===== -->
+          <text x="24" y="22" font-size="11" font-weight="700" fill="#18181B">What you wrote: edges between blocks</text>
+
+          <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11.5" fill="#27272A">
+            <rect x="75"  y="40"  width="150" height="30" rx="8" fill="#FAFAFA" stroke="#16653a" stroke-width="1.3"/><text x="150" y="59"  text-anchor="middle">authenticate().await</text>
+            <rect x="75"  y="96"  width="150" height="30" rx="8" fill="#FAFAFA" stroke="#16653a" stroke-width="1.3"/><text x="150" y="115" text-anchor="middle">charge().await</text>
+            <rect x="75"  y="152" width="150" height="30" rx="8" fill="#FAFAFA" stroke="#16653a" stroke-width="1.3"/><text x="150" y="171" text-anchor="middle">if paid.ok</text>
+            <rect x="34"  y="224" width="112" height="30" rx="8" fill="#FAFAFA" stroke="#16653a" stroke-width="1.3"/><text x="90"  y="243" text-anchor="middle">ship().await</text>
+            <rect x="196" y="224" width="120" height="30" rx="8" fill="#FAFAFA" stroke="#16653a" stroke-width="1.3"/><text x="256" y="243" text-anchor="middle">declined()</text>
+            <rect x="96"  y="296" width="150" height="30" rx="8" fill="#FAFAFA" stroke="#16653a" stroke-width="1.3"/><text x="171" y="315" text-anchor="middle">Receipt</text>
+          </g>
+          <g stroke="#71717A" stroke-width="1.5" fill="none">
+            <line x1="150" y1="70"  x2="150" y2="96"  marker-end="url(#obf-a)"/>
+            <line x1="150" y1="126" x2="150" y2="152" marker-end="url(#obf-a)"/>
+            <line x1="120" y1="182" x2="92"  y2="224" marker-end="url(#obf-a)"/>
+            <line x1="180" y1="182" x2="250" y2="224" marker-end="url(#obf-a)"/>
+            <line x1="90"  y1="254" x2="150" y2="296" marker-end="url(#obf-a)"/>
+            <line x1="256" y1="254" x2="200" y2="296" marker-end="url(#obf-a)"/>
+          </g>
+          <g font-size="9.5" fill="#71717A" font-style="italic">
+            <text x="96"  y="210">true</text>
+            <text x="214" y="210">false</text>
+          </g>
+
+          <!-- resume-point badges: one per .await -->
+          <g font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">
+            <circle cx="225" cy="40"  r="9" fill="#D97706"/><text x="225" y="40"  dominant-baseline="central">1</text>
+            <circle cx="225" cy="96"  r="9" fill="#D97706"/><text x="225" y="96"  dominant-baseline="central">2</text>
+            <circle cx="146" cy="224" r="9" fill="#D97706"/><text x="146" y="224" dominant-baseline="central">3</text>
+          </g>
+
+          <!-- ===== Middle: transform ===== -->
+          <line x1="346" y1="188" x2="412" y2="188" stroke="#D97706" stroke-width="3" marker-end="url(#obf-a)"/>
+          <text x="379" y="178" font-size="10.5" font-weight="700" fill="#D97706" text-anchor="middle">rustc</text>
+          <text x="379" y="206" font-size="10.5" font-weight="700" fill="#D97706" text-anchor="middle">lowers</text>
+
+          <!-- ===== Right: flattened state machine ===== -->
+          <text x="452" y="22" font-size="11" font-weight="700" fill="#18181B">What runs: every block via one dispatch</text>
+
+          <rect x="575" y="38" width="130" height="30" rx="8" fill="rgba(220,38,38,0.07)" stroke="#DC2626" stroke-width="1.2"/>
+          <text x="640" y="57" font-size="11" text-anchor="middle" fill="#991B1B">executor + Waker</text>
+
+          <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11.5" fill="#7c2d12">
+            <rect x="452" y="84"  width="118" height="40" rx="8" fill="#FFF7ED" stroke="#D97706" stroke-width="1.3"/><text x="511" y="101" text-anchor="middle">S0 authenticate</text>
+            <rect x="710" y="84"  width="118" height="40" rx="8" fill="#FFF7ED" stroke="#D97706" stroke-width="1.3"/><text x="769" y="101" text-anchor="middle">S1 charge</text>
+            <rect x="710" y="280" width="118" height="40" rx="8" fill="#FFF7ED" stroke="#D97706" stroke-width="1.3"/><text x="769" y="297" text-anchor="middle">S2 ship / branch</text>
+            <rect x="452" y="280" width="118" height="40" rx="8" fill="#FFF7ED" stroke="#D97706" stroke-width="1.3"/><text x="511" y="297" text-anchor="middle">Done</text>
+          </g>
+          <g font-size="9.5" fill="#9A3412" text-anchor="middle">
+            <text x="511" y="114">parked at await 1</text>
+            <text x="769" y="114">parked at await 2</text>
+            <text x="769" y="310">parked at await 3</text>
+            <text x="511" y="310">Poll::Ready</text>
+          </g>
+          <g font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">
+            <circle cx="570" cy="84"  r="9" fill="#D97706"/><text x="570" y="84"  dominant-baseline="central">1</text>
+            <circle cx="828" cy="84"  r="9" fill="#D97706"/><text x="828" y="84"  dominant-baseline="central">2</text>
+            <circle cx="828" cy="280" r="9" fill="#D97706"/><text x="828" y="280" dominant-baseline="central">3</text>
+          </g>
+
+          <!-- hub -->
+          <rect x="578" y="170" width="124" height="66" rx="10" fill="rgba(217,119,6,0.12)" stroke="#D97706" stroke-width="1.6"/>
+          <text x="640" y="196" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12.5" font-weight="700" text-anchor="middle" fill="#7c2d12">poll():</text>
+          <text x="640" y="214" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12.5" font-weight="700" text-anchor="middle" fill="#7c2d12">match state</text>
+          <text x="640" y="252" font-size="9.5" font-style="italic" text-anchor="middle" fill="#71717A">a discriminant picks the next state</text>
+
+          <!-- executor <-> hub -->
+          <line x1="626" y1="68"  x2="626" y2="170" stroke="#71717A" stroke-width="1.5" marker-end="url(#obf-a)"/>
+          <text x="620" y="124" font-size="9.5" fill="#71717A" text-anchor="end">poll()</text>
+          <line x1="656" y1="170" x2="656" y2="68"  stroke="#DC2626" stroke-width="1.5" marker-end="url(#obf-a-red)"/>
+          <text x="662" y="124" font-size="9.5" fill="#DC2626" text-anchor="start">Pending</text>
+
+          <!-- hub <-> states (bidirectional: enter / return) -->
+          <g stroke="#71717A" stroke-width="1.5" fill="none">
+            <line x1="590" y1="172" x2="545" y2="124" marker-start="url(#obf-a)" marker-end="url(#obf-a)"/>
+            <line x1="690" y1="172" x2="735" y2="124" marker-start="url(#obf-a)" marker-end="url(#obf-a)"/>
+            <line x1="690" y1="234" x2="735" y2="280" marker-start="url(#obf-a)" marker-end="url(#obf-a)"/>
+            <line x1="590" y1="234" x2="545" y2="280" marker-start="url(#obf-a)" marker-end="url(#obf-a)"/>
+          </g>
+
+          <!-- legend -->
+          <circle cx="32" cy="356" r="9" fill="#D97706"/>
+          <text x="32" y="356" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle" dominant-baseline="central">n</text>
+          <text x="48" y="356" font-size="11" fill="#52525B" dominant-baseline="central">= the n-th .await: where the future can pause, and the state poll() resumes in</text>
+        </g>
+      </svg>
+      <figcaption class="mt-3 text-sm text-brand-muted">
+        Left: the flow you wrote is <strong class="text-brand-text">edges between blocks</strong>, the graph a decompiler hopes to find, with each <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">.await</code> numbered. Right: each numbered await became a state the future can be parked in, and the blocks never point at each other. Each returns to one <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px]">poll()</code> dispatch that reads a state field to decide what runs next, and the whole future is re-entered from the executor. That indirection, recovering the real edges from the discriminant, is the work the lowering forces on an analyst.
+      </figcaption>
+    </figure>
+
+    <p class="mb-4 text-brand-body">Four properties make the lowered form hostile to static analysis:</p>
+    <ul class="mb-8 flex list-disc flex-col gap-2 pl-5 text-sm text-brand-body marker:text-brand-muted">
+      <li><strong class="text-brand-text">Control flow becomes data.</strong> The <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">if</code>/<code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">await</code> ordering is reconstructed at runtime from the discriminant, so a disassembler sees one dispatch loop, not nested blocks.</li>
+      <li><strong class="text-brand-text">Locals leave the stack.</strong> Every value live across an <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">.await</code> is promoted to a field of the future (often behind <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Box::pin</code>), valid only in certain states, so a debugger cannot read it off a normal frame.</li>
+      <li><strong class="text-brand-text">The call graph collapses.</strong> Awaited inner futures are stored inline in the outer one, so chained <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">async fn</code>s inline into a single flat machine with no call boundary left to recover.</li>
+      <li><strong class="text-brand-text">Resumption is indirect.</strong> After <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Pending</code>, the suspend-to-resume edge runs back through the executor and a <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Waker</code> via dynamic dispatch; a custom executor decides resume order from data, not code order.</li>
+    </ul>
+
+    <!-- Reverse-engineering walkthrough on real disassembly -->
+    <h3 class="mb-2 mt-10 text-lg font-semibold text-brand-text">Reverse engineering one: ordinary fn vs async fn</h3>
+    <p class="mb-4 text-brand-body">
+      The same logic compiled twice, then read the way an analyst would, from the disassembly alone.
+    </p>
+
+    <div class="mb-4 grid gap-4 md:grid-cols-2">
+      <div>
+        <p class="mb-1.5 flex items-center gap-2 text-xs font-semibold text-brand-body">
+          <span class="inline-block h-2 w-2 rounded-sm" style="background:#16653a"></span>
+          Ordinary fn <span class="font-normal text-brand-muted">: source</span>
+        </p>
+        <div class="overflow-x-auto rounded-lg text-[11px] [&>pre]:!rounded-lg [&>pre]:!p-3" set:html={reSyncSrcHtml} />
+      </div>
+      <div>
+        <p class="mb-1.5 flex items-center gap-2 text-xs font-semibold text-brand-body">
+          <span class="inline-block h-2 w-2 rounded-sm" style="background:#D97706"></span>
+          Async fn <span class="font-normal text-brand-muted">: source</span>
+        </p>
+        <div class="overflow-x-auto rounded-lg text-[11px] [&>pre]:!rounded-lg [&>pre]:!p-3" set:html={reAsyncSrcHtml} />
+      </div>
+    </div>
+
+    <div class="mb-8 grid items-start gap-4 md:grid-cols-2">
+      <div>
+        <p class="mb-1.5 flex items-center gap-2 text-xs font-semibold text-brand-body">
+          <span class="inline-block h-2 w-2 rounded-sm" style="background:#16653a"></span>
+          Ordinary fn <span class="font-normal text-brand-muted">: x86-64, straight-line</span>
+        </p>
+        <div class="overflow-x-auto rounded-lg text-[11px] [&>pre]:!rounded-lg [&>pre]:!p-3" set:html={reSyncAsmHtml} />
+      </div>
+      <div>
+        <p class="mb-1.5 flex items-center gap-2 text-xs font-semibold text-brand-body">
+          <span class="inline-block h-2 w-2 rounded-sm" style="background:#D97706"></span>
+          Async fn <span class="font-normal text-brand-muted">: x86-64, dispatch loop</span>
+        </p>
+        <div class="overflow-x-auto rounded-lg text-[11px] [&>pre]:!rounded-lg [&>pre]:!p-3" set:html={reAsyncAsmHtml} />
+      </div>
+    </div>
+    <!-- Hands-on lab: a real binary to load in Ghidra -->
+    <h3 class="mb-2 mt-10 text-lg font-semibold text-brand-text">Hands-on: crack a real async binary in Ghidra</h3>
+    <p class="mb-4 text-brand-body">
+      The same exercise on a binary you can load yourself. <strong class="text-brand-text">The goal: find a key that makes <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">./checkout.bin &lt;key&gt;</code> print <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">ACCESS GRANTED</code></strong>, using only Ghidra.
+    </p>
+
+    <div class="mb-3 grid gap-3 sm:grid-cols-3">
+      <a href="/downloads/checkout.bin" download class="rounded-lg border border-brand-border bg-white p-3 transition-colors hover:border-accent-blue">
+        <p class="font-mono text-sm font-semibold text-brand-text">checkout.bin</p>
+        <p class="text-xs text-brand-muted">437 KiB · symbols kept · start here</p>
+      </a>
+      <a href="/downloads/checkout-stripped.bin" download class="rounded-lg border border-brand-border bg-white p-3 transition-colors hover:border-accent-blue">
+        <p class="font-mono text-sm font-semibold text-brand-text">checkout-stripped.bin</p>
+        <p class="text-xs text-brand-muted">331 KiB · no symbols · hard mode</p>
+      </a>
+      <a href="/downloads/checkout.rs" download class="rounded-lg border border-brand-border bg-white p-3 transition-colors hover:border-accent-blue">
+        <p class="font-mono text-sm font-semibold text-brand-text">checkout.rs</p>
+        <p class="text-xs text-brand-muted">source · read it after, not before</p>
+      </a>
+    </div>
+
+    <details class="group mb-8 rounded-lg border border-brand-border">
+      <summary class="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-semibold text-brand-text [&::-webkit-details-marker]:hidden">
+        <svg class="h-3.5 w-3.5 shrink-0 text-brand-muted transition-transform group-open:rotate-90" viewBox="0 0 12 12" aria-hidden="true"><path d="M4 2l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Walkthrough: from main to the key
+        <span class="font-normal text-brand-muted">(spoilers)</span>
+      </summary>
+      <div class="border-t border-brand-border px-4 pb-2 pt-4">
+        <p class="mb-5 text-xs text-brand-muted">Addresses are from Ghidra 11.4.2 with default analysis and are the same in both binaries (built with rustc 1.99.1).</p>
+
+        <p class="mb-2 text-sm text-brand-body"><strong class="text-brand-text">1. Import.</strong> File, Import File, accept the defaults, then analyze. In the Symbol Tree, open <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">checkout::main</code>.</p>
+
+        <p class="mb-2 text-sm text-brand-body"><strong class="text-brand-text">2. Read the end of main.</strong> Skip the long argument parsing at the top (the <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">- 0x30</code> / <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">* 10</code> loop is just <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">parse::&lt;u64&gt;()</code>). The last lines are what matter: the future is allocated, the key goes in at <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">+0x00</code>, state 0 at <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">+0x11</code>, and a result of 0 means &quot;access denied&quot;. Double-click <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">block_on&lt;u64&gt;</code>.</p>
+        <div class="mb-5 overflow-x-auto rounded-lg text-[11px] [&>pre]:!rounded-lg [&>pre]:!p-3" set:html={ghMainHtml} />
+
+        <p class="mb-2 text-sm text-brand-body"><strong class="text-brand-text">3. Find the executor loop.</strong> <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">block_on</code> polls the future until the low bit of the result is 0 (<code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">Poll::Ready</code>), then returns the value. The function it calls is the state machine: double-click <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">checkout::{"{closure#0}"}</code>.</p>
+        <div class="mb-5 overflow-x-auto rounded-lg text-[11px] [&>pre]:!rounded-lg [&>pre]:!p-3" set:html={ghBlockOnHtml} />
+
+        <p class="mb-2 text-sm text-brand-body"><strong class="text-brand-text">4. Watch the decompiler give up.</strong> The state byte at <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">+0x11</code> indexes a jump table with no bounds check, because rustc knows it only holds 0 to 5. Ghidra cannot size the table, so it shows one opaque call and leaves every state undecoded.</p>
+        <div class="mb-5 overflow-x-auto rounded-lg text-[11px] [&>pre]:!rounded-lg [&>pre]:!p-3" set:html={ghBeforeHtml} />
+
+        <p class="mb-2 text-sm text-brand-body"><strong class="text-brand-text">5. Decode the table.</strong> Press <kbd class="rounded border border-brand-border bg-gray-50 px-1 font-mono text-[11px]">G</kbd>, go to <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">104ec0</code>, press <kbd class="rounded border border-brand-border bg-gray-50 px-1 font-mono text-[11px]">T</kbd> and type <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">int[6]</code>, then expand it with the <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">+</code>. Add each value to <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">0x104ec0</code>. There are exactly six: a string starts at <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">104ed8</code> = <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">0x104ec0 + 6 × 4</code>. States 0 to 2 mean the same in every rustc async fn.</p>
+        <div class="mb-5 overflow-x-auto rounded-lg text-[11px] [&>pre]:!rounded-lg [&>pre]:!p-3" set:html={ghTableHtml} />
+
+        <p class="mb-2 text-sm text-brand-body"><strong class="text-brand-text">6. Disassemble the states.</strong> At each target press <kbd class="rounded border border-brand-border bg-gray-50 px-1 font-mono text-[11px]">G</kbd>, type the address, press <kbd class="rounded border border-brand-border bg-gray-50 px-1 font-mono text-[11px]">D</kbd>. To also get a <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">switch</code> in the decompiler, run <a href="/downloads/FixCheckoutSwitch.java" download class="text-accent-blue underline underline-offset-2">FixCheckoutSwitch.java</a> from Window, Script Manager (it does both).</p>
+
+        <p class="mb-2 text-sm text-brand-body"><strong class="text-brand-text">7. Read the states.</strong> In the listing, <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">RBX</code> is the future and <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">R14</code> is <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">cx</code>. Every state ends one of two ways. <em>Pause</em>: set <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">+0x18</code>, call <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">[RCX + 0x10]</code> (<code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">wake_by_ref</code>), write the next state, return <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">1</code>. <em>Finish</em>: write state 1, return <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">0</code> with the value in <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">RDX</code>.</p>
+        <div class="mb-4 overflow-x-auto rounded-lg border border-brand-border bg-white">
+          <table class="min-w-full text-sm">
+            <thead><tr class="border-b border-gray-200 bg-gray-50/80"><th class="px-3 py-2 text-left font-semibold text-brand-text">State</th><th class="px-3 py-2 text-left font-semibold text-brand-text">At</th><th class="px-3 py-2 text-left font-semibold text-brand-text">Does</th><th class="px-3 py-2 text-left font-semibold text-brand-text">Then</th></tr></thead>
+            <tbody>
+            <tr class="border-b border-gray-100"><td class="whitespace-nowrap px-3 py-2 align-top font-mono text-brand-text">0</td><td class="whitespace-nowrap px-3 py-2 align-top font-mono text-brand-text">00114c7e</td><td class="px-3 py-2 align-top text-brand-body"><code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">user = authenticate(key)</code>, stored at <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">+0x08</code></td><td class="px-3 py-2 align-top text-brand-body">pause, then state 3</td></tr>
+            <tr class="border-b border-gray-100"><td class="whitespace-nowrap px-3 py-2 align-top font-mono text-brand-text">3</td><td class="whitespace-nowrap px-3 py-2 align-top font-mono text-brand-text">00114cc8</td><td class="px-3 py-2 align-top text-brand-body"><code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">paid = charge(user)</code>, stored at <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">+0x10</code></td><td class="px-3 py-2 align-top text-brand-body">pause, then state 4</td></tr>
+            <tr class="border-b border-gray-100"><td class="whitespace-nowrap px-3 py-2 align-top font-mono text-brand-text">4</td><td class="whitespace-nowrap px-3 py-2 align-top font-mono text-brand-text">00114c98</td><td class="px-3 py-2 align-top text-brand-body">if not <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">paid</code>: finish with 0. Else <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">receipt = ship(user)</code> at <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">+0x20</code></td><td class="px-3 py-2 align-top text-brand-body">pause, then state 5</td></tr>
+            <tr class="border-b border-gray-100"><td class="whitespace-nowrap px-3 py-2 align-top font-mono text-brand-text">5</td><td class="whitespace-nowrap px-3 py-2 align-top font-mono text-brand-text">00114c8c</td><td class="px-3 py-2 align-top text-brand-body">load <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">receipt</code></td><td class="px-3 py-2 align-top text-brand-body">finish with <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">receipt</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="mb-2 text-sm text-brand-body">State 4 holds the check:</p>
+        <div class="mb-5 overflow-x-auto rounded-lg text-[11px] [&>pre]:!rounded-lg [&>pre]:!p-3" set:html={ghCheckHtml} />
+        <p class="mb-2 text-sm text-brand-body">Put together, the states give back the source:</p>
+        <div class="mb-5 overflow-x-auto rounded-lg text-[11px] [&>pre]:!rounded-lg [&>pre]:!p-3" set:html={ghRecoveredHtml} />
+
+        <p class="mb-2 text-sm text-brand-body"><strong class="text-brand-text">8. Crack it.</strong> Access needs <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">charge(authenticate(key))</code> to be true. Double-click <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">authenticate</code> and <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">charge</code>: each is one line with one constant. Solve the equation modulo 2¹⁶ and run <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">./checkout.bin &lt;key&gt;</code>.</p>
+        <details class="mb-5 rounded-lg border border-brand-border bg-white p-4 text-sm text-brand-body">
+          <summary class="cursor-pointer font-semibold text-brand-text">Answer</summary>
+          <p class="mt-2"><code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">authenticate</code> returns the low 16 bits of <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">key * 0x79b1</code>, and <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">charge</code> is <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">user == 0x7d2d</code>. 0x79b1 is odd, so it has an inverse mod 2¹⁶: <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">pow(0x79b1, -1, 1 &lt;&lt; 16) * 0x7d2d % (1 &lt;&lt; 16)</code> gives <strong class="text-brand-text">56893</strong>, and <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">./checkout.bin 56893</code> prints <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">ACCESS GRANTED  receipt=0x54744995</code>.</p>
+        </details>
+
+        <p class="mb-2 text-sm text-brand-body"><strong class="text-brand-text">9. Or bypass it.</strong> Patch the <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">JNZ</code> at <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">00114ca2</code> into two <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">NOP</code>s (Patch Instruction, then File, Export Program, format Original File), or in gdb <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">break charge</code>, <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">finish</code>, <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">set $rax = 1</code>. Both print ACCESS GRANTED for any key, but with the wrong receipt (<code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">0x54e7c995</code> for key 1): <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">ship(user)</code> still uses the wrong <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">user</code>. A check that only says yes or no is easy to bypass; data derived from the key is not.</p>
+
+        <div class="mb-4 rounded-lg border border-brand-border bg-gray-50/60 p-4">
+          <p class="mb-1 text-sm font-semibold text-brand-text">Hard mode: checkout-stripped.bin</p>
+          <p class="text-sm text-brand-body">Same addresses, no names. Search memory for <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">ACCESS GRANTED</code>: the reference sits on the byte just before it and leads to the Rust <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">main</code>. From there, steps 2 to 9 are the same, with <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[11px]">FUN_…</code> names.</p>
+        </div>
+      </div>
+    </details>
+
+    <div class="mb-4 rounded-xl border border-brand-border p-5" style="border-left:3px solid #DC2626; background-color:rgba(220,38,38,0.05)">
+      <p class="mb-2 text-sm font-semibold text-brand-text">Reality check: this is obscurity, not protection</p>
+      <p class="text-sm text-brand-body">
+        The flattening is deterministic and reversible: the discriminant and per-state fields fully describe the original flow, decompilers increasingly recognise async state machines, and the optimizer may fold a trivial machine back into straight-line code. It raises the cost of reading a binary but protects nothing on its own, and it brings real runtime and complexity cost. Treat it as one layer of defence in depth, never as a security boundary.
+      </p>
+    </div>
+  </section>
+
+  <!-- ====== OBFUSCATION QUIZ ====== -->
+  <section class="mb-14">
+    <p class="mono-eyebrow mb-2">// recover the state machine to pass</p>
+    <h2 class="glitch mb-4 text-xl font-semibold text-brand-text" data-text="Quiz: async as obfuscation">Quiz: async as obfuscation</h2>
+    <p class="mb-6 text-brand-body">
+      A self-check on the section above: control-flow flattening, reading the jump table and state byte in a disassembly, locals promoted to fields, the collapsed call graph, indirect resumption through the executor, and why a polled future resists relocation. Same format as the futures quiz, medium to hard, nothing saved. Answer with a click or the keyboard (<code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">1-4</code> / <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[13px]">A-D</code> to answer, arrows to move).
+    </p>
+
+    <AsyncObfuscationQuiz client:visible />
   </section>
 
 </BaseLayout>
