@@ -1,0 +1,88 @@
+---
+// A block shipped only as ciphertext (made by scripts/encrypt-private.mjs) and decrypted in the
+// browser: PBKDF2-SHA256 turns the access code into an AES-256-GCM key, the plaintext is gzipped HTML.
+export interface Props {
+  payload?: { iterations: number; salt: string; iv: string; ct: string; classes: string };
+  message: string;
+}
+
+const { payload, message } = Astro.props;
+---
+
+{
+  payload ? (
+    <div
+      class="encrypted-block mb-8 rounded-xl border border-dashed border-brand-border bg-gray-50 p-5 sm:p-6"
+      data-iterations={payload.iterations}
+      data-salt={payload.salt}
+      data-iv={payload.iv}
+      data-ct={payload.ct}
+    >
+      <form class="flex flex-col gap-3">
+        <p class="text-sm leading-relaxed text-brand-body">
+          <span class="mr-1 font-mono text-xs font-semibold uppercase tracking-widest text-accent-blue">locked</span>
+          {message}
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <input
+            type="password"
+            name="code"
+            required
+            autocomplete="off"
+            aria-label="Access code"
+            placeholder="Access code"
+            class="min-w-0 flex-1 rounded-lg border border-brand-border bg-white px-3 py-2 font-mono text-sm text-brand-text sm:max-w-xs"
+          />
+          <button
+            type="submit"
+            class="rounded-lg bg-[#D97706] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#B45309] disabled:opacity-50"
+          >
+            Unlock
+          </button>
+        </div>
+        <p class="text-sm text-red-700" data-error hidden>Wrong code.</p>
+      </form>
+    </div>
+  ) : (
+    <p class="mb-8 text-sm text-brand-muted">This part is not published.</p>
+  )
+}
+
+<script>
+  const bytes = (b64: string) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+
+  async function decrypt(code: string, d: DOMStringMap) {
+    const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(code), "PBKDF2", false, ["deriveKey"]);
+    const key = await crypto.subtle.deriveKey(
+      { name: "PBKDF2", hash: "SHA-256", salt: bytes(d.salt!), iterations: Number(d.iterations) },
+      base,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["decrypt"],
+    );
+    const gz = await crypto.subtle.decrypt({ name: "AES-GCM", iv: bytes(d.iv!) }, key, bytes(d.ct!));
+    return new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
+  }
+
+  document.querySelectorAll<HTMLElement>(".encrypted-block").forEach((block) => {
+    const form = block.querySelector("form")!;
+    const input = form.querySelector("input")!;
+    const button = form.querySelector("button")!;
+    const error = form.querySelector<HTMLElement>("[data-error]")!;
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      button.disabled = true;
+      error.hidden = true;
+      try {
+        const html = await decrypt(input.value, block.dataset);
+        const range = document.createRange();
+        block.replaceWith(range.createContextualFragment(html));
+      } catch {
+        error.hidden = false;
+        input.select();
+      } finally {
+        button.disabled = false;
+      }
+    });
+  });
+</script>
